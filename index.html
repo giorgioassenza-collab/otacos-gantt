@@ -395,10 +395,12 @@
       align-items: center;
       padding: 0 10px;
       border-radius: 7px;
-      color: #fff;
+      border: 2px solid currentColor;
+      color: #111827;
+      background: #fff;
       font-size: 12px;
       font-weight: 800;
-      box-shadow: 0 8px 18px rgba(16, 24, 40, .12);
+      box-shadow: 0 8px 18px rgba(16, 24, 40, .08);
       white-space: nowrap;
       overflow: hidden;
       gap: 7px;
@@ -407,9 +409,23 @@
     }
 
     .bar.is-done {
-      opacity: .38;
+      opacity: 1;
       box-shadow: none;
-      filter: saturate(.65);
+      filter: none;
+    }
+
+    .bar.is-done::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 50%;
+      height: 3px;
+      border-radius: 999px;
+      background: currentColor;
+      transform: translateY(-50%) rotate(-1deg);
+      opacity: .9;
+      pointer-events: none;
     }
 
     .bar-title {
@@ -417,6 +433,14 @@
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .bar-home {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+      color: currentColor;
+      opacity: .95;
     }
 
     .bar-meta {
@@ -575,6 +599,23 @@
       padding: 9px 10px;
       resize: vertical;
       line-height: 1.4;
+    }
+
+    .inline-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      color: #56616d;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .inline-check input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: var(--blue);
     }
 
     .field input[type="color"] {
@@ -824,6 +865,7 @@
       <label class="field">Chi<div class="check-list" id="taskMembers"></div></label>
       <label class="field">Inizio<input id="taskStart" type="date" value="2026-06-16" required></label>
       <label class="field">Fine<input id="taskEnd" type="date" value="2026-06-24" required></label>
+      <label class="inline-check"><input id="taskHasHomeLabel" type="checkbox"> Label casetta</label>
       <label class="field">Info<textarea id="taskInfo" placeholder="Testo, note o link"></textarea></label>
       <button class="primary-btn" type="submit">Aggiungi task</button>
     </form>
@@ -856,6 +898,7 @@
         <label class="field">Chi<div class="check-list" id="editTaskMembers"></div></label>
         <label class="field">Data inizio<input id="editTaskStart" type="date" required></label>
         <label class="field">Data fine<input id="editTaskEnd" type="date" required></label>
+        <label class="inline-check"><input id="editTaskHasHomeLabel" type="checkbox"> Label casetta</label>
         <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
         <div class="modal-actions">
           <button class="danger-btn" id="deleteTaskButton" type="button">Elimina</button>
@@ -913,10 +956,10 @@
         { id: "p4", name: "Lancio", color: "#e4572e" }
       ],
       tasks: [
-        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "" },
-        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "" },
-        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "" },
-        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "" }
+        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", hasHomeLabel: false },
+        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", hasHomeLabel: false },
+        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", hasHomeLabel: false },
+        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", hasHomeLabel: false }
       ]
     };
     let data = structuredClone(starterData);
@@ -1117,7 +1160,8 @@
       });
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
-        info: task.info || ""
+        info: task.info || "",
+        hasHomeLabel: Boolean(task.hasHomeLabel)
       }));
       return normalized;
     }
@@ -1129,6 +1173,10 @@
     function statusColor(name) {
       const status = data.statuses.find((item) => statusName(item) === name);
       return status && typeof status !== "string" ? status.color : "#d7dde5";
+    }
+
+    function homeIconMarkup() {
+      return `<svg class="bar-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>`;
     }
 
     function renderSettingsLists() {
@@ -1187,6 +1235,7 @@
       });
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end;
+      document.getElementById("editTaskHasHomeLabel").checked = Boolean(task.hasHomeLabel);
       document.getElementById("editTaskInfo").value = task.info || "";
       taskModal.classList.add("open");
     }
@@ -1239,17 +1288,14 @@
             bar.className = "bar";
             if (isDoneStatus(task.status)) {
               bar.classList.add("is-done");
-              bar.style.opacity = ".34";
-              bar.style.boxShadow = "none";
-              bar.style.filter = "saturate(.55)";
             }
             bar.title = `${task.name}: ${task.start} - ${task.end}`;
             bar.style.left = `${left}px`;
             bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
-            bar.style.background = project.color;
+            bar.style.color = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `<span class="bar-title">${escapeHtml(previewName(task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
+            bar.innerHTML = `${task.hasHomeLabel ? homeIconMarkup() : ""}<span class="bar-title">${escapeHtml(previewName(task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -1344,13 +1390,15 @@
       const status = taskStatus.value;
       const start = document.getElementById("taskStart").value;
       const end = document.getElementById("taskEnd").value;
+      const hasHomeLabel = document.getElementById("taskHasHomeLabel").checked;
       const info = document.getElementById("taskInfo").value.trim();
       if (!projectId || !name || !members.length || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
-      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd, info });
+      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd, info, hasHomeLabel });
       saveData();
       renderBoard();
       document.getElementById("taskName").value = "Nuova task";
+      document.getElementById("taskHasHomeLabel").checked = false;
       document.getElementById("taskInfo").value = "";
     });
 
@@ -1385,6 +1433,7 @@
       const members = selectedMembers(editTaskMembers);
       const start = document.getElementById("editTaskStart").value;
       const end = document.getElementById("editTaskEnd").value;
+      const hasHomeLabel = document.getElementById("editTaskHasHomeLabel").checked;
       const info = document.getElementById("editTaskInfo").value.trim();
       if (!name || !status || !members.length || !start || !end) return;
       task.name = name;
@@ -1392,6 +1441,7 @@
       task.members = members;
       task.start = start;
       task.end = end < start ? start : end;
+      task.hasHomeLabel = hasHomeLabel;
       task.info = info;
       saveData();
       renderBoard();
