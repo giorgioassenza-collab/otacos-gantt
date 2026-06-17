@@ -255,7 +255,6 @@
     }
 
     body.ped-mode .board,
-    body.ped-mode .zoom,
     body.ped-mode #openTaskPanel,
     body.ped-mode #openProjectPanel,
     body.ped-mode #memberFilter,
@@ -588,6 +587,10 @@
       color: #667085;
       font-size: 10px;
       font-weight: 800;
+    }
+
+    .ped-fields[hidden] {
+      display: none;
     }
 
     .ped-preview-line {
@@ -1191,14 +1194,9 @@
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
-        <label class="field">PED title<input id="editTaskPedTitle" placeholder="Same as task name"></label>
-        <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
-        <label class="field">Social<div class="check-list">
-          <label class="check-item"><input id="editTaskPedInstagram" type="checkbox" value="instagram">Instagram</label>
-          <label class="check-item"><input id="editTaskPedTikTok" type="checkbox" value="tiktok">TikTok</label>
-        </div></label>
-        <label class="field">Asset<textarea id="editTaskPedAsset" placeholder="Link asset"></textarea></label>
-        <label class="field">Copy<textarea id="editTaskPedCopy" placeholder="Copy"></textarea></label>
+        <div class="ped-fields" id="editTaskPedFields" hidden>
+          <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
+        </div>
         <section class="subtasks">
           <div class="subtasks-title">Subtasks</div>
           <div class="stack-list" id="subtaskList"></div>
@@ -1537,6 +1535,7 @@
       }));
       normalized.pedPosts = (normalized.pedPosts || []).map((post) => ({
         id: post.id || `ped${Date.now()}${Math.random()}`,
+        sourceTaskId: post.sourceTaskId || "",
         title: post.title || "Post",
         date: post.date || "2026-06-16",
         status: post.status || (normalized.statuses[0] ? statusName(normalized.statuses[0]) : ""),
@@ -1760,15 +1759,16 @@
         .filter((task) => task.pedEnabled && task.pedDate)
         .map((task) => {
           const project = data.projects.find((item) => item.id === task.projectId);
+          const linkedPost = (data.pedPosts || []).find((post) => post.sourceTaskId === task.id);
           return {
             id: `task-${task.id}`,
-            title: task.pedTitle || task.nameEn || task.name,
+            title: linkedPost?.title || task.nameEn || task.name,
             date: task.pedDate,
-            status: task.status,
-            members: task.members || [],
-            social: task.pedSocial || [],
-            asset: task.pedAsset || "",
-            copy: task.pedCopy || "",
+            status: linkedPost?.status || task.status,
+            members: linkedPost?.members || task.members || [],
+            social: linkedPost?.social || [],
+            asset: linkedPost?.asset || "",
+            copy: linkedPost?.copy || "",
             color: project ? project.color : statusColor(task.status),
             source: "Gantt"
           };
@@ -1777,7 +1777,7 @@
         ...post,
         color: statusColor(post.status),
         source: "PED"
-      }));
+      })).filter((post) => !post.sourceTaskId);
       return [...linkedTasks, ...manualPosts];
     }
 
@@ -1874,12 +1874,8 @@
       document.getElementById("editTaskEnd").value = task.end;
       document.getElementById("editTaskInfo").value = task.info || "";
       document.getElementById("editTaskPedEnabled").checked = Boolean(task.pedEnabled);
-      document.getElementById("editTaskPedTitle").value = task.pedTitle || "";
+      document.getElementById("editTaskPedFields").hidden = !task.pedEnabled;
       document.getElementById("editTaskPedDate").value = task.pedDate || task.start || "";
-      document.getElementById("editTaskPedInstagram").checked = (task.pedSocial || []).includes("instagram");
-      document.getElementById("editTaskPedTikTok").checked = (task.pedSocial || []).includes("tiktok");
-      document.getElementById("editTaskPedAsset").value = task.pedAsset || "";
-      document.getElementById("editTaskPedCopy").value = task.pedCopy || "";
       document.getElementById("newSubtaskTitle").value = "";
       newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       renderSubtasks(task);
@@ -1897,6 +1893,7 @@
       document.getElementById("editPedPostId").value = post.id;
       document.getElementById("editPedPostTitle").value = post.title || "";
       document.getElementById("editPedPostDate").value = post.date || "";
+      document.getElementById("editPedPostDate").closest(".field").hidden = Boolean(post.sourceTaskId);
       editPedPostStatus.value = post.status || "";
       [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = (post.members || []).includes(item.value);
@@ -1906,6 +1903,29 @@
       document.getElementById("editPedPostAsset").value = post.asset || "";
       document.getElementById("editPedPostCopy").value = post.copy || "";
       pedPostModal.classList.add("open");
+    }
+
+    function openLinkedPedTaskEditor(taskId) {
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      data.pedPosts = data.pedPosts || [];
+      let post = data.pedPosts.find((item) => item.sourceTaskId === task.id);
+      if (!post) {
+        post = {
+          id: `ped${Date.now()}`,
+          sourceTaskId: task.id,
+          title: task.nameEn || task.name,
+          date: task.pedDate || task.start,
+          status: task.status,
+          members: task.members || [],
+          social: [],
+          asset: "",
+          copy: ""
+        };
+        data.pedPosts.push(post);
+        saveData();
+      }
+      openPedPostEditor(post.id);
     }
 
     function closePedPostEditor() {
@@ -2030,14 +2050,16 @@
       zoomIndex = Math.max(0, zoomIndex - 1);
       updateZoom();
       renderBoard();
-      scrollToToday();
+      renderPed();
+      if (!document.body.classList.contains("ped-mode")) scrollToToday();
     });
 
     document.getElementById("zoomIn").addEventListener("click", () => {
       zoomIndex = Math.min(zooms.length - 1, zoomIndex + 1);
       updateZoom();
       renderBoard();
-      scrollToToday();
+      renderPed();
+      if (!document.body.classList.contains("ped-mode")) scrollToToday();
     });
 
     document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
@@ -2150,11 +2172,7 @@
       if (!post) return;
       closePanels();
       if (post.dataset.taskId) {
-        document.body.classList.remove("ped-mode");
-        pedToggle.textContent = "PED";
-        document.querySelector(".brand-title").textContent = "Gantt Board";
-        document.getElementById("currentMonth").textContent = "O'TACOS";
-        openTaskEditor(post.dataset.taskId);
+        openLinkedPedTaskEditor(post.dataset.taskId);
         return;
       }
       if (post.dataset.pedPostId) openPedPostEditor(post.dataset.pedPostId);
@@ -2163,6 +2181,13 @@
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
     taskModal.addEventListener("click", (event) => {
       if (event.target === taskModal) closeTaskEditor();
+    });
+
+    document.getElementById("editTaskPedEnabled").addEventListener("change", (event) => {
+      document.getElementById("editTaskPedFields").hidden = !event.target.checked;
+      if (event.target.checked && !document.getElementById("editTaskPedDate").value) {
+        document.getElementById("editTaskPedDate").value = document.getElementById("editTaskStart").value;
+      }
     });
 
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
@@ -2241,14 +2266,7 @@
       const label = editTaskLabel.value;
       const info = document.getElementById("editTaskInfo").value.trim();
       const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
-      const pedTitle = document.getElementById("editTaskPedTitle").value.trim();
       const pedDate = document.getElementById("editTaskPedDate").value || start;
-      const pedSocial = [
-        document.getElementById("editTaskPedInstagram").checked ? "instagram" : "",
-        document.getElementById("editTaskPedTikTok").checked ? "tiktok" : ""
-      ].filter(Boolean);
-      const pedAsset = document.getElementById("editTaskPedAsset").value.trim();
-      const pedCopy = document.getElementById("editTaskPedCopy").value.trim();
       if (!projectId || !name || !status || !members.length || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
@@ -2261,11 +2279,7 @@
       task.label = label;
       task.info = info;
       task.pedEnabled = pedEnabled;
-      task.pedTitle = pedTitle;
       task.pedDate = pedDate;
-      task.pedSocial = pedSocial;
-      task.pedAsset = pedAsset;
-      task.pedCopy = pedCopy;
       saveData();
       renderBoard();
       renderPed();
@@ -2287,7 +2301,7 @@
       ].filter(Boolean);
       if (!title || !date || !status) return;
       post.title = title;
-      post.date = date;
+      post.date = post.sourceTaskId ? post.date : date;
       post.status = status;
       post.members = members;
       post.social = social;
