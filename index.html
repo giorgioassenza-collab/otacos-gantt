@@ -515,6 +515,19 @@
       margin-top: 14px;
     }
 
+    .danger-btn {
+      height: 34px;
+      border: 0;
+      border-radius: 9px;
+      padding: 0 12px;
+      background: #ffe8eb;
+      color: #9f1d2d;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-right: auto;
+    }
+
     .settings-panel.open {
       opacity: 1;
       pointer-events: auto;
@@ -845,6 +858,7 @@
         <label class="field">Data fine<input id="editTaskEnd" type="date" required></label>
         <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
         <div class="modal-actions">
+          <button class="danger-btn" id="deleteTaskButton" type="button">Elimina</button>
           <button class="secondary-btn" id="closeTaskModal" type="button">Chiudi</button>
           <button class="primary-btn" type="submit">Salva</button>
         </div>
@@ -913,12 +927,15 @@
     let applyingRemoteUpdate = false;
     const accessPassword = "otacos2026";
     const zooms = [
+      { label: "XS", width: 90 },
+      { label: "S", width: 150 },
+      { label: "M", width: 230 },
       { label: "Compatta", width: 320 },
       { label: "Max", width: 380 },
       { label: "420", width: 420 },
       { label: "460", width: 460 }
     ];
-    let zoomIndex = 1;
+    let zoomIndex = 4;
 
     async function loadData() {
       try {
@@ -1347,6 +1364,15 @@
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
     taskModal.addEventListener("click", (event) => {
       if (event.target === taskModal) closeTaskEditor();
+    });
+
+    document.getElementById("deleteTaskButton").addEventListener("click", () => {
+      const taskId = document.getElementById("editTaskId").value;
+      if (!taskId) return;
+      data.tasks = data.tasks.filter((task) => task.id !== taskId);
+      saveData();
+      renderBoard();
+      closeTaskEditor();
     });
 
     document.getElementById("editTaskForm").addEventListener("submit", (event) => {
