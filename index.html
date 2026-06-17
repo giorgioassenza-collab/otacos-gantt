@@ -46,6 +46,7 @@
     }
 
     body:not(.is-authenticated) .app,
+    body:not(.is-authenticated) .ped-fab,
     body:not(.is-authenticated) .sync,
     body:not(.is-authenticated) .settings-panel,
     body:not(.is-authenticated) .modal-backdrop {
@@ -250,6 +251,20 @@
       grid-template-columns: var(--sidebar) 1fr;
       min-height: 0;
       overflow: auto;
+    }
+
+    body.ped-mode .board,
+    body.ped-mode .zoom,
+    body.ped-mode #openTaskPanel,
+    body.ped-mode #openProjectPanel,
+    body.ped-mode #memberFilter,
+    body.ped-mode #settings {
+      display: none;
+    }
+
+    body:not(.ped-mode) .ped-view,
+    body:not(.ped-mode) .ped-only {
+      display: none;
     }
 
     .sidebar {
@@ -471,6 +486,101 @@
 
     .sync {
       display: none;
+    }
+
+    .ped-fab {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      height: 42px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: #111827;
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: 0 10px 26px rgba(17, 24, 39, .25);
+      cursor: pointer;
+    }
+
+    .ped-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      background: var(--bg);
+    }
+
+    .ped-calendar {
+      display: grid;
+      gap: 18px;
+      min-width: 1050px;
+    }
+
+    .ped-month-title {
+      margin: 0 0 8px;
+      color: #111827;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ped-month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(150px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    .ped-day {
+      min-height: 138px;
+      padding: 8px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ped-day.is-weekend {
+      background: #f0f2f5;
+    }
+
+    .ped-day.is-empty {
+      background: #f7f8fa;
+    }
+
+    .ped-day-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .ped-post {
+      border: 1px solid #d9e0e8;
+      border-left: 4px solid #111827;
+      border-radius: 8px;
+      padding: 7px;
+      background: #fff;
+      color: #111827;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(16, 24, 40, .06);
+      cursor: pointer;
+    }
+
+    .ped-post small {
+      display: block;
+      margin-top: 4px;
+      color: #667085;
+      font-size: 10px;
+      font-weight: 800;
     }
 
     .manus {
@@ -928,6 +1038,7 @@
       </div>
       <button class="toolbar-btn" id="openTaskPanel" type="button">New task</button>
       <button class="toolbar-btn" id="openProjectPanel" type="button">New project</button>
+      <button class="toolbar-btn ped-only" id="openPedPostPanel" type="button">New post</button>
       <select class="member-select" id="memberFilter" aria-label="Who"></select>
       <button class="icon-btn" id="settings" type="button" title="General settings" aria-label="General settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.07A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3a2 2 0 1 1 0-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.04a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.14.36.5.83 1.56 1H21a2 2 0 1 1 0 4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg>
@@ -947,8 +1058,13 @@
         </div>
       </div>
     </section>
+
+    <section class="ped-view" id="pedView" aria-label="PED">
+      <div class="ped-calendar" id="pedCalendar"></div>
+    </section>
   </main>
 
+  <button class="ped-fab" id="pedToggle" type="button">PED</button>
   <div class="sync">Sincronizzazione...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="New project">
     <h2>New project</h2>
@@ -990,6 +1106,18 @@
     </form>
   </aside>
 
+  <aside class="settings-panel" id="pedPostPanel" aria-label="New post">
+    <h2>New post</h2>
+    <form id="pedPostForm">
+      <label class="field">Name<input id="pedPostTitle" value="New post" required></label>
+      <label class="field">Date<input id="pedPostDate" type="date" value="2026-06-16" required></label>
+      <label class="field">Status<select id="pedPostStatus" required></select></label>
+      <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
+      <label class="field">Link<textarea id="pedPostLink" placeholder="Link o note"></textarea></label>
+      <button class="primary-btn" type="submit">Add post</button>
+    </form>
+  </aside>
+
   <aside class="settings-panel" id="settingsPanel" aria-label="General settings">
     <h2>General settings</h2>
     <h3>Who</h3>
@@ -1027,6 +1155,9 @@
         <label class="field">End<input id="editTaskEnd" type="date" required></label>
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
+        <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
+        <label class="field">PED title<input id="editTaskPedTitle" placeholder="Same as task name"></label>
+        <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
         <section class="subtasks">
           <div class="subtasks-title">Subtasks</div>
           <div class="stack-list" id="subtaskList"></div>
@@ -1069,6 +1200,10 @@
     const taskMembers = document.getElementById("taskMembers");
     const taskStatus = document.getElementById("taskStatus");
     const taskLabel = document.getElementById("taskLabel");
+    const pedCalendar = document.getElementById("pedCalendar");
+    const pedToggle = document.getElementById("pedToggle");
+    const pedPostMembers = document.getElementById("pedPostMembers");
+    const pedPostStatus = document.getElementById("pedPostStatus");
     const creatorOptions = document.getElementById("creatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
     const editTaskMembers = document.getElementById("editTaskMembers");
@@ -1103,7 +1238,8 @@
         { id: "t2", projectId: "p2", name: "Ricette salse", nameEn: "Sauce recipes", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", label: "" },
         { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", label: "" },
         { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", label: "" }
-      ]
+      ],
+      pedPosts: []
     };
     let data = structuredClone(starterData);
     let dataVersion = 0;
@@ -1146,6 +1282,7 @@
             if (!remote || applyingRemoteUpdate) return;
             data = normalizeData(remote);
             renderBoard();
+            renderPed();
             syncIndicator.textContent = "Sincronizzato live";
           });
           syncIndicator.textContent = "Connesso a Firestore";
@@ -1316,12 +1453,23 @@
         nameEn: task.nameEn || "",
         info: task.info || "",
         label: task.label || (task.hasHomeLabel ? "Video in store" : ""),
+        pedEnabled: Boolean(task.pedEnabled),
+        pedDate: task.pedDate || task.start || "",
+        pedTitle: task.pedTitle || "",
         subtasks: (task.subtasks || []).map((subtask) => ({
           id: subtask.id || `s${Date.now()}${Math.random()}`,
           title: subtask.title || "",
           members: Array.isArray(subtask.members) ? subtask.members : [],
           done: Boolean(subtask.done)
         }))
+      }));
+      normalized.pedPosts = (normalized.pedPosts || []).map((post) => ({
+        id: post.id || `ped${Date.now()}${Math.random()}`,
+        title: post.title || "Post",
+        date: post.date || "2026-06-16",
+        status: post.status || (normalized.statuses[0] ? statusName(normalized.statuses[0]) : ""),
+        members: Array.isArray(post.members) ? post.members : [],
+        link: post.link || ""
       }));
       return normalized;
     }
@@ -1451,6 +1599,7 @@
       taskMembers.innerHTML = "";
       editTaskMembers.innerHTML = "";
       newSubtaskMembers.innerHTML = "";
+      pedPostMembers.innerHTML = "";
       memberFilter.innerHTML = "";
       memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
@@ -1459,6 +1608,7 @@
         taskMembers.appendChild(checkboxItem(member, "taskMembers"));
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
         newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
+        pedPostMembers.appendChild(checkboxItem(member, "pedPostMembers"));
         memberFilter.appendChild(option(member));
         const pill = document.createElement("div");
         pill.className = "project-pill";
@@ -1469,12 +1619,14 @@
 
       taskStatus.innerHTML = "";
       editTaskStatus.innerHTML = "";
+      pedPostStatus.innerHTML = "";
       statusList.innerHTML = "";
       data.statuses.forEach((status, index) => {
         const name = statusName(status);
         const color = typeof status === "string" ? "#d7dde5" : status.color;
         taskStatus.appendChild(option(name));
         editTaskStatus.appendChild(option(name));
+        pedPostStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
         pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.statuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
@@ -1482,6 +1634,7 @@
       });
       taskStatus.disabled = data.statuses.length === 0;
       editTaskStatus.disabled = data.statuses.length === 0;
+      pedPostStatus.disabled = data.statuses.length === 0;
 
       taskLabel.innerHTML = "";
       editTaskLabel.innerHTML = "";
@@ -1523,6 +1676,63 @@
       });
     }
 
+    function pedItems() {
+      const linkedTasks = data.tasks
+        .filter((task) => task.pedEnabled && task.pedDate)
+        .map((task) => ({
+          id: `task-${task.id}`,
+          title: task.pedTitle || task.nameEn || task.name,
+          date: task.pedDate,
+          status: task.status,
+          members: task.members || [],
+          link: task.info || "",
+          source: "Gantt"
+        }));
+      const manualPosts = (data.pedPosts || []).map((post) => ({
+        ...post,
+        source: "PED"
+      }));
+      return [...linkedTasks, ...manualPosts];
+    }
+
+    function renderPed() {
+      pedCalendar.innerHTML = "";
+      const items = pedItems();
+      for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
+        const firstDay = new Date(2026, 5 + monthOffset, 1);
+        const year = firstDay.getFullYear();
+        const month = firstDay.getMonth();
+        const calendarStart = new Date(firstDay);
+        calendarStart.setDate(calendarStart.getDate() - ((calendarStart.getDay() + 6) % 7));
+        const section = document.createElement("section");
+        section.className = "ped-month";
+        section.innerHTML = `<h3 class="ped-month-title">${monthNames[month]} ${year}</h3>`;
+        const grid = document.createElement("div");
+        grid.className = "ped-month-grid";
+        for (let index = 0; index < 42; index += 1) {
+          const date = new Date(calendarStart);
+          date.setDate(calendarStart.getDate() + index);
+          const iso = date.toISOString().slice(0, 10);
+          const dayItems = items.filter((item) => item.date === iso);
+          const day = document.createElement("div");
+          const isCurrentMonth = date.getMonth() === month;
+          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          day.className = `ped-day${isWeekend ? " is-weekend" : ""}${isCurrentMonth ? "" : " is-empty"}`;
+          day.innerHTML = `<div class="ped-day-head"><span>${date.getDate()}</span><span>${monthNames[date.getMonth()]}</span></div>`;
+          dayItems.forEach((item) => {
+            const post = document.createElement("div");
+            post.className = "ped-post";
+            post.style.borderLeftColor = statusColor(item.status);
+            post.innerHTML = `${escapeHtml(previewName(item.title))}<small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.source)}</small>`;
+            day.appendChild(post);
+          });
+          grid.appendChild(day);
+        }
+        section.appendChild(grid);
+        pedCalendar.appendChild(section);
+      }
+    }
+
     function openTaskEditor(taskId) {
       renderSettingsLists();
       const task = data.tasks.find((item) => item.id === taskId);
@@ -1538,6 +1748,9 @@
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end;
       document.getElementById("editTaskInfo").value = task.info || "";
+      document.getElementById("editTaskPedEnabled").checked = Boolean(task.pedEnabled);
+      document.getElementById("editTaskPedTitle").value = task.pedTitle || "";
+      document.getElementById("editTaskPedDate").value = task.pedDate || task.start || "";
       document.getElementById("newSubtaskTitle").value = "";
       newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       renderSubtasks(task);
@@ -1636,6 +1849,7 @@
       renderTimeline();
       updateZoom();
       renderBoard();
+      renderPed();
       scrollToToday();
       setInterval(refreshSharedData, 1800);
     }
@@ -1677,8 +1891,19 @@
 
     document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
     document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
+    document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
     document.getElementById("settings").addEventListener("click", () => {
       openPanel("settingsPanel");
+    });
+
+    pedToggle.addEventListener("click", () => {
+      const pedMode = !document.body.classList.contains("ped-mode");
+      document.body.classList.toggle("ped-mode", pedMode);
+      pedToggle.textContent = pedMode ? "GANTT" : "PED";
+      document.querySelector(".brand-title").textContent = pedMode ? "PED" : "Gantt Board";
+      document.getElementById("currentMonth").textContent = pedMode ? "PED" : "O'TACOS";
+      closePanels();
+      if (pedMode) renderPed();
     });
 
     taskLabel.addEventListener("change", syncCreatorOptionsVisibility);
@@ -1733,6 +1958,25 @@
       syncCreatorOptionsVisibility();
       resetCreatorOptions();
       document.getElementById("taskInfo").value = "";
+    });
+
+    document.getElementById("pedPostForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const title = document.getElementById("pedPostTitle").value.trim();
+      const date = document.getElementById("pedPostDate").value;
+      const status = pedPostStatus.value;
+      const members = selectedMembers(pedPostMembers);
+      const link = document.getElementById("pedPostLink").value.trim();
+      if (!title || !date || !status) return;
+      data.pedPosts = data.pedPosts || [];
+      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, link });
+      saveData();
+      renderPed();
+      event.currentTarget.reset();
+      document.getElementById("pedPostTitle").value = "New post";
+      document.getElementById("pedPostDate").value = "2026-06-16";
+      document.getElementById("pedPostLink").value = "";
+      pedPostMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
     });
 
     bars.addEventListener("dblclick", (event) => {
@@ -1808,6 +2052,9 @@
       const end = document.getElementById("editTaskEnd").value;
       const label = editTaskLabel.value;
       const info = document.getElementById("editTaskInfo").value.trim();
+      const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
+      const pedTitle = document.getElementById("editTaskPedTitle").value.trim();
+      const pedDate = document.getElementById("editTaskPedDate").value || start;
       if (!projectId || !name || !status || !members.length || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
@@ -1819,8 +2066,12 @@
       task.end = end < start ? start : end;
       task.label = label;
       task.info = info;
+      task.pedEnabled = pedEnabled;
+      task.pedTitle = pedTitle;
+      task.pedDate = pedDate;
       saveData();
       renderBoard();
+      renderPed();
       closeTaskEditor();
     });
 
