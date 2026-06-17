@@ -461,6 +461,10 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
     }
 
+    .bar-status-text {
+      color: #111827;
+    }
+
     .sync {
       position: fixed;
       left: 16px;
@@ -1553,9 +1557,9 @@
             bar.style.left = `${left}px`;
             bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
-            bar.style.color = project.color;
+            bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `${taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
+            bar.innerHTML = `${taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span><span class="bar-status-text">${escapeHtml(task.status)}</span></span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
