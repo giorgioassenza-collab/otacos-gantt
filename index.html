@@ -966,7 +966,7 @@
         <label class="inline-check"><input id="creatorPublish" type="checkbox"> Pubblicazione</label>
         <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
       </div>
-      <label class="field">Info<textarea id="taskInfo" placeholder="Testo, note o link"></textarea></label>
+      <label class="field">Link<textarea id="taskInfo" placeholder="Link o note"></textarea></label>
       <button class="primary-btn" type="submit">Add task</button>
     </form>
   </aside>
@@ -1006,13 +1006,13 @@
         <label class="field">Start<input id="editTaskStart" type="date" required></label>
         <label class="field">End<input id="editTaskEnd" type="date" required></label>
         <label class="field">Label<select id="editTaskLabel"></select></label>
-        <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
+        <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
         <section class="subtasks">
-          <div class="subtasks-title">Info subtasks</div>
+          <div class="subtasks-title">Subtasks</div>
+          <div class="stack-list" id="subtaskList"></div>
           <label class="field">New subtask<input id="newSubtaskTitle" placeholder="Subtask name"></label>
           <label class="field">Who<div class="check-list" id="newSubtaskMembers"></div></label>
           <button class="secondary-btn" id="addSubtaskButton" type="button">Add subtask</button>
-          <div class="stack-list" id="subtaskList"></div>
         </section>
         <div class="modal-actions">
           <button class="danger-btn" id="deleteTaskButton" type="button">Delete</button>
