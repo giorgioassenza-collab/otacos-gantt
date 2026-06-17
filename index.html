@@ -790,6 +790,63 @@
       background: #ffe8eb;
     }
 
+    .subtasks {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+      padding: 10px;
+      border: 1px solid #d3dae2;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .subtasks-title {
+      color: #56616d;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .subtask-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px;
+      border-radius: 7px;
+      background: #fff;
+      color: #3f4a55;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .subtask-row.is-done .subtask-title {
+      text-decoration: line-through;
+      opacity: .58;
+    }
+
+    .subtask-members {
+      color: #7b8793;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .subtask-delete {
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 6px;
+      color: #8a3540;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .subtask-delete:hover {
+      background: #ffe8eb;
+    }
+
     svg { display: block; }
 
     @media (max-width: 800px) {
@@ -938,6 +995,13 @@
         <label class="field">End<input id="editTaskEnd" type="date" required></label>
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
+        <section class="subtasks">
+          <div class="subtasks-title">Subtasks</div>
+          <label class="field">New subtask<input id="newSubtaskTitle" placeholder="Subtask name"></label>
+          <label class="field">Who<div class="check-list" id="newSubtaskMembers"></div></label>
+          <button class="secondary-btn" id="addSubtaskButton" type="button">Add subtask</button>
+          <div class="stack-list" id="subtaskList"></div>
+        </section>
         <div class="modal-actions">
           <button class="danger-btn" id="deleteTaskButton" type="button">Delete</button>
           <button class="secondary-btn" id="closeTaskModal" type="button">Close</button>
@@ -976,6 +1040,8 @@
     const editTaskMembers = document.getElementById("editTaskMembers");
     const editTaskStatus = document.getElementById("editTaskStatus");
     const editTaskLabel = document.getElementById("editTaskLabel");
+    const newSubtaskMembers = document.getElementById("newSubtaskMembers");
+    const subtaskList = document.getElementById("subtaskList");
     const memberFilter = document.getElementById("memberFilter");
     const projectList = document.getElementById("projectList");
     const memberList = document.getElementById("memberList");
@@ -1206,7 +1272,13 @@
         ...task,
         nameEn: task.nameEn || "",
         info: task.info || "",
-        label: task.label || (task.hasHomeLabel ? "Video in store" : "")
+        label: task.label || (task.hasHomeLabel ? "Video in store" : ""),
+        subtasks: (task.subtasks || []).map((subtask) => ({
+          id: subtask.id || `s${Date.now()}${Math.random()}`,
+          title: subtask.title || "",
+          members: Array.isArray(subtask.members) ? subtask.members : [],
+          done: Boolean(subtask.done)
+        }))
       }));
       return normalized;
     }
@@ -1281,7 +1353,7 @@
         { checked: document.getElementById("creatorContact").checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
         { checked: document.getElementById("creatorAskOk").checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
         { checked: document.getElementById("creatorContract").checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
-        { checked: document.getElementById("creatorGiorgia").checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia" }
+        { checked: document.getElementById("creatorGiorgia").checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
       ]
         .filter((item) => item.checked)
         .map((item, index) => ({
@@ -1291,6 +1363,7 @@
           nameEn: item.name,
           start: baseTask.start,
           end: baseTask.start,
+          status: item.status || baseTask.status,
           info: "",
           label: item.label
         }));
@@ -1325,10 +1398,16 @@
       return [...sameDayTasks, ...datedTasks];
     }
 
+    function ensureStatusExists(name) {
+      if (data.statuses.some((status) => statusName(status) === name)) return;
+      data.statuses.push({ name, color: "#f59e0b" });
+    }
+
     function renderSettingsLists() {
       const previousFilter = memberFilter.value || "all";
       taskMembers.innerHTML = "";
       editTaskMembers.innerHTML = "";
+      newSubtaskMembers.innerHTML = "";
       memberFilter.innerHTML = "";
       memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
@@ -1336,6 +1415,7 @@
       data.members.forEach((member) => {
         taskMembers.appendChild(checkboxItem(member, "taskMembers"));
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
+        newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
         memberFilter.appendChild(option(member));
         const pill = document.createElement("div");
         pill.className = "project-pill";
@@ -1383,6 +1463,23 @@
       panels.forEach((panel) => panel.classList.remove("open"));
     }
 
+    function renderSubtasks(task) {
+      subtaskList.innerHTML = "";
+      (task.subtasks || []).forEach((subtask) => {
+        const row = document.createElement("div");
+        row.className = `subtask-row${subtask.done ? " is-done" : ""}`;
+        row.innerHTML = `
+          <input type="checkbox" ${subtask.done ? "checked" : ""} data-subtask-done="${escapeHtml(subtask.id)}">
+          <div>
+            <div class="subtask-title">${escapeHtml(subtask.title)}</div>
+            <div class="subtask-members">${escapeHtml((subtask.members || []).join(", "))}</div>
+          </div>
+          <button class="subtask-delete" type="button" aria-label="Delete ${escapeHtml(subtask.title)}" data-delete-subtask="${escapeHtml(subtask.id)}">x</button>
+        `;
+        subtaskList.appendChild(row);
+      });
+    }
+
     function openTaskEditor(taskId) {
       renderSettingsLists();
       const task = data.tasks.find((item) => item.id === taskId);
@@ -1397,6 +1494,9 @@
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end;
       document.getElementById("editTaskInfo").value = task.info || "";
+      document.getElementById("newSubtaskTitle").value = "";
+      newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      renderSubtasks(task);
       taskModal.classList.add("open");
     }
 
@@ -1567,7 +1667,13 @@
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label };
-      data.tasks.push(baseTask, ...creatorDuplicateTasks(baseTask, createdAt));
+      if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
+      const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
+      if (isCreatorLabel(label) && generatedTasks.length > 0) {
+        data.tasks.push(...generatedTasks);
+      } else {
+        data.tasks.push(baseTask);
+      }
       saveData();
       renderBoard();
       document.getElementById("taskName").value = "New task";
@@ -1596,6 +1702,45 @@
       saveData();
       renderBoard();
       closeTaskEditor();
+    });
+
+    document.getElementById("addSubtaskButton").addEventListener("click", () => {
+      const taskId = document.getElementById("editTaskId").value;
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const title = document.getElementById("newSubtaskTitle").value.trim();
+      const members = selectedMembers(newSubtaskMembers);
+      if (!title || !members.length) return;
+      task.subtasks = task.subtasks || [];
+      task.subtasks.push({ id: `s${Date.now()}`, title, members, done: false });
+      document.getElementById("newSubtaskTitle").value = "";
+      newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      saveData();
+      renderSubtasks(task);
+    });
+
+    subtaskList.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-subtask-done]");
+      if (!checkbox) return;
+      const taskId = document.getElementById("editTaskId").value;
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const subtask = (task.subtasks || []).find((item) => item.id === checkbox.dataset.subtaskDone);
+      if (!subtask) return;
+      subtask.done = checkbox.checked;
+      saveData();
+      renderSubtasks(task);
+    });
+
+    subtaskList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-subtask]");
+      if (!button) return;
+      const taskId = document.getElementById("editTaskId").value;
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      task.subtasks = (task.subtasks || []).filter((item) => item.id !== button.dataset.deleteSubtask);
+      saveData();
+      renderSubtasks(task);
     });
 
     document.getElementById("editTaskForm").addEventListener("submit", async (event) => {
