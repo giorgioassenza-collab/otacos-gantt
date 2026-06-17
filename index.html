@@ -40,6 +40,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      min-height: 0;
       min-width: 980px;
       background: var(--bg);
     }
@@ -247,12 +248,14 @@
       flex: 1;
       display: grid;
       grid-template-columns: var(--sidebar) 1fr;
-      overflow: hidden;
+      min-height: 0;
+      overflow: auto;
     }
 
     .sidebar {
       background: #fff;
       border-right: 1px solid var(--line);
+      min-height: 100%;
     }
 
     .corner {
@@ -295,6 +298,7 @@
       overflow: auto hidden;
       background: var(--bg);
       scrollbar-width: none;
+      min-height: 100%;
     }
 
     .timeline-scroll::-webkit-scrollbar { display: none; }
@@ -302,7 +306,7 @@
     .timeline {
       position: relative;
       min-width: max-content;
-      height: 100%;
+      min-height: 100%;
     }
 
     .months {
@@ -466,11 +470,7 @@
     }
 
     .sync {
-      position: fixed;
-      left: 16px;
-      bottom: 16px;
-      color: #9aa3ad;
-      font-size: 13px;
+      display: none;
     }
 
     .manus {
@@ -798,8 +798,27 @@
       cursor: pointer;
     }
 
+    .project-pill .move-btn {
+      width: auto;
+      min-width: 38px;
+      padding: 0 6px;
+      color: #56616d;
+      background: #eef2f5;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .project-pill .move-btn:disabled {
+      opacity: .35;
+      cursor: default;
+    }
+
     .project-pill button:hover {
       background: #ffe8eb;
+    }
+
+    .project-pill .move-btn:hover {
+      background: #dfe6ee;
     }
 
     .subtasks {
@@ -1000,6 +1019,7 @@
       <h2>Edit task</h2>
       <form id="editTaskForm">
         <input id="editTaskId" type="hidden">
+        <label class="field">Project<select id="editTaskProject" required></select></label>
         <label class="field">Name<input id="editTaskName" required></label>
         <label class="field">Status<select id="editTaskStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editTaskMembers"></div></label>
@@ -1042,6 +1062,7 @@
     const monthsEl = document.getElementById("months");
     const weekendsEl = document.getElementById("weekends");
     const scroller = document.getElementById("scroller");
+    const timelineEl = document.getElementById("timeline");
     const sidebar = document.getElementById("sidebar");
     const bars = document.getElementById("bars");
     const taskProject = document.getElementById("taskProject");
@@ -1049,6 +1070,7 @@
     const taskStatus = document.getElementById("taskStatus");
     const taskLabel = document.getElementById("taskLabel");
     const creatorOptions = document.getElementById("creatorOptions");
+    const editTaskProject = document.getElementById("editTaskProject");
     const editTaskMembers = document.getElementById("editTaskMembers");
     const editTaskStatus = document.getElementById("editTaskStatus");
     const editTaskLabel = document.getElementById("editTaskLabel");
@@ -1267,6 +1289,15 @@
       return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
     }
 
+    function moveItem(list, fromIndex, direction) {
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= list.length) return list;
+      const next = [...list];
+      const [item] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, item);
+      return next;
+    }
+
     function normalizeData(rawData) {
       const normalized = structuredClone(rawData || starterData);
       const defaultStatusColors = ["#6b7280", "#147bd1", "#e4572e", "#15a36d", "#7c5cff", "#c98200"];
@@ -1424,14 +1455,14 @@
       memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
 
-      data.members.forEach((member) => {
+      data.members.forEach((member, index) => {
         taskMembers.appendChild(checkboxItem(member, "taskMembers"));
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
         newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
         memberFilter.appendChild(option(member));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Move up ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="1" ${index === data.members.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
         memberList.appendChild(pill);
       });
       memberFilter.value = data.members.includes(previousFilter) ? previousFilter : "all";
@@ -1439,14 +1470,14 @@
       taskStatus.innerHTML = "";
       editTaskStatus.innerHTML = "";
       statusList.innerHTML = "";
-      data.statuses.forEach((status) => {
+      data.statuses.forEach((status, index) => {
         const name = statusName(status);
         const color = typeof status === "string" ? "#d7dde5" : status.color;
         taskStatus.appendChild(option(name));
         editTaskStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.statuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
         statusList.appendChild(pill);
       });
       taskStatus.disabled = data.statuses.length === 0;
@@ -1457,12 +1488,12 @@
       labelList.innerHTML = "";
       taskLabel.appendChild(option("", "No label"));
       editTaskLabel.appendChild(option("", "No label"));
-      data.labels.forEach((label) => {
+      data.labels.forEach((label, index) => {
         taskLabel.appendChild(option(label));
         editTaskLabel.appendChild(option(label));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(label)}" aria-label="Edit ${escapeHtml(label)}" data-edit-label="${escapeHtml(label)}"><button type="button" aria-label="Delete ${escapeHtml(label)}" data-delete-label="${escapeHtml(label)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(label)}" aria-label="Edit ${escapeHtml(label)}" data-edit-label="${escapeHtml(label)}"><button type="button" aria-label="Move up ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="1" ${index === data.labels.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(label)}" data-delete-label="${escapeHtml(label)}">x</button>`;
         labelList.appendChild(pill);
       });
     }
@@ -1497,6 +1528,7 @@
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
       document.getElementById("editTaskId").value = task.id;
+      editTaskProject.value = task.projectId;
       document.getElementById("editTaskName").value = task.name;
       editTaskStatus.value = task.status;
       editTaskLabel.value = task.label || "";
@@ -1520,16 +1552,18 @@
       sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
       bars.innerHTML = "";
       taskProject.innerHTML = "";
+      editTaskProject.innerHTML = "";
       projectList.innerHTML = "";
       renderSettingsLists();
       const selectedMember = memberFilter.value;
-      data.projects.forEach((project) => {
+      data.projects.forEach((project, index) => {
         const item = option(project.id, project.name);
         taskProject.appendChild(item);
+        editTaskProject.appendChild(option(project.id, project.name));
 
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
         projectList.appendChild(pill);
       });
 
@@ -1578,7 +1612,13 @@
         row.className = "row-label";
         row.textContent = selectedMember === "all" ? "No projects" : "No tasks";
         sidebar.appendChild(row);
+        projectTop = 48;
       }
+
+      const boardContentHeight = 60 + projectTop;
+      sidebar.style.minHeight = `${boardContentHeight}px`;
+      timelineEl.style.minHeight = `${boardContentHeight}px`;
+      bars.style.height = `${projectTop}px`;
 
       taskProject.disabled = data.projects.length === 0;
     }
@@ -1760,6 +1800,7 @@
       const taskId = document.getElementById("editTaskId").value;
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
+      const projectId = editTaskProject.value;
       const name = document.getElementById("editTaskName").value.trim();
       const status = editTaskStatus.value;
       const members = selectedMembers(editTaskMembers);
@@ -1767,10 +1808,11 @@
       const end = document.getElementById("editTaskEnd").value;
       const label = editTaskLabel.value;
       const info = document.getElementById("editTaskInfo").value.trim();
-      if (!name || !status || !members.length || !start || !end) return;
+      if (!projectId || !name || !status || !members.length || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
       task.nameEn = nameEn;
+      task.projectId = projectId;
       task.status = status;
       task.members = members;
       task.start = start;
@@ -1813,6 +1855,14 @@
     });
 
     projectList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-project]");
+      if (moveButton) {
+        const index = data.projects.findIndex((project) => project.id === moveButton.dataset.moveProject);
+        data.projects = moveItem(data.projects, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        return;
+      }
       const button = event.target.closest("[data-delete-project]");
       if (!button) return;
       const id = button.dataset.deleteProject;
@@ -1833,6 +1883,14 @@
     });
 
     memberList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-member]");
+      if (moveButton) {
+        const index = data.members.indexOf(moveButton.dataset.moveMember);
+        data.members = moveItem(data.members, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        return;
+      }
       const button = event.target.closest("[data-delete-member]");
       if (!button) return;
       const member = button.dataset.deleteMember;
@@ -1863,6 +1921,14 @@
     });
 
     statusList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-status]");
+      if (moveButton) {
+        const index = data.statuses.findIndex((item) => statusName(item) === moveButton.dataset.moveStatus);
+        data.statuses = moveItem(data.statuses, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        return;
+      }
       const button = event.target.closest("[data-delete-status]");
       if (!button) return;
       const status = button.dataset.deleteStatus;
@@ -1900,6 +1966,14 @@
     });
 
     labelList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-label]");
+      if (moveButton) {
+        const index = data.labels.indexOf(moveButton.dataset.moveLabel);
+        data.labels = moveItem(data.labels, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        return;
+      }
       const button = event.target.closest("[data-delete-label]");
       if (!button) return;
       const label = button.dataset.deleteLabel;
