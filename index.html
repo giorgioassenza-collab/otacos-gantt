@@ -818,10 +818,10 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
         </button>
       </div>
-      <button class="toolbar-btn" id="openTaskPanel" type="button">Nuova task</button>
-      <button class="toolbar-btn" id="openProjectPanel" type="button">Nuovo progetto</button>
-      <select class="member-select" id="memberFilter" aria-label="Chi"></select>
-      <button class="icon-btn" id="settings" type="button" title="Impostazioni generali" aria-label="Impostazioni generali">
+      <button class="toolbar-btn" id="openTaskPanel" type="button">New task</button>
+      <button class="toolbar-btn" id="openProjectPanel" type="button">New project</button>
+      <select class="member-select" id="memberFilter" aria-label="Who"></select>
+      <button class="icon-btn" id="settings" type="button" title="General settings" aria-label="General settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.07A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3a2 2 0 1 1 0-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.04a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.14.36.5.83 1.56 1H21a2 2 0 1 1 0 4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg>
       </button>
     </header>
@@ -842,68 +842,68 @@
   </main>
 
   <div class="sync">Sincronizzazione...</div>
-  <aside class="settings-panel" id="projectPanel" aria-label="Nuovo progetto">
-    <h2>Nuovo progetto</h2>
+  <aside class="settings-panel" id="projectPanel" aria-label="New project">
+    <h2>New project</h2>
     <form id="projectForm">
-      <label class="field">Nome progetto<input id="projectName" value="Nuovo progetto" required></label>
-      <label class="field">Colore progetto<input id="projectColor" type="color" value="#147bd1" required></label>
+      <label class="field">Name<input id="projectName" value="New project" required></label>
+      <label class="field">Project color<input id="projectColor" type="color" value="#147bd1" required></label>
       <div class="panel-actions">
-        <button class="primary-btn" type="submit">Aggiungi progetto</button>
+        <button class="primary-btn" type="submit">Add project</button>
         <button class="secondary-btn" type="button" id="resetBoard">Reset</button>
       </div>
     </form>
-    <h3>Progetti</h3>
+    <h3>Projects</h3>
     <div class="project-list" id="projectList"></div>
   </aside>
 
-  <aside class="settings-panel" id="taskPanel" aria-label="Nuova task">
-    <h2>Nuova task</h2>
+  <aside class="settings-panel" id="taskPanel" aria-label="New task">
+    <h2>New task</h2>
     <form id="taskForm">
-      <label class="field">Progetto<select id="taskProject"></select></label>
-      <label class="field">Nome<input id="taskName" value="Nuova task" required></label>
+      <label class="field">Project<select id="taskProject"></select></label>
+      <label class="field">Name<input id="taskName" value="New task" required></label>
       <label class="field">Status<select id="taskStatus" required></select></label>
-      <label class="field">Chi<div class="check-list" id="taskMembers"></div></label>
-      <label class="field">Inizio<input id="taskStart" type="date" value="2026-06-16" required></label>
-      <label class="field">Fine<input id="taskEnd" type="date" value="2026-06-24" required></label>
+      <label class="field">Who<div class="check-list" id="taskMembers"></div></label>
+      <label class="field">Start<input id="taskStart" type="date" value="2026-06-16" required></label>
+      <label class="field">End<input id="taskEnd" type="date" value="2026-06-24" required></label>
       <label class="inline-check"><input id="taskHasHomeLabel" type="checkbox"> Video in store</label>
       <label class="field">Info<textarea id="taskInfo" placeholder="Testo, note o link"></textarea></label>
-      <button class="primary-btn" type="submit">Aggiungi task</button>
+      <button class="primary-btn" type="submit">Add task</button>
     </form>
   </aside>
 
-  <aside class="settings-panel" id="settingsPanel" aria-label="Impostazioni generali">
-    <h2>Impostazioni generali</h2>
-    <h3>Chi</h3>
+  <aside class="settings-panel" id="settingsPanel" aria-label="General settings">
+    <h2>General settings</h2>
+    <h3>Who</h3>
     <form id="memberForm">
-      <label class="field">Nuovo chi<input id="memberName" value="Nuovo membro" required></label>
-      <button class="primary-btn" type="submit">Aggiungi chi</button>
+      <label class="field">New person<input id="memberName" value="New person" required></label>
+      <button class="primary-btn" type="submit">Add person</button>
     </form>
     <div class="stack-list" id="memberList"></div>
 
     <h3>Status</h3>
     <form id="statusForm">
-      <label class="field">Nuovo status<input id="statusName" value="Nuovo status" required></label>
-      <button class="primary-btn" type="submit">Aggiungi status</button>
+      <label class="field">New status<input id="statusName" value="New status" required></label>
+      <button class="primary-btn" type="submit">Add status</button>
     </form>
     <div class="stack-list" id="statusList"></div>
   </aside>
 
-  <div class="modal-backdrop" id="taskModal" aria-label="Modifica task">
+  <div class="modal-backdrop" id="taskModal" aria-label="Edit task">
     <div class="modal">
-      <h2>Modifica task</h2>
+      <h2>Edit task</h2>
       <form id="editTaskForm">
         <input id="editTaskId" type="hidden">
-        <label class="field">Nome<input id="editTaskName" required></label>
+        <label class="field">Name<input id="editTaskName" required></label>
         <label class="field">Status<select id="editTaskStatus" required></select></label>
-        <label class="field">Chi<div class="check-list" id="editTaskMembers"></div></label>
-        <label class="field">Data inizio<input id="editTaskStart" type="date" required></label>
-        <label class="field">Data fine<input id="editTaskEnd" type="date" required></label>
+        <label class="field">Who<div class="check-list" id="editTaskMembers"></div></label>
+        <label class="field">Start<input id="editTaskStart" type="date" required></label>
+        <label class="field">End<input id="editTaskEnd" type="date" required></label>
         <label class="inline-check"><input id="editTaskHasHomeLabel" type="checkbox"> Video in store</label>
         <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
         <div class="modal-actions">
-          <button class="danger-btn" id="deleteTaskButton" type="button">Elimina</button>
-          <button class="secondary-btn" id="closeTaskModal" type="button">Chiudi</button>
-          <button class="primary-btn" type="submit">Salva</button>
+          <button class="danger-btn" id="deleteTaskButton" type="button">Delete</button>
+          <button class="secondary-btn" id="closeTaskModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Save</button>
         </div>
       </form>
     </div>
@@ -956,10 +956,10 @@
         { id: "p4", name: "Lancio", color: "#e4572e" }
       ],
       tasks: [
-        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", hasHomeLabel: false },
-        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", hasHomeLabel: false },
-        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", hasHomeLabel: false },
-        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", hasHomeLabel: false }
+        { id: "t1", projectId: "p1", name: "Impasto e test", nameEn: "Dough and testing", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", hasHomeLabel: false },
+        { id: "t2", projectId: "p2", name: "Ricette salse", nameEn: "Sauce recipes", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", hasHomeLabel: false },
+        { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", hasHomeLabel: false },
+        { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", hasHomeLabel: false }
       ]
     };
     let data = structuredClone(starterData);
@@ -1160,10 +1160,37 @@
       });
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
+        nameEn: task.nameEn || "",
         info: task.info || "",
         hasHomeLabel: Boolean(task.hasHomeLabel)
       }));
       return normalized;
+    }
+
+    function translationCacheKey(text) {
+      return `logo-gantt-translation:${text.trim().toLowerCase()}`;
+    }
+
+    async function translateToEnglish(text) {
+      const source = text.trim();
+      if (!source) return "";
+      const cacheKey = translationCacheKey(source);
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return cached;
+      try {
+        syncIndicator.textContent = "Traduzione...";
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=it|en`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Translation failed");
+        const payload = await response.json();
+        const translated = payload?.responseData?.translatedText?.trim();
+        const result = translated || source;
+        localStorage.setItem(cacheKey, result);
+        return result;
+      } catch {
+        syncIndicator.textContent = "Traduzione non disponibile";
+        return source;
+      }
     }
 
     function statusName(status) {
@@ -1184,7 +1211,7 @@
       taskMembers.innerHTML = "";
       editTaskMembers.innerHTML = "";
       memberFilter.innerHTML = "";
-      memberFilter.appendChild(option("all", "Tutti"));
+      memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
 
       data.members.forEach((member) => {
@@ -1193,7 +1220,7 @@
         memberFilter.appendChild(option(member));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Modifica ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Elimina ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
         memberList.appendChild(pill);
       });
       memberFilter.value = data.members.includes(previousFilter) ? previousFilter : "all";
@@ -1208,7 +1235,7 @@
         editTaskStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Modifica ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Colore ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Elimina ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
         statusList.appendChild(pill);
       });
       taskStatus.disabled = data.statuses.length === 0;
@@ -1257,7 +1284,7 @@
 
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Colore ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button type="button" aria-label="Elimina ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
         projectList.appendChild(pill);
       });
 
@@ -1295,7 +1322,7 @@
             bar.style.width = `${width}px`;
             bar.style.color = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `${task.hasHomeLabel ? homeIconMarkup() : ""}<span class="bar-title">${escapeHtml(previewName(task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
+            bar.innerHTML = `${task.hasHomeLabel ? homeIconMarkup() : ""}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -1304,7 +1331,7 @@
       if (!visibleProjects.length) {
         const row = document.createElement("div");
         row.className = "row-label";
-        row.textContent = selectedMember === "all" ? "Nessun progetto" : "Nessuna task";
+        row.textContent = selectedMember === "all" ? "No projects" : "No tasks";
         sidebar.appendChild(row);
       }
 
@@ -1378,11 +1405,11 @@
       saveData();
       renderBoard();
       event.currentTarget.reset();
-      document.getElementById("projectName").value = "Nuovo progetto";
+      document.getElementById("projectName").value = "New project";
       document.getElementById("projectColor").value = "#147bd1";
     });
 
-    document.getElementById("taskForm").addEventListener("submit", (event) => {
+    document.getElementById("taskForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const projectId = taskProject.value;
       const name = document.getElementById("taskName").value.trim();
@@ -1394,10 +1421,11 @@
       const info = document.getElementById("taskInfo").value.trim();
       if (!projectId || !name || !members.length || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
-      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd, info, hasHomeLabel });
+      const nameEn = await translateToEnglish(name);
+      data.tasks.push({ id: `t${Date.now()}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, hasHomeLabel });
       saveData();
       renderBoard();
-      document.getElementById("taskName").value = "Nuova task";
+      document.getElementById("taskName").value = "New task";
       document.getElementById("taskHasHomeLabel").checked = false;
       document.getElementById("taskInfo").value = "";
     });
@@ -1423,7 +1451,7 @@
       closeTaskEditor();
     });
 
-    document.getElementById("editTaskForm").addEventListener("submit", (event) => {
+    document.getElementById("editTaskForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const taskId = document.getElementById("editTaskId").value;
       const task = data.tasks.find((item) => item.id === taskId);
@@ -1436,7 +1464,9 @@
       const hasHomeLabel = document.getElementById("editTaskHasHomeLabel").checked;
       const info = document.getElementById("editTaskInfo").value.trim();
       if (!name || !status || !members.length || !start || !end) return;
+      const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
+      task.nameEn = nameEn;
       task.status = status;
       task.members = members;
       task.start = start;
@@ -1455,7 +1485,7 @@
       data.members.push(member);
       saveData();
       renderBoard();
-      document.getElementById("memberName").value = "Nuovo membro";
+      document.getElementById("memberName").value = "New person";
     });
 
     document.getElementById("statusForm").addEventListener("submit", (event) => {
@@ -1465,7 +1495,7 @@
       data.statuses.push({ name: status, color: "#6b7280" });
       saveData();
       renderBoard();
-      document.getElementById("statusName").value = "Nuovo status";
+      document.getElementById("statusName").value = "New status";
     });
 
     projectList.addEventListener("click", (event) => {
