@@ -19,6 +19,7 @@
       --shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .05);
       --day: 380px;
       --sidebar: 180px;
+      --timeline-head: 72px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -274,7 +275,7 @@
     }
 
     .corner {
-      height: 60px;
+      height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
     }
 
@@ -326,7 +327,7 @@
 
     .months {
       display: flex;
-      height: 60px;
+      height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #f9fafb;
     }
@@ -342,7 +343,7 @@
       z-index: 3;
       width: max-content;
       min-width: 180px;
-      height: 36px;
+      height: 34px;
       display: flex;
       align-items: center;
       padding: 0 22px;
@@ -357,7 +358,7 @@
 
     .days {
       display: grid;
-      height: 24px;
+      height: 38px;
       grid-auto-flow: column;
       grid-auto-columns: var(--day);
     }
@@ -366,10 +367,24 @@
       position: relative;
       display: grid;
       place-items: center;
+      gap: 2px;
       border-right: 1px solid var(--line-soft);
       color: #636e79;
       font-size: 9px;
       line-height: 1;
+    }
+
+    .day-weekday {
+      color: #8b96a3;
+      font-size: 8px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .day-number {
+      color: #4b5563;
+      font-size: 10px;
+      font-weight: 800;
     }
 
     .day.weekend {
@@ -378,7 +393,7 @@
 
     .weekends {
       position: absolute;
-      inset: 60px 0 0;
+      inset: var(--timeline-head) 0 0;
       pointer-events: none;
       z-index: 0;
     }
@@ -394,7 +409,7 @@
 
     .grid {
       position: absolute;
-      inset: 60px 0 0;
+      inset: var(--timeline-head) 0 0;
       background:
         repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--line-soft) 47px, var(--line-soft) 48px),
         var(--bg);
@@ -403,7 +418,7 @@
 
     .bars {
       position: absolute;
-      inset: 60px 0 0;
+      inset: var(--timeline-head) 0 0;
       z-index: 2;
     }
 
@@ -509,70 +524,62 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
-      padding: 18px;
       background: var(--bg);
     }
 
     .ped-calendar {
-      display: grid;
-      gap: 18px;
-      min-width: 1050px;
+      position: relative;
+      min-width: max-content;
+      min-height: 100%;
     }
 
-    .ped-month-title {
-      margin: 0 0 8px;
-      color: #111827;
-      font-size: 14px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-
-    .ped-month-grid {
-      display: grid;
-      grid-template-columns: repeat(7, minmax(150px, 1fr));
-      gap: 1px;
-      border: 1px solid var(--line);
-      background: var(--line);
+    .ped-months {
+      display: flex;
+      height: var(--timeline-head);
+      border-bottom: 1px solid var(--line);
+      background: #f9fafb;
     }
 
     .ped-day {
-      min-height: 138px;
-      padding: 8px;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+      min-height: 0;
     }
 
-    .ped-day.is-weekend {
-      background: #f0f2f5;
+    .ped-layer {
+      position: absolute;
+      inset: var(--timeline-head) 0 0;
+      z-index: 2;
     }
 
-    .ped-day.is-empty {
-      background: #f7f8fa;
+    .ped-grid {
+      position: absolute;
+      inset: var(--timeline-head) 0 0;
+      background:
+        repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), var(--line-soft) calc(var(--day) - 1px), var(--line-soft) var(--day)),
+        repeating-linear-gradient(to bottom, transparent 0, transparent 77px, var(--line-soft) 77px, var(--line-soft) 78px),
+        var(--bg);
+      z-index: 1;
     }
 
-    .ped-day-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      color: #6b7280;
-      font-size: 11px;
-      font-weight: 900;
-      text-transform: uppercase;
+    .ped-weekends {
+      position: absolute;
+      inset: var(--timeline-head) 0 0;
+      pointer-events: none;
+      z-index: 0;
     }
 
     .ped-post {
-      border: 1px solid #d9e0e8;
-      border-left: 4px solid #111827;
+      position: absolute;
+      min-height: 64px;
+      padding: 7px 9px;
+      border: 2px solid #111827;
       border-radius: 8px;
-      padding: 7px;
       background: #fff;
       color: #111827;
       font-size: 12px;
       font-weight: 800;
       box-shadow: 0 4px 12px rgba(16, 24, 40, .06);
       cursor: pointer;
+      overflow: hidden;
     }
 
     .ped-post small {
@@ -581,6 +588,29 @@
       color: #667085;
       font-size: 10px;
       font-weight: 800;
+    }
+
+    .ped-preview-line {
+      margin-top: 4px;
+      overflow: hidden;
+      color: #334155;
+      font-size: 10px;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .social-badge {
+      display: inline-grid;
+      place-items: center;
+      min-width: 18px;
+      height: 16px;
+      margin-right: 3px;
+      border-radius: 4px;
+      color: #fff;
+      background: #111827;
+      font-size: 8px;
+      font-weight: 900;
     }
 
     .manus {
@@ -1113,7 +1143,12 @@
       <label class="field">Date<input id="pedPostDate" type="date" value="2026-06-16" required></label>
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
-      <label class="field">Link<textarea id="pedPostLink" placeholder="Link o note"></textarea></label>
+      <label class="field">Social<div class="check-list">
+        <label class="check-item"><input id="pedPostInstagram" type="checkbox" value="instagram">Instagram</label>
+        <label class="check-item"><input id="pedPostTikTok" type="checkbox" value="tiktok">TikTok</label>
+      </div></label>
+      <label class="field">Asset<textarea id="pedPostAsset" placeholder="Link asset"></textarea></label>
+      <label class="field">Copy<textarea id="pedPostCopy" placeholder="Copy"></textarea></label>
       <button class="primary-btn" type="submit">Add post</button>
     </form>
   </aside>
@@ -1158,6 +1193,12 @@
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
         <label class="field">PED title<input id="editTaskPedTitle" placeholder="Same as task name"></label>
         <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
+        <label class="field">Social<div class="check-list">
+          <label class="check-item"><input id="editTaskPedInstagram" type="checkbox" value="instagram">Instagram</label>
+          <label class="check-item"><input id="editTaskPedTikTok" type="checkbox" value="tiktok">TikTok</label>
+        </div></label>
+        <label class="field">Asset<textarea id="editTaskPedAsset" placeholder="Link asset"></textarea></label>
+        <label class="field">Copy<textarea id="editTaskPedCopy" placeholder="Copy"></textarea></label>
         <section class="subtasks">
           <div class="subtasks-title">Subtasks</div>
           <div class="stack-list" id="subtaskList"></div>
@@ -1168,6 +1209,30 @@
         <div class="modal-actions">
           <button class="danger-btn" id="deleteTaskButton" type="button">Delete</button>
           <button class="secondary-btn" id="closeTaskModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="pedPostModal" aria-label="Edit PED post">
+    <div class="modal">
+      <h2>Edit PED post</h2>
+      <form id="editPedPostForm">
+        <input id="editPedPostId" type="hidden">
+        <label class="field">Name<input id="editPedPostTitle" required></label>
+        <label class="field">Date<input id="editPedPostDate" type="date" required></label>
+        <label class="field">Status<select id="editPedPostStatus" required></select></label>
+        <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
+        <label class="field">Social<div class="check-list">
+          <label class="check-item"><input id="editPedPostInstagram" type="checkbox" value="instagram">Instagram</label>
+          <label class="check-item"><input id="editPedPostTikTok" type="checkbox" value="tiktok">TikTok</label>
+        </div></label>
+        <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
+        <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
+        <div class="modal-actions">
+          <button class="danger-btn" id="deletePedPostButton" type="button">Delete</button>
+          <button class="secondary-btn" id="closePedPostModal" type="button">Close</button>
           <button class="primary-btn" type="submit">Save</button>
         </div>
       </form>
@@ -1190,6 +1255,7 @@
     };
 
     const monthNames = ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"];
+    const weekdayNames = ["DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"];
     const monthsEl = document.getElementById("months");
     const weekendsEl = document.getElementById("weekends");
     const scroller = document.getElementById("scroller");
@@ -1204,6 +1270,9 @@
     const pedToggle = document.getElementById("pedToggle");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
+    const editPedPostMembers = document.getElementById("editPedPostMembers");
+    const editPedPostStatus = document.getElementById("editPedPostStatus");
+    const pedPostModal = document.getElementById("pedPostModal");
     const creatorOptions = document.getElementById("creatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
     const editTaskMembers = document.getElementById("editTaskMembers");
@@ -1358,7 +1427,7 @@
             band.style.width = "var(--day)";
             weekendsEl.appendChild(band);
           }
-          el.textContent = day;
+          el.innerHTML = `<span class="day-weekday">${weekdayNames[weekDay]}</span><span class="day-number">${day}</span>`;
           daysEl.appendChild(el);
           dayOffset += 1;
         }
@@ -1456,6 +1525,9 @@
         pedEnabled: Boolean(task.pedEnabled),
         pedDate: task.pedDate || task.start || "",
         pedTitle: task.pedTitle || "",
+        pedSocial: Array.isArray(task.pedSocial) ? task.pedSocial : [],
+        pedAsset: task.pedAsset || "",
+        pedCopy: task.pedCopy || "",
         subtasks: (task.subtasks || []).map((subtask) => ({
           id: subtask.id || `s${Date.now()}${Math.random()}`,
           title: subtask.title || "",
@@ -1469,7 +1541,9 @@
         date: post.date || "2026-06-16",
         status: post.status || (normalized.statuses[0] ? statusName(normalized.statuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
-        link: post.link || ""
+        social: Array.isArray(post.social) ? post.social : [],
+        asset: post.asset || post.link || "",
+        copy: post.copy || ""
       }));
       return normalized;
     }
@@ -1600,6 +1674,7 @@
       editTaskMembers.innerHTML = "";
       newSubtaskMembers.innerHTML = "";
       pedPostMembers.innerHTML = "";
+      editPedPostMembers.innerHTML = "";
       memberFilter.innerHTML = "";
       memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
@@ -1609,6 +1684,7 @@
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
         newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
         pedPostMembers.appendChild(checkboxItem(member, "pedPostMembers"));
+        editPedPostMembers.appendChild(checkboxItem(member, "editPedPostMembers"));
         memberFilter.appendChild(option(member));
         const pill = document.createElement("div");
         pill.className = "project-pill";
@@ -1620,6 +1696,7 @@
       taskStatus.innerHTML = "";
       editTaskStatus.innerHTML = "";
       pedPostStatus.innerHTML = "";
+      editPedPostStatus.innerHTML = "";
       statusList.innerHTML = "";
       data.statuses.forEach((status, index) => {
         const name = statusName(status);
@@ -1627,6 +1704,7 @@
         taskStatus.appendChild(option(name));
         editTaskStatus.appendChild(option(name));
         pedPostStatus.appendChild(option(name));
+        editPedPostStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
         pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.statuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
@@ -1635,6 +1713,7 @@
       taskStatus.disabled = data.statuses.length === 0;
       editTaskStatus.disabled = data.statuses.length === 0;
       pedPostStatus.disabled = data.statuses.length === 0;
+      editPedPostStatus.disabled = data.statuses.length === 0;
 
       taskLabel.innerHTML = "";
       editTaskLabel.innerHTML = "";
@@ -1679,58 +1758,104 @@
     function pedItems() {
       const linkedTasks = data.tasks
         .filter((task) => task.pedEnabled && task.pedDate)
-        .map((task) => ({
-          id: `task-${task.id}`,
-          title: task.pedTitle || task.nameEn || task.name,
-          date: task.pedDate,
-          status: task.status,
-          members: task.members || [],
-          link: task.info || "",
-          source: "Gantt"
-        }));
+        .map((task) => {
+          const project = data.projects.find((item) => item.id === task.projectId);
+          return {
+            id: `task-${task.id}`,
+            title: task.pedTitle || task.nameEn || task.name,
+            date: task.pedDate,
+            status: task.status,
+            members: task.members || [],
+            social: task.pedSocial || [],
+            asset: task.pedAsset || "",
+            copy: task.pedCopy || "",
+            color: project ? project.color : statusColor(task.status),
+            source: "Gantt"
+          };
+        });
       const manualPosts = (data.pedPosts || []).map((post) => ({
         ...post,
+        color: statusColor(post.status),
         source: "PED"
       }));
       return [...linkedTasks, ...manualPosts];
     }
 
+    function socialMarkup(social = []) {
+      return social.map((item) => item === "instagram"
+        ? '<span class="social-badge">IG</span>'
+        : '<span class="social-badge">TT</span>').join("");
+    }
+
     function renderPed() {
       pedCalendar.innerHTML = "";
       const items = pedItems();
+      const months = document.createElement("div");
+      months.className = "ped-months";
+      const weekends = document.createElement("div");
+      weekends.className = "ped-weekends";
+      const grid = document.createElement("div");
+      grid.className = "ped-grid";
+      const layer = document.createElement("div");
+      layer.className = "ped-layer";
+      let dayOffset = 0;
+      const stackByDate = {};
       for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
-        const firstDay = new Date(2026, 5 + monthOffset, 1);
-        const year = firstDay.getFullYear();
-        const month = firstDay.getMonth();
-        const calendarStart = new Date(firstDay);
-        calendarStart.setDate(calendarStart.getDate() - ((calendarStart.getDay() + 6) % 7));
-        const section = document.createElement("section");
-        section.className = "ped-month";
-        section.innerHTML = `<h3 class="ped-month-title">${monthNames[month]} ${year}</h3>`;
-        const grid = document.createElement("div");
-        grid.className = "ped-month-grid";
-        for (let index = 0; index < 42; index += 1) {
-          const date = new Date(calendarStart);
-          date.setDate(calendarStart.getDate() + index);
-          const iso = date.toISOString().slice(0, 10);
+        const date = new Date(2026, 5 + monthOffset, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const total = daysInMonth(year, month);
+        const monthEl = document.createElement("section");
+        monthEl.className = "month";
+        monthEl.style.width = `calc(var(--day) * ${total})`;
+        monthEl.innerHTML = `<div class="month-name">${monthNames[month]} ${year}</div>`;
+        const daysEl = document.createElement("div");
+        daysEl.className = "days";
+        for (let day = 1; day <= total; day += 1) {
+          const dayDate = new Date(year, month, day);
+          const weekDay = dayDate.getDay();
+          const iso = dayDate.toISOString().slice(0, 10);
+          const el = document.createElement("div");
+          el.className = "day";
+          if (weekDay === 0 || weekDay === 6) {
+            el.classList.add("weekend");
+            const band = document.createElement("div");
+            band.className = "weekend-band";
+            band.style.left = `calc(var(--day) * ${dayOffset})`;
+            band.style.width = "var(--day)";
+            weekends.appendChild(band);
+          }
+          el.innerHTML = `<span class="day-weekday">${weekdayNames[weekDay]}</span><span class="day-number">${day}</span>`;
+          daysEl.appendChild(el);
           const dayItems = items.filter((item) => item.date === iso);
-          const day = document.createElement("div");
-          const isCurrentMonth = date.getMonth() === month;
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-          day.className = `ped-day${isWeekend ? " is-weekend" : ""}${isCurrentMonth ? "" : " is-empty"}`;
-          day.innerHTML = `<div class="ped-day-head"><span>${date.getDate()}</span><span>${monthNames[date.getMonth()]}</span></div>`;
-          dayItems.forEach((item) => {
+          stackByDate[iso] = dayItems.length;
+          dayItems.forEach((item, itemIndex) => {
             const post = document.createElement("div");
             post.className = "ped-post";
-            post.style.borderLeftColor = statusColor(item.status);
-            post.innerHTML = `${escapeHtml(previewName(item.title))}<small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.source)}</small>`;
-            day.appendChild(post);
+            post.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
+            post.style.top = `${itemIndex * 78 + 10}px`;
+            post.style.width = "calc(var(--day) - 12px)";
+            post.style.borderColor = item.color || statusColor(item.status);
+            if (item.source === "Gantt") {
+              post.dataset.taskId = item.id.replace("task-", "");
+            } else {
+              post.dataset.pedPostId = item.id;
+            }
+            post.innerHTML = `<div>${socialMarkup(item.social)}${escapeHtml(previewName(item.title))}</div><small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.source)}</small><div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div><div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>`;
+            layer.appendChild(post);
           });
-          grid.appendChild(day);
+          dayOffset += 1;
         }
-        section.appendChild(grid);
-        pedCalendar.appendChild(section);
+        monthEl.appendChild(daysEl);
+        months.appendChild(monthEl);
       }
+      const maxStack = Math.max(1, ...Object.values(stackByDate));
+      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxStack * 78 + 24;
+      pedCalendar.style.height = `${height}px`;
+      pedCalendar.appendChild(months);
+      pedCalendar.appendChild(weekends);
+      pedCalendar.appendChild(grid);
+      pedCalendar.appendChild(layer);
     }
 
     function openTaskEditor(taskId) {
@@ -1751,6 +1876,10 @@
       document.getElementById("editTaskPedEnabled").checked = Boolean(task.pedEnabled);
       document.getElementById("editTaskPedTitle").value = task.pedTitle || "";
       document.getElementById("editTaskPedDate").value = task.pedDate || task.start || "";
+      document.getElementById("editTaskPedInstagram").checked = (task.pedSocial || []).includes("instagram");
+      document.getElementById("editTaskPedTikTok").checked = (task.pedSocial || []).includes("tiktok");
+      document.getElementById("editTaskPedAsset").value = task.pedAsset || "";
+      document.getElementById("editTaskPedCopy").value = task.pedCopy || "";
       document.getElementById("newSubtaskTitle").value = "";
       newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       renderSubtasks(task);
@@ -1759,6 +1888,28 @@
 
     function closeTaskEditor() {
       taskModal.classList.remove("open");
+    }
+
+    function openPedPostEditor(postId) {
+      renderSettingsLists();
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      document.getElementById("editPedPostId").value = post.id;
+      document.getElementById("editPedPostTitle").value = post.title || "";
+      document.getElementById("editPedPostDate").value = post.date || "";
+      editPedPostStatus.value = post.status || "";
+      [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
+        item.checked = (post.members || []).includes(item.value);
+      });
+      document.getElementById("editPedPostInstagram").checked = (post.social || []).includes("instagram");
+      document.getElementById("editPedPostTikTok").checked = (post.social || []).includes("tiktok");
+      document.getElementById("editPedPostAsset").value = post.asset || "";
+      document.getElementById("editPedPostCopy").value = post.copy || "";
+      pedPostModal.classList.add("open");
+    }
+
+    function closePedPostEditor() {
+      pedPostModal.classList.remove("open");
     }
 
     function renderBoard() {
@@ -1828,7 +1979,7 @@
         projectTop = 48;
       }
 
-      const boardContentHeight = 60 + projectTop;
+      const boardContentHeight = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + projectTop;
       sidebar.style.minHeight = `${boardContentHeight}px`;
       timelineEl.style.minHeight = `${boardContentHeight}px`;
       bars.style.height = `${projectTop}px`;
@@ -1966,16 +2117,24 @@
       const date = document.getElementById("pedPostDate").value;
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
-      const link = document.getElementById("pedPostLink").value.trim();
+      const social = [
+        document.getElementById("pedPostInstagram").checked ? "instagram" : "",
+        document.getElementById("pedPostTikTok").checked ? "tiktok" : ""
+      ].filter(Boolean);
+      const asset = document.getElementById("pedPostAsset").value.trim();
+      const copy = document.getElementById("pedPostCopy").value.trim();
       if (!title || !date || !status) return;
       data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, link });
+      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, social, asset, copy });
       saveData();
       renderPed();
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
       document.getElementById("pedPostDate").value = "2026-06-16";
-      document.getElementById("pedPostLink").value = "";
+      document.getElementById("pedPostAsset").value = "";
+      document.getElementById("pedPostCopy").value = "";
+      document.getElementById("pedPostInstagram").checked = false;
+      document.getElementById("pedPostTikTok").checked = false;
       pedPostMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
     });
 
@@ -1986,9 +2145,38 @@
       openTaskEditor(bar.dataset.taskId);
     });
 
+    pedCalendar.addEventListener("dblclick", (event) => {
+      const post = event.target.closest(".ped-post");
+      if (!post) return;
+      closePanels();
+      if (post.dataset.taskId) {
+        document.body.classList.remove("ped-mode");
+        pedToggle.textContent = "PED";
+        document.querySelector(".brand-title").textContent = "Gantt Board";
+        document.getElementById("currentMonth").textContent = "O'TACOS";
+        openTaskEditor(post.dataset.taskId);
+        return;
+      }
+      if (post.dataset.pedPostId) openPedPostEditor(post.dataset.pedPostId);
+    });
+
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
     taskModal.addEventListener("click", (event) => {
       if (event.target === taskModal) closeTaskEditor();
+    });
+
+    document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
+    pedPostModal.addEventListener("click", (event) => {
+      if (event.target === pedPostModal) closePedPostEditor();
+    });
+
+    document.getElementById("deletePedPostButton").addEventListener("click", () => {
+      const postId = document.getElementById("editPedPostId").value;
+      if (!postId) return;
+      data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
+      saveData();
+      renderPed();
+      closePedPostEditor();
     });
 
     document.getElementById("deleteTaskButton").addEventListener("click", () => {
@@ -2055,6 +2243,12 @@
       const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
       const pedTitle = document.getElementById("editTaskPedTitle").value.trim();
       const pedDate = document.getElementById("editTaskPedDate").value || start;
+      const pedSocial = [
+        document.getElementById("editTaskPedInstagram").checked ? "instagram" : "",
+        document.getElementById("editTaskPedTikTok").checked ? "tiktok" : ""
+      ].filter(Boolean);
+      const pedAsset = document.getElementById("editTaskPedAsset").value.trim();
+      const pedCopy = document.getElementById("editTaskPedCopy").value.trim();
       if (!projectId || !name || !status || !members.length || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
@@ -2069,10 +2263,39 @@
       task.pedEnabled = pedEnabled;
       task.pedTitle = pedTitle;
       task.pedDate = pedDate;
+      task.pedSocial = pedSocial;
+      task.pedAsset = pedAsset;
+      task.pedCopy = pedCopy;
       saveData();
       renderBoard();
       renderPed();
       closeTaskEditor();
+    });
+
+    document.getElementById("editPedPostForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const postId = document.getElementById("editPedPostId").value;
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      const title = document.getElementById("editPedPostTitle").value.trim();
+      const date = document.getElementById("editPedPostDate").value;
+      const status = editPedPostStatus.value;
+      const members = selectedMembers(editPedPostMembers);
+      const social = [
+        document.getElementById("editPedPostInstagram").checked ? "instagram" : "",
+        document.getElementById("editPedPostTikTok").checked ? "tiktok" : ""
+      ].filter(Boolean);
+      if (!title || !date || !status) return;
+      post.title = title;
+      post.date = date;
+      post.status = status;
+      post.members = members;
+      post.social = social;
+      post.asset = document.getElementById("editPedPostAsset").value.trim();
+      post.copy = document.getElementById("editPedPostCopy").value.trim();
+      saveData();
+      renderPed();
+      closePedPostEditor();
     });
 
     document.getElementById("memberForm").addEventListener("submit", (event) => {
