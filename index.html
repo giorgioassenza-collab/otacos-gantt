@@ -97,6 +97,29 @@
       box-shadow: 0 14px 34px rgba(255, 79, 10, .24);
     }
 
+    .login-field {
+      width: min(320px, 100%);
+      display: grid;
+      gap: 8px;
+    }
+
+    .login-field input {
+      height: 42px;
+      border: 1px solid #d3dae2;
+      border-radius: 10px;
+      padding: 0 12px;
+      font: inherit;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .login-error {
+      min-height: 18px;
+      color: #c72525;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
     .toolbar {
       height: 55px;
       flex: 0 0 55px;
@@ -290,19 +313,27 @@
     }
 
     .month {
+      position: relative;
       border-right: 1px solid var(--line);
     }
 
     .month-name {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      width: max-content;
+      min-width: 180px;
       height: 36px;
       display: flex;
       align-items: center;
-      padding-left: 22px;
+      padding: 0 22px;
       border-bottom: 1px solid var(--line-soft);
+      background: #f9fafb;
       color: #333a42;
       font-size: 12px;
       font-weight: 800;
       letter-spacing: .13em;
+      box-shadow: 12px 0 18px rgba(249, 250, 251, .92);
     }
 
     .days {
@@ -320,20 +351,6 @@
       color: #636e79;
       font-size: 9px;
       line-height: 1;
-    }
-
-    .day.today::after {
-      content: "";
-      position: absolute;
-      width: 10px;
-      height: 10px;
-      bottom: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      border-radius: 999px;
-      background: var(--orange);
-      box-shadow: 0 0 0 2px #fff;
-      z-index: 2;
     }
 
     .grid {
@@ -492,7 +509,8 @@
     }
 
     .field input,
-    .field select {
+    .field select,
+    .field textarea {
       height: 34px;
       border: 1px solid #d3dae2;
       border-radius: 8px;
@@ -502,6 +520,13 @@
       font: inherit;
       font-size: 13px;
       font-weight: 500;
+    }
+
+    .field textarea {
+      height: 96px;
+      padding: 9px 10px;
+      resize: vertical;
+      line-height: 1.4;
     }
 
     .field input[type="color"] {
@@ -662,6 +687,10 @@
     <div class="login-box">
       <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
       <h1 class="login-title">GANTT</h1>
+      <label class="login-field">
+        <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <span class="login-error" id="loginError"></span>
+      </label>
       <button class="login-button" id="loginButton" type="button">ACCEDI</button>
     </div>
   </section>
@@ -678,7 +707,7 @@
         </div>
         <span class="brand-title">Gantt Board</span>
       </div>
-      <div class="month-chip" id="currentMonth">GIUGNO 2026</div>
+      <div class="month-chip" id="currentMonth">O'TACOS</div>
       <div class="spacer"></div>
       <div class="zoom" aria-label="Zoom">
         <button class="icon-btn" id="zoomOut" type="button" title="Zoom out" aria-label="Zoom out">
@@ -735,6 +764,7 @@
       <label class="field">Chi<div class="check-list" id="taskMembers"></div></label>
       <label class="field">Inizio<input id="taskStart" type="date" value="2026-06-16" required></label>
       <label class="field">Fine<input id="taskEnd" type="date" value="2026-06-24" required></label>
+      <label class="field">Info<textarea id="taskInfo" placeholder="Testo, note o link"></textarea></label>
       <button class="primary-btn" type="submit">Aggiungi task</button>
     </form>
   </aside>
@@ -766,6 +796,7 @@
         <label class="field">Chi<div class="check-list" id="editTaskMembers"></div></label>
         <label class="field">Data inizio<input id="editTaskStart" type="date" required></label>
         <label class="field">Data fine<input id="editTaskEnd" type="date" required></label>
+        <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
         <div class="modal-actions">
           <button class="secondary-btn" id="closeTaskModal" type="button">Chiudi</button>
           <button class="primary-btn" type="submit">Salva</button>
@@ -820,10 +851,10 @@
         { id: "p4", name: "Lancio", color: "#e4572e" }
       ],
       tasks: [
-        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23" },
-        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02" },
-        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12" },
-        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24" }
+        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "" },
+        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "" },
+        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "" },
+        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "" }
       ]
     };
     let data = structuredClone(starterData);
@@ -832,6 +863,7 @@
     let boardRef = null;
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
+    const accessPassword = "otacos2026";
     const zooms = [
       { label: "Ampia", width: 80 },
       { label: "Max", width: 96 },
@@ -951,6 +983,10 @@
       return members.map(initials).join(",");
     }
 
+    function isDoneStatus(status) {
+      return String(status || "").replace(/\s+/g, "").toUpperCase() === "DONE";
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -1038,6 +1074,7 @@
       });
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end;
+      document.getElementById("editTaskInfo").value = task.info || "";
       taskModal.classList.add("open");
     }
 
@@ -1083,8 +1120,11 @@
             const width = Math.max(1, dateDiffDays(start, end) + 1) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
             const bar = document.createElement("div");
             bar.className = "bar";
-            if (task.status.trim().toUpperCase() === "DONE") {
+            if (isDoneStatus(task.status)) {
               bar.classList.add("is-done");
+              bar.style.opacity = ".34";
+              bar.style.boxShadow = "none";
+              bar.style.filter = "saturate(.55)";
             }
             bar.title = `${task.name}: ${task.start} - ${task.end}`;
             bar.style.left = `${left}px`;
@@ -1124,9 +1164,21 @@
       setInterval(refreshSharedData, 1800);
     }
 
-    document.getElementById("loginButton").addEventListener("click", () => {
+    function handleLogin() {
+      const password = document.getElementById("loginPassword").value;
+      const error = document.getElementById("loginError");
+      if (password !== accessPassword) {
+        error.textContent = "Password non corretta";
+        return;
+      }
+      error.textContent = "";
       sessionStorage.setItem("logo-gantt-authenticated", "true");
       startApp();
+    }
+
+    document.getElementById("loginButton").addEventListener("click", handleLogin);
+    document.getElementById("loginPassword").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") handleLogin();
     });
 
     if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
@@ -1174,12 +1226,14 @@
       const status = taskStatus.value;
       const start = document.getElementById("taskStart").value;
       const end = document.getElementById("taskEnd").value;
+      const info = document.getElementById("taskInfo").value.trim();
       if (!projectId || !name || !members.length || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
-      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd });
+      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd, info });
       saveData();
       renderBoard();
       document.getElementById("taskName").value = "Nuova task";
+      document.getElementById("taskInfo").value = "";
     });
 
     bars.addEventListener("dblclick", (event) => {
@@ -1204,12 +1258,14 @@
       const members = selectedMembers(editTaskMembers);
       const start = document.getElementById("editTaskStart").value;
       const end = document.getElementById("editTaskEnd").value;
+      const info = document.getElementById("editTaskInfo").value.trim();
       if (!name || !status || !members.length || !start || !end) return;
       task.name = name;
       task.status = status;
       task.members = members;
       task.start = start;
       task.end = end < start ? start : end;
+      task.info = info;
       saveData();
       renderBoard();
       closeTaskEditor();
