@@ -17,7 +17,7 @@
       --orange: #ff7a1a;
       --orange-soft: #fff2e8;
       --shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .05);
-      --day: 96px;
+      --day: 760px;
       --sidebar: 180px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -263,9 +263,9 @@
     .row-label {
       height: 48px;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
-      padding: 0 16px;
+      padding: 16px;
       border-bottom: 1px solid var(--line-soft);
       color: #3b444e;
       font-size: 13px;
@@ -353,17 +353,39 @@
       line-height: 1;
     }
 
+    .day.weekend {
+      background: #eceff3;
+    }
+
+    .weekends {
+      position: absolute;
+      inset: 60px 0 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .weekend-band {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(226, 231, 237, .62);
+      border-left: 1px solid rgba(210, 217, 225, .8);
+      border-right: 1px solid rgba(210, 217, 225, .8);
+    }
+
     .grid {
       position: absolute;
       inset: 60px 0 0;
       background:
         repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--line-soft) 47px, var(--line-soft) 48px),
         var(--bg);
+      z-index: 1;
     }
 
     .bars {
       position: absolute;
       inset: 60px 0 0;
+      z-index: 2;
     }
 
     .bar {
@@ -685,7 +707,7 @@
 
     @media (max-width: 800px) {
       .app { min-width: 760px; }
-      :root { --sidebar: 128px; --day: 80px; }
+      :root { --sidebar: 128px; --day: 620px; }
       .toolbar { gap: 8px; padding-inline: 10px; }
       .brand-title { display: none; }
       .month-chip { display: none; }
@@ -744,6 +766,7 @@
       <div class="timeline-scroll" id="scroller">
         <div class="timeline" id="timeline">
           <div class="months" id="months"></div>
+          <div class="weekends" id="weekends"></div>
           <div class="grid"></div>
           <div class="bars" id="bars" aria-label="Progetti"></div>
         </div>
@@ -833,6 +856,7 @@
 
     const monthNames = ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"];
     const monthsEl = document.getElementById("months");
+    const weekendsEl = document.getElementById("weekends");
     const scroller = document.getElementById("scroller");
     const sidebar = document.getElementById("sidebar");
     const bars = document.getElementById("bars");
@@ -952,6 +976,8 @@
 
     function renderTimeline() {
       monthsEl.innerHTML = "";
+      weekendsEl.innerHTML = "";
+      let dayOffset = 0;
       for (let i = 0; i < 13; i += 1) {
         const date = new Date(2026, 5 + i, 1);
         const year = date.getFullYear();
@@ -969,8 +995,19 @@
           if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
             el.classList.add("today");
           }
+          const dayDate = new Date(year, month, day);
+          const weekDay = dayDate.getDay();
+          if (weekDay === 0 || weekDay === 6) {
+            el.classList.add("weekend");
+            const band = document.createElement("div");
+            band.className = "weekend-band";
+            band.style.left = `calc(var(--day) * ${dayOffset})`;
+            band.style.width = "var(--day)";
+            weekendsEl.appendChild(band);
+          }
           el.textContent = day;
           daysEl.appendChild(el);
+          dayOffset += 1;
         }
         monthEl.appendChild(daysEl);
         monthsEl.appendChild(monthEl);
@@ -1115,16 +1152,20 @@
         return data.tasks.some((task) => task.projectId === project.id && task.members.includes(selectedMember));
       });
 
-      visibleProjects.forEach((project, index) => {
+      let projectTop = 0;
+      visibleProjects.forEach((project) => {
+        const visibleTasks = data.tasks
+          .filter((task) => task.projectId === project.id)
+          .filter((task) => selectedMember === "all" || task.members.includes(selectedMember));
+        const rowHeight = Math.max(48, visibleTasks.length * 34 + 14);
         const row = document.createElement("div");
         row.className = "row-label";
+        row.style.height = `${rowHeight}px`;
         row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
         sidebar.appendChild(row);
 
-        data.tasks
-          .filter((task) => task.projectId === project.id)
-          .filter((task) => selectedMember === "all" || task.members.includes(selectedMember))
-          .forEach((task) => {
+        visibleTasks
+          .forEach((task, taskIndex) => {
             const start = new Date(`${task.start}T00:00:00`);
             const end = new Date(`${task.end}T00:00:00`);
             const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
@@ -1139,13 +1180,14 @@
             }
             bar.title = `${task.name}: ${task.start} - ${task.end}`;
             bar.style.left = `${left}px`;
-            bar.style.top = `${index * 48 + 11}px`;
+            bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
             bar.style.background = project.color;
             bar.dataset.taskId = task.id;
             bar.innerHTML = `<span class="bar-title">${escapeHtml(task.name)}</span><span class="bar-meta">${escapeHtml(task.status)}</span>`;
             bars.appendChild(bar);
           });
+        projectTop += rowHeight;
       });
 
       if (!visibleProjects.length) {
