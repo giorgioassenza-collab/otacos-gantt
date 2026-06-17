@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tacos Gantt Board Replica</title>
+  <style>
+    :root {
+      --bg: #f8f9fb;
+      --panel: #ffffff;
+      --line: #dfe3e8;
+      --line-soft: #edf0f3;
+      --text: #151a20;
+      --muted: #7a8490;
+      --chip: #f0f3f6;
+      --blue: #147bd1;
+      --orange: #ff7a1a;
+      --orange-soft: #fff2e8;
+      --shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .05);
+      --day: 96px;
+      --sidebar: 180px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    button, select {
+      font: inherit;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 980px;
+      background: var(--bg);
+    }
+
+    body:not(.is-authenticated) .app,
+    body:not(.is-authenticated) .sync,
+    body:not(.is-authenticated) .settings-panel,
+    body:not(.is-authenticated) .modal-backdrop {
+      display: none;
+    }
+
+    .login-page {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      background: #fff;
+    }
+
+    body.is-authenticated .login-page { display: none; }
+
+    .login-box {
+      width: min(560px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 28px;
+      text-align: center;
+    }
+
+    .login-logo {
+      width: min(440px, 88vw);
+      height: auto;
+      display: block;
+    }
+
+    .login-title {
+      margin: 0;
+      color: #151a20;
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+
+    .login-button {
+      height: 44px;
+      min-width: 148px;
+      border: 0;
+      border-radius: 10px;
+      background: #ff4f0a;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      cursor: pointer;
+      box-shadow: 0 14px 34px rgba(255, 79, 10, .24);
+    }
+
+    .toolbar {
+      height: 55px;
+      flex: 0 0 55px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--blue);
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .month-chip {
+      height: 24px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      background: var(--chip);
+      color: #66717d;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+
+    .spacer { flex: 1; }
+
+    .zoom {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 9px;
+      background: var(--chip);
+    }
+
+    .icon-btn {
+      width: 26px;
+      height: 26px;
+      border: 0;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      color: #707b86;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover { background: #fff; }
+    .icon-btn:disabled { opacity: .32; cursor: default; }
+
+    .zoom-label {
+      min-width: 48px;
+      text-align: center;
+      padding: 0 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #6b7681;
+      font-size: 12px;
+    }
+
+    .today-btn {
+      height: 34px;
+      border: 0;
+      border-radius: 10px;
+      padding: 0 14px;
+      color: #ad4e00;
+      background: var(--orange-soft);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .toolbar-btn {
+      height: 34px;
+      border: 0;
+      border-radius: 10px;
+      padding: 0 12px;
+      color: #22405a;
+      background: #edf4fb;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .member-select {
+      height: 34px;
+      width: 156px;
+      padding: 0 10px;
+      border: 1px solid #cfd6de;
+      border-radius: 10px;
+      color: #65707b;
+      background: #eef2f5;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .board {
+      position: relative;
+      flex: 1;
+      display: grid;
+      grid-template-columns: var(--sidebar) 1fr;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--line);
+    }
+
+    .corner {
+      height: 60px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .row-label {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line-soft);
+      color: #3b444e;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .project-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+
+    .timeline-scroll {
+      overflow: auto hidden;
+      background: var(--bg);
+      scrollbar-width: none;
+    }
+
+    .timeline-scroll::-webkit-scrollbar { display: none; }
+
+    .timeline {
+      position: relative;
+      min-width: max-content;
+      height: 100%;
+    }
+
+    .months {
+      display: flex;
+      height: 60px;
+      border-bottom: 1px solid var(--line);
+      background: #f9fafb;
+    }
+
+    .month {
+      border-right: 1px solid var(--line);
+    }
+
+    .month-name {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      padding-left: 22px;
+      border-bottom: 1px solid var(--line-soft);
+      color: #333a42;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .13em;
+    }
+
+    .days {
+      display: grid;
+      height: 24px;
+      grid-auto-flow: column;
+      grid-auto-columns: var(--day);
+    }
+
+    .day {
+      position: relative;
+      display: grid;
+      place-items: center;
+      border-right: 1px solid var(--line-soft);
+      color: #636e79;
+      font-size: 9px;
+      line-height: 1;
+    }
+
+    .day.today::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 999px;
+      background: var(--orange);
+      box-shadow: 0 0 0 2px #fff;
+      z-index: 2;
+    }
+
+    .grid {
+      position: absolute;
+      inset: 60px 0 0;
+      background:
+        repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--line-soft) 47px, var(--line-soft) 48px),
+        var(--bg);
+    }
+
+    .bars {
+      position: absolute;
+      inset: 60px 0 0;
+    }
+
+    .bar {
+      position: absolute;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 7px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(16, 24, 40, .12);
+      white-space: nowrap;
+      overflow: hidden;
+      gap: 7px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .bar-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-meta {
+      flex: 0 0 auto;
+      opacity: .82;
+      font-weight: 700;
+    }
+
+    .sync {
+      position: fixed;
+      left: 16px;
+      bottom: 16px;
+      color: #9aa3ad;
+      font-size: 13px;
+    }
+
+    .manus {
+      position: fixed;
+      right: 17px;
+      bottom: 17px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 14px;
+      border-radius: 18px;
+      background: #222;
+      color: #fff;
+      font-size: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.22);
+    }
+
+    .settings-panel {
+      position: fixed;
+      top: 64px;
+      right: 16px;
+      width: 340px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 18px 60px rgba(16, 24, 40, .18);
+      transform: translateY(-8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .16s ease, transform .16s ease;
+      z-index: 10;
+      max-height: calc(100vh - 82px);
+      overflow: auto;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 92px;
+      background: rgba(15, 23, 42, .18);
+      z-index: 20;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      width: 360px;
+      max-width: calc(100vw - 32px);
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 24px 80px rgba(16, 24, 40, .24);
+    }
+
+    .modal h2 {
+      margin: 0 0 14px;
+      font-size: 15px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .settings-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .settings-panel h2 {
+      margin: 0 0 12px;
+      font-size: 14px;
+    }
+
+    .settings-panel h3 {
+      margin: 16px 0 10px;
+      color: #303943;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      color: #56616d;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select {
+      height: 34px;
+      border: 1px solid #d3dae2;
+      border-radius: 8px;
+      padding: 0 10px;
+      color: var(--text);
+      background: #fff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .field input[type="color"] {
+      width: 100%;
+      padding: 3px;
+      cursor: pointer;
+    }
+
+    .field select[multiple] {
+      height: 82px;
+      padding: 6px;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 6px;
+      max-height: 120px;
+      overflow: auto;
+      padding: 8px;
+      border: 1px solid #d3dae2;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 24px;
+      padding: 3px 4px;
+      border-radius: 6px;
+      color: #3f4a55;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .check-item:hover {
+      background: #f3f6f9;
+    }
+
+    .check-item input {
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      accent-color: var(--blue);
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .primary-btn,
+    .secondary-btn {
+      height: 34px;
+      border: 0;
+      border-radius: 9px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary-btn {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .secondary-btn {
+      background: var(--chip);
+      color: #5f6b76;
+    }
+
+    .project-list {
+      display: grid;
+      gap: 6px;
+      max-height: 124px;
+      overflow: auto;
+      margin-top: 10px;
+    }
+
+    .stack-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      max-height: 110px;
+      overflow: auto;
+    }
+
+    .project-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 30px;
+      border-radius: 8px;
+      padding: 0 8px;
+      background: #f5f7f9;
+      color: #48535e;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .project-pill em {
+      color: #7b8793;
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .project-pill input {
+      min-width: 0;
+      flex: 1;
+      height: 24px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 6px;
+      background: transparent;
+      color: #48535e;
+      font: inherit;
+      font-size: 12px;
+    }
+
+    .project-pill input:focus {
+      border-color: #c7d2df;
+      background: #fff;
+      outline: none;
+    }
+
+    .project-pill button {
+      width: 22px;
+      height: 22px;
+      border: 0;
+      border-radius: 6px;
+      color: #8a3540;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .project-pill button:hover {
+      background: #ffe8eb;
+    }
+
+    svg { display: block; }
+
+    @media (max-width: 800px) {
+      .app { min-width: 760px; }
+      :root { --sidebar: 128px; --day: 80px; }
+      .toolbar { gap: 8px; padding-inline: 10px; }
+      .brand-title { display: none; }
+      .month-chip { display: none; }
+      .member-select { width: 116px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="login-page" aria-label="Accesso">
+    <div class="login-box">
+      <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
+      <h1 class="login-title">LOGO GANTT</h1>
+      <button class="login-button" id="loginButton" type="button">ACCEDI</button>
+    </div>
+  </section>
+
+  <main class="app">
+    <header class="toolbar">
+      <div class="brand" aria-label="Gantt Board">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1" y="3" width="12" height="2" rx="1" fill="currentColor"/>
+            <rect x="1" y="6.5" width="8" height="2" rx="1" fill="currentColor"/>
+            <rect x="1" y="10" width="10" height="2" rx="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <span class="brand-title">Gantt Board</span>
+      </div>
+      <div class="month-chip" id="currentMonth">GIUGNO 2026</div>
+      <div class="spacer"></div>
+      <div class="zoom" aria-label="Zoom">
+        <button class="icon-btn" id="zoomOut" type="button" title="Zoom out" aria-label="Zoom out">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/></svg>
+        </button>
+        <span class="zoom-label" id="zoomLabel">Max</span>
+        <button class="icon-btn" id="zoomIn" type="button" title="Zoom in" aria-label="Zoom in">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
+        </button>
+      </div>
+      <button class="toolbar-btn" id="openTaskPanel" type="button">Nuova task</button>
+      <button class="toolbar-btn" id="openProjectPanel" type="button">Nuovo progetto</button>
+      <select class="member-select" id="memberFilter" aria-label="Chi"></select>
+      <button class="icon-btn" id="settings" type="button" title="Impostazioni generali" aria-label="Impostazioni generali">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.07A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3a2 2 0 1 1 0-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.04a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.14.36.5.83 1.56 1H21a2 2 0 1 1 0 4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+      </button>
+    </header>
+
+    <section class="board">
+      <aside class="sidebar" id="sidebar">
+        <div class="corner"></div>
+      </aside>
+      <div class="timeline-scroll" id="scroller">
+        <div class="timeline" id="timeline">
+          <div class="months" id="months"></div>
+          <div class="grid"></div>
+          <div class="bars" id="bars" aria-label="Progetti"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="sync">Sincronizzazione...</div>
+  <aside class="settings-panel" id="projectPanel" aria-label="Nuovo progetto">
+    <h2>Nuovo progetto</h2>
+    <form id="projectForm">
+      <label class="field">Nome progetto<input id="projectName" value="Nuovo progetto" required></label>
+      <label class="field">Colore progetto<input id="projectColor" type="color" value="#147bd1" required></label>
+      <div class="panel-actions">
+        <button class="primary-btn" type="submit">Aggiungi progetto</button>
+        <button class="secondary-btn" type="button" id="resetBoard">Reset</button>
+      </div>
+    </form>
+    <h3>Progetti</h3>
+    <div class="project-list" id="projectList"></div>
+  </aside>
+
+  <aside class="settings-panel" id="taskPanel" aria-label="Nuova task">
+    <h2>Nuova task</h2>
+    <form id="taskForm">
+      <label class="field">Progetto<select id="taskProject"></select></label>
+      <label class="field">Nome<input id="taskName" value="Nuova task" required></label>
+      <label class="field">Status<select id="taskStatus" required></select></label>
+      <label class="field">Chi<div class="check-list" id="taskMembers"></div></label>
+      <label class="field">Inizio<input id="taskStart" type="date" value="2026-06-16" required></label>
+      <label class="field">Fine<input id="taskEnd" type="date" value="2026-06-24" required></label>
+      <button class="primary-btn" type="submit">Aggiungi task</button>
+    </form>
+  </aside>
+
+  <aside class="settings-panel" id="settingsPanel" aria-label="Impostazioni generali">
+    <h2>Impostazioni generali</h2>
+    <h3>Chi</h3>
+    <form id="memberForm">
+      <label class="field">Nuovo chi<input id="memberName" value="Nuovo membro" required></label>
+      <button class="primary-btn" type="submit">Aggiungi chi</button>
+    </form>
+    <div class="stack-list" id="memberList"></div>
+
+    <h3>Status</h3>
+    <form id="statusForm">
+      <label class="field">Nuovo status<input id="statusName" value="Nuovo status" required></label>
+      <button class="primary-btn" type="submit">Aggiungi status</button>
+    </form>
+    <div class="stack-list" id="statusList"></div>
+  </aside>
+
+  <div class="modal-backdrop" id="taskModal" aria-label="Modifica task">
+    <div class="modal">
+      <h2>Modifica task</h2>
+      <form id="editTaskForm">
+        <input id="editTaskId" type="hidden">
+        <label class="field">Nome<input id="editTaskName" required></label>
+        <label class="field">Status<select id="editTaskStatus" required></select></label>
+        <label class="field">Chi<div class="check-list" id="editTaskMembers"></div></label>
+        <label class="field">Data inizio<input id="editTaskStart" type="date" required></label>
+        <label class="field">Data fine<input id="editTaskEnd" type="date" required></label>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closeTaskModal" type="button">Chiudi</button>
+          <button class="primary-btn" type="submit">Salva</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { doc, getDoc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    window.FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
+      authDomain: "o-tacos-gantt.firebaseapp.com",
+      projectId: "o-tacos-gantt",
+      storageBucket: "o-tacos-gantt.firebasestorage.app",
+      messagingSenderId: "255539789734",
+      appId: "1:255539789734:web:fe6d85009c029b61fdd967",
+      measurementId: "G-22GLYLHKKD"
+    };
+
+    const monthNames = ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"];
+    const monthsEl = document.getElementById("months");
+    const scroller = document.getElementById("scroller");
+    const sidebar = document.getElementById("sidebar");
+    const bars = document.getElementById("bars");
+    const taskProject = document.getElementById("taskProject");
+    const taskMembers = document.getElementById("taskMembers");
+    const taskStatus = document.getElementById("taskStatus");
+    const editTaskMembers = document.getElementById("editTaskMembers");
+    const editTaskStatus = document.getElementById("editTaskStatus");
+    const memberFilter = document.getElementById("memberFilter");
+    const projectList = document.getElementById("projectList");
+    const memberList = document.getElementById("memberList");
+    const statusList = document.getElementById("statusList");
+    const panels = [...document.querySelectorAll(".settings-panel")];
+    const taskModal = document.getElementById("taskModal");
+    const syncIndicator = document.querySelector(".sync");
+    const root = document.documentElement;
+    const today = new Date(2026, 5, 16);
+    const timelineStart = new Date(2026, 5, 1);
+    const storageKey = "tacos-gantt-board-data-v5";
+    const starterData = {
+      members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
+      statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
+      projects: [
+        { id: "p1", name: "Tortillas", color: "#147bd1" },
+        { id: "p2", name: "Salse", color: "#15a36d" },
+        { id: "p3", name: "Carne", color: "#7c5cff" },
+        { id: "p4", name: "Lancio", color: "#e4572e" }
+      ],
+      tasks: [
+        { id: "t1", projectId: "p1", name: "Impasto e test", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23" },
+        { id: "t2", projectId: "p2", name: "Ricette salse", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02" },
+        { id: "t3", projectId: "p3", name: "Fornitori carne", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12" },
+        { id: "t4", projectId: "p4", name: "Preparazione lancio", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24" }
+      ]
+    };
+    let data = structuredClone(starterData);
+    let dataVersion = 0;
+    let appStarted = false;
+    let boardRef = null;
+    let unsubscribeBoard = null;
+    let applyingRemoteUpdate = false;
+    const zooms = [
+      { label: "Ampia", width: 80 },
+      { label: "Max", width: 96 },
+      { label: "112", width: 112 },
+      { label: "128", width: 128 }
+    ];
+    let zoomIndex = 1;
+
+    async function loadData() {
+      try {
+        const config = window.FIREBASE_CONFIG;
+        if (config && config.apiKey && config.projectId) {
+          const app = initializeApp(config);
+          const auth = getAuth(app);
+          await signInAnonymously(auth);
+          const db = getFirestore(app);
+          boardRef = doc(db, "boards", "default");
+          const snapshot = await getDoc(boardRef);
+          if (!snapshot.exists()) {
+            await setDoc(boardRef, {
+              data: structuredClone(starterData),
+              updatedAt: serverTimestamp()
+            });
+          }
+          if (unsubscribeBoard) unsubscribeBoard();
+          unsubscribeBoard = onSnapshot(boardRef, (remoteSnapshot) => {
+            if (!remoteSnapshot.exists()) return;
+            const remote = remoteSnapshot.data().data;
+            if (!remote || applyingRemoteUpdate) return;
+            data = remote;
+            renderBoard();
+            syncIndicator.textContent = "Sincronizzato live";
+          });
+          syncIndicator.textContent = "Connesso a Firestore";
+          return snapshot.exists() ? snapshot.data().data : structuredClone(starterData);
+        }
+        const saved = localStorage.getItem(storageKey);
+        syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
+        return saved ? JSON.parse(saved) : structuredClone(starterData);
+      } catch {
+        syncIndicator.textContent = "Offline: salvataggio locale";
+        return structuredClone(starterData);
+      }
+    }
+
+    async function saveData() {
+      try {
+        syncIndicator.textContent = "Salvataggio...";
+        if (boardRef) {
+          applyingRemoteUpdate = true;
+          await setDoc(boardRef, {
+            data,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          applyingRemoteUpdate = false;
+          syncIndicator.textContent = "Sincronizzato live";
+          return;
+        }
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        syncIndicator.textContent = "Firebase non configurato: salvato locale";
+      } catch {
+        applyingRemoteUpdate = false;
+        localStorage.setItem(storageKey, JSON.stringify(data));
+        syncIndicator.textContent = "Offline: salvato locale";
+      }
+    }
+
+    async function refreshSharedData() {
+      return;
+    }
+
+    function daysInMonth(year, month) {
+      return new Date(year, month + 1, 0).getDate();
+    }
+
+    function renderTimeline() {
+      monthsEl.innerHTML = "";
+      for (let i = 0; i < 13; i += 1) {
+        const date = new Date(2026, 5 + i, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const total = daysInMonth(year, month);
+        const monthEl = document.createElement("section");
+        monthEl.className = "month";
+        monthEl.style.width = `calc(var(--day) * ${total})`;
+        monthEl.innerHTML = `<div class="month-name">${monthNames[month]} ${year}</div>`;
+        const daysEl = document.createElement("div");
+        daysEl.className = "days";
+        for (let day = 1; day <= total; day += 1) {
+          const el = document.createElement("div");
+          el.className = "day";
+          if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+            el.classList.add("today");
+          }
+          el.textContent = day;
+          daysEl.appendChild(el);
+        }
+        monthEl.appendChild(daysEl);
+        monthsEl.appendChild(monthEl);
+      }
+    }
+
+    function updateZoom() {
+      const current = zooms[zoomIndex];
+      root.style.setProperty("--day", `${current.width}px`);
+      document.getElementById("zoomLabel").textContent = current.label;
+      document.getElementById("zoomOut").disabled = zoomIndex === 0;
+      document.getElementById("zoomIn").disabled = zoomIndex === zooms.length - 1;
+    }
+
+    function initials(rawValue) {
+      const raw = rawValue || "";
+      return raw.trim().slice(0, 2).toUpperCase();
+    }
+
+    function memberSummary(members) {
+      return members.map(initials).join(",");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function dateDiffDays(a, b) {
+      const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+      const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+      return Math.round((end - start) / 86400000);
+    }
+
+    function option(value, label = value) {
+      const item = document.createElement("option");
+      item.value = value;
+      item.textContent = label;
+      return item;
+    }
+
+    function checkboxItem(member, groupName, checked = false) {
+      const label = document.createElement("label");
+      label.className = "check-item";
+      label.innerHTML = `<input type="checkbox" name="${escapeHtml(groupName)}" value="${escapeHtml(member)}"${checked ? " checked" : ""}>${escapeHtml(member)}`;
+      return label;
+    }
+
+    function selectedMembers(container) {
+      return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
+    }
+
+    function renderSettingsLists() {
+      const previousFilter = memberFilter.value || "all";
+      taskMembers.innerHTML = "";
+      editTaskMembers.innerHTML = "";
+      memberFilter.innerHTML = "";
+      memberFilter.appendChild(option("all", "Tutti"));
+      memberList.innerHTML = "";
+
+      data.members.forEach((member) => {
+        taskMembers.appendChild(checkboxItem(member, "taskMembers"));
+        editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
+        memberFilter.appendChild(option(member));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Modifica ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Elimina ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
+        memberList.appendChild(pill);
+      });
+      memberFilter.value = data.members.includes(previousFilter) ? previousFilter : "all";
+
+      taskStatus.innerHTML = "";
+      editTaskStatus.innerHTML = "";
+      statusList.innerHTML = "";
+      data.statuses.forEach((status) => {
+        taskStatus.appendChild(option(status));
+        editTaskStatus.appendChild(option(status));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(status)}" aria-label="Modifica ${escapeHtml(status)}" data-edit-status="${escapeHtml(status)}"><button type="button" aria-label="Elimina ${escapeHtml(status)}" data-delete-status="${escapeHtml(status)}">x</button>`;
+        statusList.appendChild(pill);
+      });
+      taskStatus.disabled = data.statuses.length === 0;
+      editTaskStatus.disabled = data.statuses.length === 0;
+    }
+
+    function openPanel(panelId) {
+      panels.forEach((panel) => panel.classList.toggle("open", panel.id === panelId && !panel.classList.contains("open")));
+    }
+
+    function closePanels() {
+      panels.forEach((panel) => panel.classList.remove("open"));
+    }
+
+    function openTaskEditor(taskId) {
+      renderSettingsLists();
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      document.getElementById("editTaskId").value = task.id;
+      document.getElementById("editTaskName").value = task.name;
+      editTaskStatus.value = task.status;
+      [...editTaskMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
+        item.checked = task.members.includes(item.value);
+      });
+      document.getElementById("editTaskStart").value = task.start;
+      document.getElementById("editTaskEnd").value = task.end;
+      taskModal.classList.add("open");
+    }
+
+    function closeTaskEditor() {
+      taskModal.classList.remove("open");
+    }
+
+    function renderBoard() {
+      sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
+      bars.innerHTML = "";
+      taskProject.innerHTML = "";
+      projectList.innerHTML = "";
+      renderSettingsLists();
+      const selectedMember = memberFilter.value;
+      data.projects.forEach((project) => {
+        const item = option(project.id, project.name);
+        taskProject.appendChild(item);
+
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><button type="button" aria-label="Elimina ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+        projectList.appendChild(pill);
+      });
+
+      const visibleProjects = data.projects.filter((project) => {
+        if (selectedMember === "all") return true;
+        return data.tasks.some((task) => task.projectId === project.id && task.members.includes(selectedMember));
+      });
+
+      visibleProjects.forEach((project, index) => {
+        const row = document.createElement("div");
+        row.className = "row-label";
+        row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
+        sidebar.appendChild(row);
+
+        data.tasks
+          .filter((task) => task.projectId === project.id)
+          .filter((task) => selectedMember === "all" || task.members.includes(selectedMember))
+          .forEach((task) => {
+            const start = new Date(`${task.start}T00:00:00`);
+            const end = new Date(`${task.end}T00:00:00`);
+            const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+            const width = Math.max(1, dateDiffDays(start, end) + 1) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            bar.title = `${task.name}: ${task.start} - ${task.end}`;
+            bar.style.left = `${left}px`;
+            bar.style.top = `${index * 48 + 11}px`;
+            bar.style.width = `${width}px`;
+            bar.style.background = project.color;
+            bar.dataset.taskId = task.id;
+            bar.innerHTML = `<span class="bar-title">${escapeHtml(task.name)}</span><span class="bar-meta">${escapeHtml(task.status)}</span>`;
+            bars.appendChild(bar);
+          });
+      });
+
+      if (!visibleProjects.length) {
+        const row = document.createElement("div");
+        row.className = "row-label";
+        row.textContent = selectedMember === "all" ? "Nessun progetto" : "Nessuna task";
+        sidebar.appendChild(row);
+      }
+
+      taskProject.disabled = data.projects.length === 0;
+    }
+
+    function scrollToToday() {
+      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      scroller.scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+    }
+
+    async function startApp() {
+      if (appStarted) return;
+      appStarted = true;
+      document.body.classList.add("is-authenticated");
+      data = await loadData();
+      renderTimeline();
+      updateZoom();
+      renderBoard();
+      scrollToToday();
+      setInterval(refreshSharedData, 1800);
+    }
+
+    document.getElementById("loginButton").addEventListener("click", () => {
+      sessionStorage.setItem("logo-gantt-authenticated", "true");
+      startApp();
+    });
+
+    if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
+      startApp();
+    }
+
+    document.getElementById("zoomOut").addEventListener("click", () => {
+      zoomIndex = Math.max(0, zoomIndex - 1);
+      updateZoom();
+      renderBoard();
+      scrollToToday();
+    });
+
+    document.getElementById("zoomIn").addEventListener("click", () => {
+      zoomIndex = Math.min(zooms.length - 1, zoomIndex + 1);
+      updateZoom();
+      renderBoard();
+      scrollToToday();
+    });
+
+    document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
+    document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
+    document.getElementById("settings").addEventListener("click", () => {
+      openPanel("settingsPanel");
+    });
+
+    document.getElementById("projectForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = document.getElementById("projectName").value.trim();
+      const color = document.getElementById("projectColor").value;
+      if (!name || !color) return;
+      data.projects.push({ id: `p${Date.now()}`, name, color });
+      saveData();
+      renderBoard();
+      event.currentTarget.reset();
+      document.getElementById("projectName").value = "Nuovo progetto";
+      document.getElementById("projectColor").value = "#147bd1";
+    });
+
+    document.getElementById("taskForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const projectId = taskProject.value;
+      const name = document.getElementById("taskName").value.trim();
+      const members = selectedMembers(taskMembers);
+      const status = taskStatus.value;
+      const start = document.getElementById("taskStart").value;
+      const end = document.getElementById("taskEnd").value;
+      if (!projectId || !name || !members.length || !status || !start || !end) return;
+      const normalizedEnd = end < start ? start : end;
+      data.tasks.push({ id: `t${Date.now()}`, projectId, name, members, status, start, end: normalizedEnd });
+      saveData();
+      renderBoard();
+      document.getElementById("taskName").value = "Nuova task";
+    });
+
+    bars.addEventListener("dblclick", (event) => {
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      closePanels();
+      openTaskEditor(bar.dataset.taskId);
+    });
+
+    document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
+    taskModal.addEventListener("click", (event) => {
+      if (event.target === taskModal) closeTaskEditor();
+    });
+
+    document.getElementById("editTaskForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const taskId = document.getElementById("editTaskId").value;
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const name = document.getElementById("editTaskName").value.trim();
+      const status = editTaskStatus.value;
+      const members = selectedMembers(editTaskMembers);
+      const start = document.getElementById("editTaskStart").value;
+      const end = document.getElementById("editTaskEnd").value;
+      if (!name || !status || !members.length || !start || !end) return;
+      task.name = name;
+      task.status = status;
+      task.members = members;
+      task.start = start;
+      task.end = end < start ? start : end;
+      saveData();
+      renderBoard();
+      closeTaskEditor();
+    });
+
+    document.getElementById("memberForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const member = document.getElementById("memberName").value.trim();
+      if (!member || data.members.includes(member)) return;
+      data.members.push(member);
+      saveData();
+      renderBoard();
+      document.getElementById("memberName").value = "Nuovo membro";
+    });
+
+    document.getElementById("statusForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const status = document.getElementById("statusName").value.trim();
+      if (!status || data.statuses.includes(status)) return;
+      data.statuses.push(status);
+      saveData();
+      renderBoard();
+      document.getElementById("statusName").value = "Nuovo status";
+    });
+
+    projectList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-project]");
+      if (!button) return;
+      const id = button.dataset.deleteProject;
+      data.projects = data.projects.filter((project) => project.id !== id);
+      data.tasks = data.tasks.filter((task) => task.projectId !== id);
+      saveData();
+      renderBoard();
+    });
+
+    memberList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-member]");
+      if (!button) return;
+      const member = button.dataset.deleteMember;
+      data.members = data.members.filter((item) => item !== member);
+      data.tasks = data.tasks
+        .map((task) => ({ ...task, members: task.members.filter((item) => item !== member) }))
+        .filter((task) => task.members.length > 0);
+      saveData();
+      renderBoard();
+    });
+
+    memberList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-member]");
+      if (!input) return;
+      const oldMember = input.dataset.editMember;
+      const newMember = input.value.trim();
+      if (!newMember || (newMember !== oldMember && data.members.includes(newMember))) {
+        renderBoard();
+        return;
+      }
+      data.members = data.members.map((item) => item === oldMember ? newMember : item);
+      data.tasks = data.tasks.map((task) => ({
+        ...task,
+        members: task.members.map((item) => item === oldMember ? newMember : item)
+      }));
+      saveData();
+      renderBoard();
+    });
+
+    statusList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-status]");
+      if (!button) return;
+      const status = button.dataset.deleteStatus;
+      data.statuses = data.statuses.filter((item) => item !== status);
+      const fallback = data.statuses[0] || "";
+      data.tasks = data.tasks.map((task) => task.status === status ? { ...task, status: fallback } : task);
+      if (!fallback) data.tasks = [];
+      saveData();
+      renderBoard();
+    });
+
+    statusList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-status]");
+      if (!input) return;
+      const oldStatus = input.dataset.editStatus;
+      const newStatus = input.value.trim();
+      if (!newStatus || (newStatus !== oldStatus && data.statuses.includes(newStatus))) {
+        renderBoard();
+        return;
+      }
+      data.statuses = data.statuses.map((item) => item === oldStatus ? newStatus : item);
+      data.tasks = data.tasks.map((task) => task.status === oldStatus ? { ...task, status: newStatus } : task);
+      saveData();
+      renderBoard();
+    });
+
+    memberFilter.addEventListener("change", renderBoard);
+
+    document.getElementById("resetBoard").addEventListener("click", () => {
+      data = structuredClone(starterData);
+      saveData();
+      renderBoard();
+      scrollToToday();
+    });
+  </script>
+</body>
+</html>
