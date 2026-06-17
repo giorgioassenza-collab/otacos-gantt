@@ -257,8 +257,7 @@
     body.ped-mode .board,
     body.ped-mode #openTaskPanel,
     body.ped-mode #openProjectPanel,
-    body.ped-mode #memberFilter,
-    body.ped-mode #settings {
+    body.ped-mode #memberFilter {
       display: none;
     }
 
@@ -1146,10 +1145,7 @@
       <label class="field">Date<input id="pedPostDate" type="date" value="2026-06-16" required></label>
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
-      <label class="field">Social<div class="check-list">
-        <label class="check-item"><input id="pedPostInstagram" type="checkbox" value="instagram">Instagram</label>
-        <label class="check-item"><input id="pedPostTikTok" type="checkbox" value="tiktok">TikTok</label>
-      </div></label>
+      <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
       <label class="field">Asset<textarea id="pedPostAsset" placeholder="Link asset"></textarea></label>
       <label class="field">Copy<textarea id="pedPostCopy" placeholder="Copy"></textarea></label>
       <button class="primary-btn" type="submit">Add post</button>
@@ -1178,6 +1174,14 @@
       <button class="primary-btn" type="submit">Add label</button>
     </form>
     <div class="stack-list" id="labelList"></div>
+
+    <h3>Social</h3>
+    <form id="socialForm">
+      <label class="field">Name<input id="socialName" value="New social" required></label>
+      <label class="field">Short<input id="socialShort" value="NS" maxlength="4" required></label>
+      <button class="primary-btn" type="submit">Add social</button>
+    </form>
+    <div class="stack-list" id="socialList"></div>
   </aside>
 
   <div class="modal-backdrop" id="taskModal" aria-label="Edit task">
@@ -1222,10 +1226,7 @@
         <label class="field">Date<input id="editPedPostDate" type="date" required></label>
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
-        <label class="field">Social<div class="check-list">
-          <label class="check-item"><input id="editPedPostInstagram" type="checkbox" value="instagram">Instagram</label>
-          <label class="check-item"><input id="editPedPostTikTok" type="checkbox" value="tiktok">TikTok</label>
-        </div></label>
+        <label class="field">Social<div class="check-list" id="editPedPostSocials"></div></label>
         <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
         <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
         <div class="modal-actions">
@@ -1268,8 +1269,10 @@
     const pedToggle = document.getElementById("pedToggle");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
+    const pedPostSocials = document.getElementById("pedPostSocials");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
+    const editPedPostSocials = document.getElementById("editPedPostSocials");
     const pedPostModal = document.getElementById("pedPostModal");
     const creatorOptions = document.getElementById("creatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
@@ -1283,6 +1286,7 @@
     const memberList = document.getElementById("memberList");
     const statusList = document.getElementById("statusList");
     const labelList = document.getElementById("labelList");
+    const socialList = document.getElementById("socialList");
     const panels = [...document.querySelectorAll(".settings-panel")];
     const taskModal = document.getElementById("taskModal");
     const syncIndicator = document.querySelector(".sync");
@@ -1294,6 +1298,10 @@
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
       labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
+      socials: [
+        { id: "instagram", label: "Instagram", short: "IG" },
+        { id: "tiktok", label: "TikTok", short: "TT" }
+      ],
       projects: [
         { id: "p1", name: "Tortillas", color: "#147bd1" },
         { id: "p2", name: "Salse", color: "#15a36d" },
@@ -1440,6 +1448,7 @@
       document.getElementById("zoomLabel").textContent = current.label;
       document.getElementById("zoomOut").disabled = zoomIndex === 0;
       document.getElementById("zoomIn").disabled = zoomIndex === zooms.length - 1;
+      document.body.classList.toggle("compact-bars", zoomIndex <= 1);
     }
 
     function initials(rawValue) {
@@ -1475,6 +1484,13 @@
       return Math.round((end - start) / 86400000);
     }
 
+    function dateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     function option(value, label = value) {
       const item = document.createElement("option");
       item.value = value;
@@ -1491,6 +1507,18 @@
 
     function selectedMembers(container) {
       return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
+    }
+
+    function selectedValues(container) {
+      return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
+    }
+
+    function slugify(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || `social-${Date.now()}`;
     }
 
     function moveItem(list, fromIndex, direction) {
@@ -1515,6 +1543,17 @@
         };
       });
       normalized.labels = normalized.labels || structuredClone(starterData.labels);
+      normalized.socials = (normalized.socials || structuredClone(starterData.socials)).map((social) => {
+        if (typeof social === "string") {
+          return { id: slugify(social), label: social, short: social.slice(0, 2).toUpperCase() };
+        }
+        const label = social.label || social.name || "Social";
+        return {
+          id: social.id || slugify(label),
+          label,
+          short: (social.short || label.slice(0, 2)).toUpperCase()
+        };
+      });
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
         nameEn: task.nameEn || "",
@@ -1540,7 +1579,9 @@
         date: post.date || "2026-06-16",
         status: post.status || (normalized.statuses[0] ? statusName(normalized.statuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
-        social: Array.isArray(post.social) ? post.social : [],
+        social: Array.isArray(post.social)
+          ? post.social.map((item) => item === "tiktok" ? "tiktok" : item === "instagram" ? "instagram" : item)
+          : [],
         asset: post.asset || post.link || "",
         copy: post.copy || ""
       }));
@@ -1727,6 +1768,20 @@
         pill.innerHTML = `<input value="${escapeHtml(label)}" aria-label="Edit ${escapeHtml(label)}" data-edit-label="${escapeHtml(label)}"><button type="button" aria-label="Move up ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="1" ${index === data.labels.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(label)}" data-delete-label="${escapeHtml(label)}">x</button>`;
         labelList.appendChild(pill);
       });
+
+      pedPostSocials.innerHTML = "";
+      editPedPostSocials.innerHTML = "";
+      socialList.innerHTML = "";
+      data.socials.forEach((social, index) => {
+        pedPostSocials.appendChild(checkboxItem(social.id, "pedPostSocials"));
+        pedPostSocials.lastElementChild.lastChild.textContent = social.label;
+        editPedPostSocials.appendChild(checkboxItem(social.id, "editPedPostSocials"));
+        editPedPostSocials.lastElementChild.lastChild.textContent = social.label;
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input value="${escapeHtml(social.short)}" maxlength="4" aria-label="Short ${escapeHtml(social.label)}" data-social-short="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
+        socialList.appendChild(pill);
+      });
     }
 
     function openPanel(panelId) {
@@ -1782,9 +1837,10 @@
     }
 
     function socialMarkup(social = []) {
-      return social.map((item) => item === "instagram"
-        ? '<span class="social-badge">IG</span>'
-        : '<span class="social-badge">TT</span>').join("");
+      return social.map((item) => {
+        const socialItem = (data.socials || []).find((entry) => entry.id === item);
+        return `<span class="social-badge">${escapeHtml(socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase())}</span>`;
+      }).join("");
     }
 
     function renderPed() {
@@ -1814,7 +1870,7 @@
         for (let day = 1; day <= total; day += 1) {
           const dayDate = new Date(year, month, day);
           const weekDay = dayDate.getDay();
-          const iso = dayDate.toISOString().slice(0, 10);
+          const iso = dateKey(dayDate);
           const el = document.createElement("div");
           el.className = "day";
           if (weekDay === 0 || weekDay === 6) {
@@ -1898,8 +1954,9 @@
       [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = (post.members || []).includes(item.value);
       });
-      document.getElementById("editPedPostInstagram").checked = (post.social || []).includes("instagram");
-      document.getElementById("editPedPostTikTok").checked = (post.social || []).includes("tiktok");
+      [...editPedPostSocials.querySelectorAll("input[type='checkbox']")].forEach((item) => {
+        item.checked = (post.social || []).includes(item.value);
+      });
       document.getElementById("editPedPostAsset").value = post.asset || "";
       document.getElementById("editPedPostCopy").value = post.copy || "";
       pedPostModal.classList.add("open");
@@ -1985,7 +2042,8 @@
             bar.style.width = `${width}px`;
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `${taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span><span class="bar-status-text">${escapeHtml(task.status)}</span></span>`;
+            const compactPreview = zoomIndex <= 1;
+            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -2139,10 +2197,7 @@
       const date = document.getElementById("pedPostDate").value;
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
-      const social = [
-        document.getElementById("pedPostInstagram").checked ? "instagram" : "",
-        document.getElementById("pedPostTikTok").checked ? "tiktok" : ""
-      ].filter(Boolean);
+      const social = selectedValues(pedPostSocials);
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
       if (!title || !date || !status) return;
@@ -2155,8 +2210,7 @@
       document.getElementById("pedPostDate").value = "2026-06-16";
       document.getElementById("pedPostAsset").value = "";
       document.getElementById("pedPostCopy").value = "";
-      document.getElementById("pedPostInstagram").checked = false;
-      document.getElementById("pedPostTikTok").checked = false;
+      pedPostSocials.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       pedPostMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
     });
 
@@ -2295,10 +2349,7 @@
       const date = document.getElementById("editPedPostDate").value;
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
-      const social = [
-        document.getElementById("editPedPostInstagram").checked ? "instagram" : "",
-        document.getElementById("editPedPostTikTok").checked ? "tiktok" : ""
-      ].filter(Boolean);
+      const social = selectedValues(editPedPostSocials);
       if (!title || !date || !status) return;
       post.title = title;
       post.date = post.sourceTaskId ? post.date : date;
@@ -2340,6 +2391,20 @@
       saveData();
       renderBoard();
       document.getElementById("labelName").value = "New label";
+    });
+
+    document.getElementById("socialForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const label = document.getElementById("socialName").value.trim();
+      const short = document.getElementById("socialShort").value.trim().toUpperCase();
+      const id = slugify(label);
+      if (!label || !short || data.socials.some((social) => social.id === id || social.label === label)) return;
+      data.socials.push({ id, label, short });
+      saveData();
+      renderBoard();
+      renderPed();
+      document.getElementById("socialName").value = "New social";
+      document.getElementById("socialShort").value = "NS";
     });
 
     projectList.addEventListener("click", (event) => {
@@ -2486,12 +2551,65 @@
       renderBoard();
     });
 
+    socialList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-social]");
+      if (moveButton) {
+        const index = data.socials.findIndex((item) => item.id === moveButton.dataset.moveSocial);
+        data.socials = moveItem(data.socials, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        renderPed();
+        return;
+      }
+      const button = event.target.closest("[data-delete-social]");
+      if (!button) return;
+      const id = button.dataset.deleteSocial;
+      data.socials = data.socials.filter((item) => item.id !== id);
+      data.pedPosts = (data.pedPosts || []).map((post) => ({
+        ...post,
+        social: (post.social || []).filter((item) => item !== id)
+      }));
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
+    socialList.addEventListener("change", (event) => {
+      const nameInput = event.target.closest("[data-edit-social]");
+      if (nameInput) {
+        const social = data.socials.find((item) => item.id === nameInput.dataset.editSocial);
+        const label = nameInput.value.trim();
+        if (!social || !label || data.socials.some((item) => item.id !== social.id && item.label === label)) {
+          renderBoard();
+          return;
+        }
+        social.label = label;
+        saveData();
+        renderBoard();
+        renderPed();
+        return;
+      }
+      const shortInput = event.target.closest("[data-social-short]");
+      if (!shortInput) return;
+      const social = data.socials.find((item) => item.id === shortInput.dataset.socialShort);
+      const short = shortInput.value.trim().toUpperCase();
+      if (!social || !short) {
+        renderBoard();
+        return;
+      }
+      social.short = short;
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
     memberFilter.addEventListener("change", renderBoard);
 
     document.getElementById("resetBoard").addEventListener("click", () => {
       data = structuredClone(starterData);
       saveData();
       renderBoard();
+      renderPed();
       scrollToToday();
     });
   </script>
