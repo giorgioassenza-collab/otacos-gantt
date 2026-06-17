@@ -865,7 +865,17 @@
       <label class="field">Who<div class="check-list" id="taskMembers"></div></label>
       <label class="field">Start<input id="taskStart" type="date" value="2026-06-16" required></label>
       <label class="field">End<input id="taskEnd" type="date" value="2026-06-24" required></label>
-      <label class="inline-check"><input id="taskHasHomeLabel" type="checkbox"> Video in store</label>
+      <label class="field">Label<select id="taskLabel"></select></label>
+      <div id="creatorOptions" hidden>
+        <label class="inline-check"><input id="creatorContact" type="checkbox"> Contattare</label>
+        <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Ok Alice</label>
+        <label class="inline-check"><input id="creatorContract" type="checkbox"> Mandare contratto</label>
+        <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+        <label class="inline-check"><input id="creatorVideo" type="checkbox"> Video in store</label>
+        <label class="field">Video in store date<input id="creatorVideoDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorPublish" type="checkbox"> Pubblicazione</label>
+        <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
+      </div>
       <label class="field">Info<textarea id="taskInfo" placeholder="Testo, note o link"></textarea></label>
       <button class="primary-btn" type="submit">Add task</button>
     </form>
@@ -886,6 +896,13 @@
       <button class="primary-btn" type="submit">Add status</button>
     </form>
     <div class="stack-list" id="statusList"></div>
+
+    <h3>Labels</h3>
+    <form id="labelForm">
+      <label class="field">New label<input id="labelName" value="New label" required></label>
+      <button class="primary-btn" type="submit">Add label</button>
+    </form>
+    <div class="stack-list" id="labelList"></div>
   </aside>
 
   <div class="modal-backdrop" id="taskModal" aria-label="Edit task">
@@ -898,7 +915,7 @@
         <label class="field">Who<div class="check-list" id="editTaskMembers"></div></label>
         <label class="field">Start<input id="editTaskStart" type="date" required></label>
         <label class="field">End<input id="editTaskEnd" type="date" required></label>
-        <label class="inline-check"><input id="editTaskHasHomeLabel" type="checkbox"> Video in store</label>
+        <label class="field">Label<select id="editTaskLabel"></select></label>
         <label class="field">Info<textarea id="editTaskInfo" placeholder="Testo, note o link"></textarea></label>
         <div class="modal-actions">
           <button class="danger-btn" id="deleteTaskButton" type="button">Delete</button>
@@ -933,12 +950,16 @@
     const taskProject = document.getElementById("taskProject");
     const taskMembers = document.getElementById("taskMembers");
     const taskStatus = document.getElementById("taskStatus");
+    const taskLabel = document.getElementById("taskLabel");
+    const creatorOptions = document.getElementById("creatorOptions");
     const editTaskMembers = document.getElementById("editTaskMembers");
     const editTaskStatus = document.getElementById("editTaskStatus");
+    const editTaskLabel = document.getElementById("editTaskLabel");
     const memberFilter = document.getElementById("memberFilter");
     const projectList = document.getElementById("projectList");
     const memberList = document.getElementById("memberList");
     const statusList = document.getElementById("statusList");
+    const labelList = document.getElementById("labelList");
     const panels = [...document.querySelectorAll(".settings-panel")];
     const taskModal = document.getElementById("taskModal");
     const syncIndicator = document.querySelector(".sync");
@@ -949,6 +970,7 @@
     const starterData = {
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
+      labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
       projects: [
         { id: "p1", name: "Tortillas", color: "#147bd1" },
         { id: "p2", name: "Salse", color: "#15a36d" },
@@ -956,10 +978,10 @@
         { id: "p4", name: "Lancio", color: "#e4572e" }
       ],
       tasks: [
-        { id: "t1", projectId: "p1", name: "Impasto e test", nameEn: "Dough and testing", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", hasHomeLabel: false },
-        { id: "t2", projectId: "p2", name: "Ricette salse", nameEn: "Sauce recipes", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", hasHomeLabel: false },
-        { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", hasHomeLabel: false },
-        { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", hasHomeLabel: false }
+        { id: "t1", projectId: "p1", name: "Impasto e test", nameEn: "Dough and testing", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", label: "" },
+        { id: "t2", projectId: "p2", name: "Ricette salse", nameEn: "Sauce recipes", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", label: "" },
+        { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", label: "" },
+        { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", label: "" }
       ]
     };
     let data = structuredClone(starterData);
@@ -1158,11 +1180,12 @@
           color: status.color || defaultStatusColors[index % defaultStatusColors.length]
         };
       });
+      normalized.labels = normalized.labels || structuredClone(starterData.labels);
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
         nameEn: task.nameEn || "",
         info: task.info || "",
-        hasHomeLabel: Boolean(task.hasHomeLabel)
+        label: task.label || (task.hasHomeLabel ? "Video in store" : "")
       }));
       return normalized;
     }
@@ -1206,6 +1229,25 @@
       return `<svg class="bar-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>`;
     }
 
+    function cameraIconMarkup() {
+      return `<svg class="bar-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 10l5-3v10l-5-3v-4Z"/><rect x="3" y="7" width="12" height="10" rx="2"/></svg>`;
+    }
+
+    function taskLabelIconMarkup(label) {
+      const normalized = String(label || "").trim().toLowerCase();
+      if (normalized === "video in store") return homeIconMarkup();
+      if (normalized === "pubblicazione") return cameraIconMarkup();
+      return "";
+    }
+
+    function isCreatorLabel(label) {
+      return String(label || "").trim().toLowerCase() === "creator";
+    }
+
+    function syncCreatorOptionsVisibility() {
+      creatorOptions.hidden = !isCreatorLabel(taskLabel.value);
+    }
+
     function renderSettingsLists() {
       const previousFilter = memberFilter.value || "all";
       taskMembers.innerHTML = "";
@@ -1240,6 +1282,20 @@
       });
       taskStatus.disabled = data.statuses.length === 0;
       editTaskStatus.disabled = data.statuses.length === 0;
+
+      taskLabel.innerHTML = "";
+      editTaskLabel.innerHTML = "";
+      labelList.innerHTML = "";
+      taskLabel.appendChild(option("", "No label"));
+      editTaskLabel.appendChild(option("", "No label"));
+      data.labels.forEach((label) => {
+        taskLabel.appendChild(option(label));
+        editTaskLabel.appendChild(option(label));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(label)}" aria-label="Edit ${escapeHtml(label)}" data-edit-label="${escapeHtml(label)}"><button type="button" aria-label="Delete ${escapeHtml(label)}" data-delete-label="${escapeHtml(label)}">x</button>`;
+        labelList.appendChild(pill);
+      });
     }
 
     function openPanel(panelId) {
@@ -1257,12 +1313,12 @@
       document.getElementById("editTaskId").value = task.id;
       document.getElementById("editTaskName").value = task.name;
       editTaskStatus.value = task.status;
+      editTaskLabel.value = task.label || "";
       [...editTaskMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = task.members.includes(item.value);
       });
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end;
-      document.getElementById("editTaskHasHomeLabel").checked = Boolean(task.hasHomeLabel);
       document.getElementById("editTaskInfo").value = task.info || "";
       taskModal.classList.add("open");
     }
@@ -1322,7 +1378,7 @@
             bar.style.width = `${width}px`;
             bar.style.color = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `${task.hasHomeLabel ? homeIconMarkup() : ""}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
+            bar.innerHTML = `${taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -1396,6 +1452,8 @@
       openPanel("settingsPanel");
     });
 
+    taskLabel.addEventListener("change", syncCreatorOptionsVisibility);
+
     document.getElementById("projectForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const name = document.getElementById("projectName").value.trim();
@@ -1417,16 +1475,52 @@
       const status = taskStatus.value;
       const start = document.getElementById("taskStart").value;
       const end = document.getElementById("taskEnd").value;
-      const hasHomeLabel = document.getElementById("taskHasHomeLabel").checked;
+      const label = taskLabel.value;
       const info = document.getElementById("taskInfo").value.trim();
       if (!projectId || !name || !members.length || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
-      data.tasks.push({ id: `t${Date.now()}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, hasHomeLabel });
+      const createdAt = Date.now();
+      data.tasks.push({ id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label });
+
+      if (isCreatorLabel(label)) {
+        const sameDayItems = [
+          { checked: document.getElementById("creatorContact").checked, prefix: "Contattare", label: "Contattare" },
+          { checked: document.getElementById("creatorAskOk").checked, prefix: "Ask Ok", label: "Ask Ok" },
+          { checked: document.getElementById("creatorContract").checked, prefix: "Mandare contratto", label: "Mandare contratto" },
+          { checked: document.getElementById("creatorGiorgia").checked, prefix: "Avvisare Giorgia", label: "Avvisare Giorgia" }
+        ];
+        sameDayItems.filter((item) => item.checked).forEach((item, index) => {
+          const childName = `${item.prefix} ${name}`;
+          data.tasks.push({
+            id: `t${createdAt}-${index}`,
+            projectId,
+            name: childName,
+            nameEn: childName,
+            members,
+            status,
+            start,
+            end: start,
+            info: "",
+            label: item.label
+          });
+        });
+
+        const videoDate = document.getElementById("creatorVideoDate").value || start;
+        if (document.getElementById("creatorVideo").checked) {
+          data.tasks.push({ id: `t${createdAt}-video`, projectId, name, nameEn, members, status, start: videoDate, end: videoDate, info: "", label: "Video in store" });
+        }
+        const publishDate = document.getElementById("creatorPublishDate").value || start;
+        if (document.getElementById("creatorPublish").checked) {
+          data.tasks.push({ id: `t${createdAt}-publish`, projectId, name, nameEn, members, status, start: publishDate, end: publishDate, info: "", label: "Pubblicazione" });
+        }
+      }
       saveData();
       renderBoard();
       document.getElementById("taskName").value = "New task";
-      document.getElementById("taskHasHomeLabel").checked = false;
+      taskLabel.value = "";
+      syncCreatorOptionsVisibility();
+      creatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       document.getElementById("taskInfo").value = "";
     });
 
@@ -1461,7 +1555,7 @@
       const members = selectedMembers(editTaskMembers);
       const start = document.getElementById("editTaskStart").value;
       const end = document.getElementById("editTaskEnd").value;
-      const hasHomeLabel = document.getElementById("editTaskHasHomeLabel").checked;
+      const label = editTaskLabel.value;
       const info = document.getElementById("editTaskInfo").value.trim();
       if (!name || !status || !members.length || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
@@ -1471,7 +1565,7 @@
       task.members = members;
       task.start = start;
       task.end = end < start ? start : end;
-      task.hasHomeLabel = hasHomeLabel;
+      task.label = label;
       task.info = info;
       saveData();
       renderBoard();
@@ -1496,6 +1590,16 @@
       saveData();
       renderBoard();
       document.getElementById("statusName").value = "New status";
+    });
+
+    document.getElementById("labelForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const label = document.getElementById("labelName").value.trim();
+      if (!label || data.labels.includes(label)) return;
+      data.labels.push(label);
+      saveData();
+      renderBoard();
+      document.getElementById("labelName").value = "New label";
     });
 
     projectList.addEventListener("click", (event) => {
@@ -1581,6 +1685,31 @@
       const status = data.statuses.find((item) => statusName(item) === input.dataset.statusColor);
       if (!status || typeof status === "string") return;
       status.color = input.value;
+      saveData();
+      renderBoard();
+    });
+
+    labelList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-label]");
+      if (!button) return;
+      const label = button.dataset.deleteLabel;
+      data.labels = data.labels.filter((item) => item !== label);
+      data.tasks = data.tasks.map((task) => task.label === label ? { ...task, label: "" } : task);
+      saveData();
+      renderBoard();
+    });
+
+    labelList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-label]");
+      if (!input) return;
+      const oldLabel = input.dataset.editLabel;
+      const newLabel = input.value.trim();
+      if (!newLabel || (newLabel !== oldLabel && data.labels.includes(newLabel))) {
+        renderBoard();
+        return;
+      }
+      data.labels = data.labels.map((item) => item === oldLabel ? newLabel : item);
+      data.tasks = data.tasks.map((task) => task.label === oldLabel ? { ...task, label: newLabel } : task);
       saveData();
       renderBoard();
     });
