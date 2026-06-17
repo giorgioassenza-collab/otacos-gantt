@@ -17,7 +17,7 @@
       --orange: #ff7a1a;
       --orange-soft: #fff2e8;
       --shadow: 0 1px 2px rgba(16, 24, 40, .08), 0 8px 24px rgba(16, 24, 40, .05);
-      --day: 1250px;
+      --day: 380px;
       --sidebar: 180px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -421,8 +421,20 @@
 
     .bar-meta {
       flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       opacity: .82;
       font-weight: 700;
+    }
+
+    .status-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+      background: #d7dde5;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
     }
 
     .sync {
@@ -708,7 +720,7 @@
 
     @media (max-width: 800px) {
       .app { min-width: 760px; }
-      :root { --sidebar: 128px; --day: 980px; }
+      :root { --sidebar: 128px; --day: 320px; }
       .toolbar { gap: 8px; padding-inline: 10px; }
       .brand-title { display: none; }
       .month-chip { display: none; }
@@ -901,10 +913,10 @@
     let applyingRemoteUpdate = false;
     const accessPassword = "otacos2026";
     const zooms = [
-      { label: "100", width: 1100 },
-      { label: "Max", width: 1250 },
-      { label: "140", width: 1400 },
-      { label: "155", width: 1550 }
+      { label: "Compatta", width: 320 },
+      { label: "Max", width: 380 },
+      { label: "420", width: 420 },
+      { label: "460", width: 460 }
     ];
     let zoomIndex = 1;
 
@@ -929,19 +941,19 @@
             if (!remoteSnapshot.exists()) return;
             const remote = remoteSnapshot.data().data;
             if (!remote || applyingRemoteUpdate) return;
-            data = remote;
+            data = normalizeData(remote);
             renderBoard();
             syncIndicator.textContent = "Sincronizzato live";
           });
           syncIndicator.textContent = "Connesso a Firestore";
-          return snapshot.exists() ? snapshot.data().data : structuredClone(starterData);
+          return snapshot.exists() ? normalizeData(snapshot.data().data) : normalizeData(starterData);
         }
         const saved = localStorage.getItem(storageKey);
         syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
-        return saved ? JSON.parse(saved) : structuredClone(starterData);
+        return saved ? normalizeData(JSON.parse(saved)) : normalizeData(starterData);
       } catch {
         syncIndicator.textContent = "Offline: salvataggio locale";
-        return structuredClone(starterData);
+        return normalizeData(starterData);
       }
     }
 
@@ -1045,6 +1057,11 @@
         .replaceAll("'", "&#039;");
     }
 
+    function previewName(name) {
+      const text = String(name || "");
+      return text.length > 30 ? `${text.slice(0, 29)}…` : text;
+    }
+
     function dateDiffDays(a, b) {
       const start = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
       const end = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
@@ -1067,6 +1084,34 @@
 
     function selectedMembers(container) {
       return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
+    }
+
+    function normalizeData(rawData) {
+      const normalized = structuredClone(rawData || starterData);
+      const defaultStatusColors = ["#6b7280", "#147bd1", "#e4572e", "#15a36d", "#7c5cff", "#c98200"];
+      normalized.statuses = (normalized.statuses || []).map((status, index) => {
+        if (typeof status === "string") {
+          return { name: status, color: defaultStatusColors[index % defaultStatusColors.length] };
+        }
+        return {
+          name: status.name || "Status",
+          color: status.color || defaultStatusColors[index % defaultStatusColors.length]
+        };
+      });
+      normalized.tasks = (normalized.tasks || []).map((task) => ({
+        ...task,
+        info: task.info || ""
+      }));
+      return normalized;
+    }
+
+    function statusName(status) {
+      return typeof status === "string" ? status : status.name;
+    }
+
+    function statusColor(name) {
+      const status = data.statuses.find((item) => statusName(item) === name);
+      return status && typeof status !== "string" ? status.color : "#d7dde5";
     }
 
     function renderSettingsLists() {
@@ -1092,11 +1137,13 @@
       editTaskStatus.innerHTML = "";
       statusList.innerHTML = "";
       data.statuses.forEach((status) => {
-        taskStatus.appendChild(option(status));
-        editTaskStatus.appendChild(option(status));
+        const name = statusName(status);
+        const color = typeof status === "string" ? "#d7dde5" : status.color;
+        taskStatus.appendChild(option(name));
+        editTaskStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(status)}" aria-label="Modifica ${escapeHtml(status)}" data-edit-status="${escapeHtml(status)}"><button type="button" aria-label="Elimina ${escapeHtml(status)}" data-delete-status="${escapeHtml(status)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Modifica ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Colore ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Elimina ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
         statusList.appendChild(pill);
       });
       taskStatus.disabled = data.statuses.length === 0;
@@ -1185,7 +1232,7 @@
             bar.style.width = `${width}px`;
             bar.style.background = project.color;
             bar.dataset.taskId = task.id;
-            bar.innerHTML = `<span class="bar-title">${escapeHtml(task.name)}</span><span class="bar-meta">${escapeHtml(task.status)}</span>`;
+            bar.innerHTML = `<span class="bar-title">${escapeHtml(previewName(task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${escapeHtml(task.status)}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -1338,8 +1385,8 @@
     document.getElementById("statusForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const status = document.getElementById("statusName").value.trim();
-      if (!status || data.statuses.includes(status)) return;
-      data.statuses.push(status);
+      if (!status || data.statuses.some((item) => statusName(item) === status)) return;
+      data.statuses.push({ name: status, color: "#6b7280" });
       saveData();
       renderBoard();
       document.getElementById("statusName").value = "Nuovo status";
@@ -1399,8 +1446,8 @@
       const button = event.target.closest("[data-delete-status]");
       if (!button) return;
       const status = button.dataset.deleteStatus;
-      data.statuses = data.statuses.filter((item) => item !== status);
-      const fallback = data.statuses[0] || "";
+      data.statuses = data.statuses.filter((item) => statusName(item) !== status);
+      const fallback = data.statuses[0] ? statusName(data.statuses[0]) : "";
       data.tasks = data.tasks.map((task) => task.status === status ? { ...task, status: fallback } : task);
       if (!fallback) data.tasks = [];
       saveData();
@@ -1412,12 +1459,22 @@
       if (!input) return;
       const oldStatus = input.dataset.editStatus;
       const newStatus = input.value.trim();
-      if (!newStatus || (newStatus !== oldStatus && data.statuses.includes(newStatus))) {
+      if (!newStatus || (newStatus !== oldStatus && data.statuses.some((item) => statusName(item) === newStatus))) {
         renderBoard();
         return;
       }
-      data.statuses = data.statuses.map((item) => item === oldStatus ? newStatus : item);
+      data.statuses = data.statuses.map((item) => statusName(item) === oldStatus ? { ...item, name: newStatus } : item);
       data.tasks = data.tasks.map((task) => task.status === oldStatus ? { ...task, status: newStatus } : task);
+      saveData();
+      renderBoard();
+    });
+
+    statusList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-status-color]");
+      if (!input) return;
+      const status = data.statuses.find((item) => statusName(item) === input.dataset.statusColor);
+      if (!status || typeof status === "string") return;
+      status.color = input.value;
       saveData();
       renderBoard();
     });
