@@ -367,6 +367,12 @@
       user-select: none;
     }
 
+    .bar.is-done {
+      opacity: .38;
+      box-shadow: none;
+      filter: saturate(.65);
+    }
+
     .bar-title {
       min-width: 0;
       overflow: hidden;
@@ -1077,6 +1083,9 @@
             const width = Math.max(1, dateDiffDays(start, end) + 1) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
             const bar = document.createElement("div");
             bar.className = "bar";
+            if (task.status.trim().toUpperCase() === "DONE") {
+              bar.classList.add("is-done");
+            }
             bar.title = `${task.name}: ${task.start} - ${task.end}`;
             bar.style.left = `${left}px`;
             bar.style.top = `${index * 48 + 11}px`;
