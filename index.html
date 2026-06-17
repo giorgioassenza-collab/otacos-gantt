@@ -618,6 +618,26 @@
       accent-color: var(--blue);
     }
 
+    .creator-block {
+      display: grid;
+      gap: 8px;
+      margin: 4px 0 12px;
+      padding: 10px;
+      border: 1px solid #d3dae2;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .creator-block[hidden] { display: none; }
+
+    .creator-block-title {
+      color: #56616d;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
     .field input[type="color"] {
       width: 100%;
       padding: 3px;
@@ -866,7 +886,8 @@
       <label class="field">Start<input id="taskStart" type="date" value="2026-06-16" required></label>
       <label class="field">End<input id="taskEnd" type="date" value="2026-06-24" required></label>
       <label class="field">Label<select id="taskLabel"></select></label>
-      <div id="creatorOptions" hidden>
+      <div class="creator-block" id="creatorOptions" hidden>
+        <div class="creator-block-title">Creator duplicates</div>
         <label class="inline-check"><input id="creatorContact" type="checkbox"> Contattare</label>
         <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Ok Alice</label>
         <label class="inline-check"><input id="creatorContract" type="checkbox"> Mandare contratto</label>
@@ -1248,6 +1269,62 @@
       creatorOptions.hidden = !isCreatorLabel(taskLabel.value);
     }
 
+    function resetCreatorOptions() {
+      creatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
+      document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
+    }
+
+    function creatorDuplicateTasks(baseTask, createdAt) {
+      if (!isCreatorLabel(baseTask.label)) return [];
+      const sameDayTasks = [
+        { checked: document.getElementById("creatorContact").checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
+        { checked: document.getElementById("creatorAskOk").checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
+        { checked: document.getElementById("creatorContract").checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
+        { checked: document.getElementById("creatorGiorgia").checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia" }
+      ]
+        .filter((item) => item.checked)
+        .map((item, index) => ({
+          ...baseTask,
+          id: `t${createdAt}-creator-${index}`,
+          name: item.name,
+          nameEn: item.name,
+          start: baseTask.start,
+          end: baseTask.start,
+          info: "",
+          label: item.label
+        }));
+
+      const datedTasks = [];
+      if (document.getElementById("creatorVideo").checked) {
+        const videoDate = document.getElementById("creatorVideoDate").value || baseTask.start;
+        datedTasks.push({
+          ...baseTask,
+          id: `t${createdAt}-creator-video`,
+          name: baseTask.name,
+          nameEn: baseTask.nameEn,
+          start: videoDate,
+          end: videoDate,
+          info: "",
+          label: "Video in store"
+        });
+      }
+      if (document.getElementById("creatorPublish").checked) {
+        const publishDate = document.getElementById("creatorPublishDate").value || baseTask.start;
+        datedTasks.push({
+          ...baseTask,
+          id: `t${createdAt}-creator-publish`,
+          name: baseTask.name,
+          nameEn: baseTask.nameEn,
+          start: publishDate,
+          end: publishDate,
+          info: "",
+          label: "Pubblicazione"
+        });
+      }
+      return [...sameDayTasks, ...datedTasks];
+    }
+
     function renderSettingsLists() {
       const previousFilter = memberFilter.value || "all";
       taskMembers.innerHTML = "";
@@ -1453,6 +1530,14 @@
     });
 
     taskLabel.addEventListener("change", syncCreatorOptionsVisibility);
+    document.getElementById("taskStart").addEventListener("change", () => {
+      if (!document.getElementById("creatorVideoDate").value) {
+        document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
+      }
+      if (!document.getElementById("creatorPublishDate").value) {
+        document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
+      }
+    });
 
     document.getElementById("projectForm").addEventListener("submit", (event) => {
       event.preventDefault();
@@ -1481,46 +1566,14 @@
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
-      data.tasks.push({ id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label });
-
-      if (isCreatorLabel(label)) {
-        const sameDayItems = [
-          { checked: document.getElementById("creatorContact").checked, prefix: "Contattare", label: "Contattare" },
-          { checked: document.getElementById("creatorAskOk").checked, prefix: "Ask Ok", label: "Ask Ok" },
-          { checked: document.getElementById("creatorContract").checked, prefix: "Mandare contratto", label: "Mandare contratto" },
-          { checked: document.getElementById("creatorGiorgia").checked, prefix: "Avvisare Giorgia", label: "Avvisare Giorgia" }
-        ];
-        sameDayItems.filter((item) => item.checked).forEach((item, index) => {
-          const childName = `${item.prefix} ${name}`;
-          data.tasks.push({
-            id: `t${createdAt}-${index}`,
-            projectId,
-            name: childName,
-            nameEn: childName,
-            members,
-            status,
-            start,
-            end: start,
-            info: "",
-            label: item.label
-          });
-        });
-
-        const videoDate = document.getElementById("creatorVideoDate").value || start;
-        if (document.getElementById("creatorVideo").checked) {
-          data.tasks.push({ id: `t${createdAt}-video`, projectId, name, nameEn, members, status, start: videoDate, end: videoDate, info: "", label: "Video in store" });
-        }
-        const publishDate = document.getElementById("creatorPublishDate").value || start;
-        if (document.getElementById("creatorPublish").checked) {
-          data.tasks.push({ id: `t${createdAt}-publish`, projectId, name, nameEn, members, status, start: publishDate, end: publishDate, info: "", label: "Pubblicazione" });
-        }
-      }
+      const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label };
+      data.tasks.push(baseTask, ...creatorDuplicateTasks(baseTask, createdAt));
       saveData();
       renderBoard();
       document.getElementById("taskName").value = "New task";
       taskLabel.value = "";
       syncCreatorOptionsVisibility();
-      creatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      resetCreatorOptions();
       document.getElementById("taskInfo").value = "";
     });
 
