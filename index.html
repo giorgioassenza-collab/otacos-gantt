@@ -1312,15 +1312,6 @@
       renderBoard();
     });
 
-    projectList.addEventListener("input", (event) => {
-      const input = event.target.closest("[data-project-color]");
-      if (!input) return;
-      const project = data.projects.find((item) => item.id === input.dataset.projectColor);
-      if (!project) return;
-      project.color = input.value;
-      renderBoard();
-    });
-
     projectList.addEventListener("change", (event) => {
       const input = event.target.closest("[data-project-color]");
       if (!input) return;
