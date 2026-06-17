@@ -650,6 +650,17 @@
       font-size: 12px;
     }
 
+    .project-pill input[type="color"] {
+      width: 30px;
+      min-width: 30px;
+      height: 24px;
+      flex: 0 0 auto;
+      padding: 2px;
+      border-color: #d3dae2;
+      background: #fff;
+      cursor: pointer;
+    }
+
     .project-pill input:focus {
       border-color: #c7d2df;
       background: #fff;
@@ -1095,7 +1106,7 @@
 
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><button type="button" aria-label="Elimina ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Colore ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button type="button" aria-label="Elimina ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
         projectList.appendChild(pill);
       });
 
@@ -1297,6 +1308,25 @@
       const id = button.dataset.deleteProject;
       data.projects = data.projects.filter((project) => project.id !== id);
       data.tasks = data.tasks.filter((task) => task.projectId !== id);
+      saveData();
+      renderBoard();
+    });
+
+    projectList.addEventListener("input", (event) => {
+      const input = event.target.closest("[data-project-color]");
+      if (!input) return;
+      const project = data.projects.find((item) => item.id === input.dataset.projectColor);
+      if (!project) return;
+      project.color = input.value;
+      renderBoard();
+    });
+
+    projectList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-project-color]");
+      if (!input) return;
+      const project = data.projects.find((item) => item.id === input.dataset.projectColor);
+      if (!project) return;
+      project.color = input.value;
       saveData();
       renderBoard();
     });
