@@ -544,18 +544,18 @@
 
     .hidden-task-indicator {
       position: absolute;
-      bottom: 4px;
-      width: 20px;
-      height: 18px;
+      width: 24px;
+      height: 22px;
       display: grid;
       place-items: center;
-      border-radius: 999px;
-      color: #475569;
-      background: rgba(255, 255, 255, .88);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, .12);
-      font-size: 12px;
+      color: #ef4444;
+      background: transparent;
+      text-shadow: 0 1px 0 #fff, 0 0 10px rgba(239, 68, 68, .28);
+      font-size: 18px;
+      line-height: 1;
       font-weight: 900;
       pointer-events: none;
+      z-index: 4;
     }
 
     .sync {
@@ -1382,6 +1382,7 @@
     const weekdayNames = ["DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"];
     const monthsEl = document.getElementById("months");
     const weekendsEl = document.getElementById("weekends");
+    const boardEl = document.querySelector(".board");
     const scroller = document.getElementById("scroller");
     const timelineEl = document.getElementById("timeline");
     const sidebar = document.getElementById("sidebar");
@@ -2314,6 +2315,34 @@
       bars.style.height = `${projectTop}px`;
 
       taskProject.disabled = data.projects.length === 0;
+      updateHiddenTaskIndicators();
+    }
+
+    function updateHiddenTaskIndicators() {
+      bars.querySelectorAll(".hidden-task-indicator").forEach((indicator) => indicator.remove());
+      if (document.body.classList.contains("ped-mode")) return;
+      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
+      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const visibleBottomInBars = boardEl.scrollTop + boardEl.clientHeight - timelineHead;
+      const indicatorTop = Math.max(6, Math.min(parseFloat(bars.style.height || "0") - 24, visibleBottomInBars - 28));
+      const hiddenColumns = new Set();
+
+      bars.querySelectorAll(".bar[data-task-id]").forEach((bar) => {
+        const top = parseFloat(bar.style.top || "0");
+        const bottom = top + bar.offsetHeight;
+        if (bottom <= visibleBottomInBars) return;
+        const left = parseFloat(bar.style.left || "0");
+        hiddenColumns.add(Math.round(left / dayWidth) * dayWidth);
+      });
+
+      hiddenColumns.forEach((left) => {
+        const indicator = document.createElement("div");
+        indicator.className = "hidden-task-indicator";
+        indicator.style.left = `${left + Math.min(dayWidth - 30, 18)}px`;
+        indicator.style.top = `${indicatorTop}px`;
+        indicator.textContent = "↓";
+        bars.appendChild(indicator);
+      });
     }
 
     function scrollToToday() {
@@ -3178,6 +3207,7 @@
     });
 
     memberFilter.addEventListener("change", renderBoard);
+    boardEl.addEventListener("scroll", updateHiddenTaskIndicators);
 
     document.getElementById("resetBoard").addEventListener("click", () => {
       data = structuredClone(starterData);
