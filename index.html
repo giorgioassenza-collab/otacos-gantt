@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tacos Gantt Board Replica</title>
+  <title>O'Tacos Workflow</title>
   <style>
     :root {
       --bg: #f8f9fb;
@@ -267,11 +267,22 @@
 
     body.influencer-mode .board,
     body.influencer-mode .ped-view,
+    body.influencer-mode .creator-calendar-view,
     body.influencer-mode #openTaskPanel,
     body.influencer-mode #openProjectPanel,
     body.influencer-mode #openPedPostPanel,
     body.influencer-mode #memberFilter,
     body.influencer-mode .zoom {
+      display: none;
+    }
+
+    body.creator-calendar-mode .board,
+    body.creator-calendar-mode .ped-view,
+    body.creator-calendar-mode .influencer-view,
+    body.creator-calendar-mode #openTaskPanel,
+    body.creator-calendar-mode #openProjectPanel,
+    body.creator-calendar-mode #openPedPostPanel,
+    body.creator-calendar-mode #memberFilter {
       display: none;
     }
 
@@ -282,6 +293,10 @@
 
     body:not(.influencer-mode) .influencer-view,
     body:not(.influencer-mode) .influencer-only {
+      display: none;
+    }
+
+    body:not(.creator-calendar-mode) .creator-calendar-view {
       display: none;
     }
 
@@ -687,6 +702,49 @@
       white-space: normal;
     }
 
+    .creator-calendar-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .creator-calendar {
+      position: relative;
+      min-width: max-content;
+      min-height: 100%;
+    }
+
+    .creator-card {
+      position: absolute;
+      min-height: 86px;
+      padding: 9px 10px;
+      border: 2px solid #111827;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+      color: #111827;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .creator-card-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .creator-card-line {
+      margin-top: 4px;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
     .social-badge {
       display: inline-grid;
       place-items: center;
@@ -708,6 +766,8 @@
       display: flex;
       gap: 6px;
       padding: 5px;
+      max-width: calc(100vw - 36px);
+      overflow-x: auto;
       border: 1px solid #d9e0e8;
       border-radius: 999px;
       background: rgba(255, 255, 255, .96);
@@ -719,6 +779,7 @@
       border: 0;
       border-radius: 999px;
       padding: 0 12px;
+      white-space: nowrap;
       color: #475467;
       background: transparent;
       font-size: 12px;
@@ -1313,7 +1374,7 @@
   <section class="login-page" aria-label="Accesso">
     <div class="login-box">
       <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
-      <h1 class="login-title">GANTT</h1>
+      <h1 class="login-title">WORKFLOW</h1>
       <label class="login-field">
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
         <span class="login-error" id="loginError"></span>
@@ -1327,7 +1388,7 @@
       <button class="icon-btn undo-btn" id="undoButton" type="button" title="Undo" aria-label="Undo" disabled>
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 1 1 0 12h-2"/></svg>
       </button>
-      <div class="brand" aria-label="Gantt Board">
+      <div class="brand" aria-label="Workflow">
         <div class="brand-mark" aria-hidden="true">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <rect x="1" y="3" width="12" height="2" rx="1" fill="currentColor"/>
@@ -1335,7 +1396,7 @@
             <rect x="1" y="10" width="10" height="2" rx="1" fill="currentColor"/>
           </svg>
         </div>
-        <span class="brand-title">Gantt Board</span>
+        <span class="brand-title">Workflow</span>
       </div>
       <div class="month-chip" id="currentMonth">O'TACOS</div>
       <div class="spacer"></div>
@@ -1394,12 +1455,17 @@
         </div>
       </div>
     </section>
+
+    <section class="creator-calendar-view" id="creatorCalendarView" aria-label="Creator Calendar">
+      <div class="creator-calendar" id="creatorCalendar"></div>
+    </section>
   </main>
 
   <div class="view-switch" aria-label="Views">
     <button id="viewGantt" class="is-active" type="button">GANTT</button>
     <button id="viewPed" type="button">PED</button>
     <button id="viewInfluencer" type="button">INFLUENCER</button>
+    <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
   </div>
   <div class="sync">Sincronizzazione...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="Project">
@@ -1714,9 +1780,11 @@
     const taskStatus = document.getElementById("taskStatus");
     const taskLabel = document.getElementById("taskLabel");
     const pedCalendar = document.getElementById("pedCalendar");
+    const creatorCalendar = document.getElementById("creatorCalendar");
     const viewGantt = document.getElementById("viewGantt");
     const viewPed = document.getElementById("viewPed");
     const viewInfluencer = document.getElementById("viewInfluencer");
+    const viewCreatorCalendar = document.getElementById("viewCreatorCalendar");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
@@ -1887,6 +1955,7 @@
             renderBoard();
             renderPed();
             renderInfluencers();
+            renderCreatorCalendar();
             updateUndoButton();
             syncIndicator.textContent = "Sincronizzato live";
           });
@@ -2081,6 +2150,13 @@
       const date = new Date(`${value}T00:00:00`);
       date.setDate(date.getDate() + days);
       return dateKey(date);
+    }
+
+    function formatDateLabel(value) {
+      if (!value) return "-";
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
     function option(value, label = value) {
@@ -2545,6 +2621,14 @@
       return "";
     }
 
+    function isVideoInStoreLabel(label) {
+      return String(label || "").trim().toLowerCase() === "video in store";
+    }
+
+    function isPublicationLabel(label) {
+      return String(label || "").trim().toLowerCase() === "pubblicazione";
+    }
+
     function isCreatorLabel(label) {
       return String(label || "").trim().toLowerCase() === "creator";
     }
@@ -2868,6 +2952,115 @@
       });
       const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
       pedCalendar.style.height = `${height}px`;
+    }
+
+    function creatorCalendarKey(task) {
+      return `${task.projectId || ""}::${normalizedInfluencerName(task.nameEn || task.name)}`;
+    }
+
+    function creatorCalendarItems() {
+      const publicationByKey = new Map(
+        (data.tasks || [])
+          .filter((task) => isPublicationLabel(task.label))
+          .map((task) => [creatorCalendarKey(task), task])
+      );
+      return (data.tasks || [])
+        .filter((task) => isVideoInStoreLabel(task.label))
+        .map((task) => {
+          const project = (data.projects || []).find((item) => item.id === task.projectId);
+          const publication = publicationByKey.get(creatorCalendarKey(task));
+          return {
+            id: task.id,
+            title: task.nameEn || task.name,
+            project: project?.name || "",
+            color: project?.color || statusColor(task.status),
+            date: task.start,
+            publicationDate: publication?.start || "",
+            members: task.members || []
+          };
+        })
+        .sort((left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title));
+    }
+
+    function renderCreatorCalendar() {
+      creatorCalendar.innerHTML = "";
+      const items = creatorCalendarItems();
+      const months = document.createElement("div");
+      months.className = "ped-months";
+      const weekends = document.createElement("div");
+      weekends.className = "ped-weekends";
+      const grid = document.createElement("div");
+      grid.className = "ped-grid";
+      const layer = document.createElement("div");
+      layer.className = "ped-layer";
+      let dayOffset = 0;
+      const cardsByDate = {};
+      for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
+        const date = new Date(2026, 5 + monthOffset, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const total = daysInMonth(year, month);
+        const monthEl = document.createElement("section");
+        monthEl.className = "month";
+        monthEl.style.width = `calc(var(--day) * ${total})`;
+        monthEl.innerHTML = `<div class="month-name">${monthNames[month]} ${year}</div>`;
+        const daysEl = document.createElement("div");
+        daysEl.className = "days";
+        for (let day = 1; day <= total; day += 1) {
+          const dayDate = new Date(year, month, day);
+          const weekDay = dayDate.getDay();
+          const iso = dateKey(dayDate);
+          const el = document.createElement("div");
+          el.className = "day";
+          if (weekDay === 0 || weekDay === 6) {
+            el.classList.add("weekend");
+            const band = document.createElement("div");
+            band.className = "weekend-band";
+            band.style.left = `calc(var(--day) * ${dayOffset})`;
+            band.style.width = "var(--day)";
+            weekends.appendChild(band);
+          }
+          el.innerHTML = `<span class="day-weekday">${weekdayNames[weekDay]}</span><span class="day-number">${day}</span>`;
+          daysEl.appendChild(el);
+          cardsByDate[iso] = [];
+          items.filter((item) => item.date === iso).forEach((item) => {
+            const card = document.createElement("div");
+            card.className = "creator-card";
+            card.dataset.taskId = item.id;
+            card.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
+            card.style.top = "10px";
+            card.style.width = "calc(var(--day) - 12px)";
+            card.style.borderColor = item.color;
+            card.innerHTML = `
+              <div class="creator-card-title">${homeIconMarkup()}<span>${escapeHtml(previewName(item.title))}</span></div>
+              <div class="creator-card-line">Project: ${escapeHtml(item.project || "-")}</div>
+              <div class="creator-card-line">Video in store: ${escapeHtml(formatDateLabel(item.date))}</div>
+              <div class="creator-card-line">${cameraIconMarkup()} Publication date: ${escapeHtml(item.publicationDate ? formatDateLabel(item.publicationDate) : "-")}</div>
+              <div class="creator-card-line">Who: ${escapeHtml(item.members.join(", ") || "-")}</div>
+            `;
+            layer.appendChild(card);
+            cardsByDate[iso].push(card);
+          });
+          dayOffset += 1;
+        }
+        monthEl.appendChild(daysEl);
+        months.appendChild(monthEl);
+      }
+      creatorCalendar.appendChild(months);
+      creatorCalendar.appendChild(weekends);
+      creatorCalendar.appendChild(grid);
+      creatorCalendar.appendChild(layer);
+      let maxColumnHeight = 104;
+      Object.values(cardsByDate).forEach((cards) => {
+        let nextTop = 10;
+        cards.forEach((card) => {
+          card.style.top = `${nextTop}px`;
+          nextTop += card.offsetHeight + 8;
+        });
+        maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
+      });
+      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
+      creatorCalendar.style.height = `${height}px`;
     }
 
     function uniqueInfluencerValues(key) {
@@ -3326,6 +3519,11 @@
       document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
     }
 
+    function scrollCreatorCalendarToToday() {
+      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      document.getElementById("creatorCalendarView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+    }
+
     async function startApp() {
       if (appStarted) return;
       appStarted = true;
@@ -3336,9 +3534,10 @@
       renderTimeline();
       updateZoom();
       await importInfluencerSeedIfNeeded();
-      renderBoard();
-      renderPed();
-      renderInfluencers();
+      if (view === "gantt") renderBoard();
+      if (pedMode) renderPed();
+      if (influencerMode) renderInfluencers();
+      if (creatorCalendarMode) renderCreatorCalendar();
       scrollToToday();
       setInterval(refreshSharedData, 1800);
     }
@@ -3375,6 +3574,7 @@
       renderBoard();
       renderPed();
       renderInfluencers();
+      renderCreatorCalendar();
       updateUndoButton();
       closePanels();
       closeTaskEditor();
@@ -3385,19 +3585,31 @@
     document.getElementById("zoomOut").addEventListener("click", () => {
       zoomIndex = Math.max(0, zoomIndex - 1);
       updateZoom();
-      renderBoard();
-      renderPed();
-      if (document.body.classList.contains("ped-mode")) scrollPedToToday();
-      else scrollToToday();
+      if (document.body.classList.contains("ped-mode")) {
+        renderPed();
+        scrollPedToToday();
+      } else if (document.body.classList.contains("creator-calendar-mode")) {
+        renderCreatorCalendar();
+        scrollCreatorCalendarToToday();
+      } else {
+        renderBoard();
+        scrollToToday();
+      }
     });
 
     document.getElementById("zoomIn").addEventListener("click", () => {
       zoomIndex = Math.min(zooms.length - 1, zoomIndex + 1);
       updateZoom();
-      renderBoard();
-      renderPed();
-      if (document.body.classList.contains("ped-mode")) scrollPedToToday();
-      else scrollToToday();
+      if (document.body.classList.contains("ped-mode")) {
+        renderPed();
+        scrollPedToToday();
+      } else if (document.body.classList.contains("creator-calendar-mode")) {
+        renderCreatorCalendar();
+        scrollCreatorCalendarToToday();
+      } else {
+        renderBoard();
+        scrollToToday();
+      }
     });
 
     document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
@@ -3419,13 +3631,16 @@
     function setView(view) {
       const pedMode = view === "ped";
       const influencerMode = view === "influencer";
+      const creatorCalendarMode = view === "creator-calendar";
       document.body.classList.toggle("ped-mode", pedMode);
       document.body.classList.toggle("influencer-mode", influencerMode);
+      document.body.classList.toggle("creator-calendar-mode", creatorCalendarMode);
       viewGantt.classList.toggle("is-active", view === "gantt");
       viewPed.classList.toggle("is-active", pedMode);
       viewInfluencer.classList.toggle("is-active", influencerMode);
-      document.querySelector(".brand-title").textContent = influencerMode ? "Influencer" : pedMode ? "PED" : "Gantt Board";
-      document.getElementById("currentMonth").textContent = influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
+      viewCreatorCalendar.classList.toggle("is-active", creatorCalendarMode);
+      document.querySelector(".brand-title").textContent = creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
+      document.getElementById("currentMonth").textContent = creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
       closePanels();
       if (!influencerMode) {
         zoomIndex = zooms.length - 1;
@@ -3434,8 +3649,10 @@
       renderBoard();
       renderPed();
       renderInfluencers();
+      renderCreatorCalendar();
       requestAnimationFrame(() => {
         if (pedMode) scrollPedToToday();
+        else if (creatorCalendarMode) scrollCreatorCalendarToToday();
         else if (!influencerMode) scrollToToday();
       });
     }
@@ -3443,6 +3660,7 @@
     viewGantt.addEventListener("click", () => setView("gantt"));
     viewPed.addEventListener("click", () => setView("ped"));
     viewInfluencer.addEventListener("click", () => setView("influencer"));
+    viewCreatorCalendar.addEventListener("click", () => setView("creator-calendar"));
 
     document.getElementById("taskAddEndDate").addEventListener("change", (event) => {
       document.getElementById("taskEndWrap").hidden = !event.target.checked;
@@ -3716,6 +3934,7 @@
       }
       saveData();
       renderBoard();
+      renderCreatorCalendar();
       document.getElementById("taskName").value = "New task";
       taskLabel.value = "";
       syncCreatorOptionsVisibility();
@@ -3792,6 +4011,7 @@
       saveData();
       renderBoard();
       renderPed();
+      renderCreatorCalendar();
       hideTaskMenus();
     });
 
@@ -3831,6 +4051,7 @@
       saveData();
       renderBoard();
       renderPed();
+      renderCreatorCalendar();
       hideTaskMenus();
     });
 
@@ -3905,6 +4126,7 @@
       data.tasks = data.tasks.filter((task) => task.id !== taskId);
       saveData();
       renderBoard();
+      renderCreatorCalendar();
       closeTaskEditor();
     });
 
@@ -4017,6 +4239,7 @@
       saveData();
       renderBoard();
       renderPed();
+      renderCreatorCalendar();
       closeTaskEditor();
     });
 
@@ -4103,6 +4326,7 @@
         data.projects = moveItem(data.projects, index, Number(moveButton.dataset.moveDirection));
         saveData();
         renderBoard();
+        renderCreatorCalendar();
         renderInfluencerSettings();
         renderInfluencers();
         return;
@@ -4114,6 +4338,7 @@
       data.tasks = data.tasks.filter((task) => task.projectId !== id);
       saveData();
       renderBoard();
+      renderCreatorCalendar();
       renderInfluencerSettings();
       renderInfluencers();
     });
@@ -4130,6 +4355,7 @@
         project.name = name;
         saveData();
         renderBoard();
+        renderCreatorCalendar();
         renderInfluencerSettings();
         renderInfluencers();
         return;
@@ -4141,6 +4367,7 @@
       project.color = colorInput.value;
       saveData();
       renderBoard();
+      renderCreatorCalendar();
       renderInfluencerSettings();
       renderInfluencers();
     });
@@ -4152,6 +4379,7 @@
         data.members = moveItem(data.members, index, Number(moveButton.dataset.moveDirection));
         saveData();
         renderBoard();
+        renderCreatorCalendar();
         return;
       }
       const button = event.target.closest("[data-delete-member]");
@@ -4163,6 +4391,7 @@
         .filter((task) => task.members.length > 0);
       saveData();
       renderBoard();
+      renderCreatorCalendar();
     });
 
     memberList.addEventListener("change", (event) => {
@@ -4181,6 +4410,7 @@
       }));
       saveData();
       renderBoard();
+      renderCreatorCalendar();
     });
 
     statusList.addEventListener("click", (event) => {
