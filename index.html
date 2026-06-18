@@ -854,7 +854,6 @@
       min-height: 22px;
       padding: 3px 8px;
       border-radius: 999px;
-      color: #111827;
       background: #eef2f7;
       font-size: 11px;
       font-weight: 900;
@@ -1559,6 +1558,7 @@
     <form id="influencerCityForm">
       <label class="field">Name<input id="influencerCityName" value="New city" required></label>
       <label class="field">Color<input id="influencerCityColor" type="color" value="#e0f2fe" required></label>
+      <label class="field">Font color<input id="influencerCityTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add city</button>
     </form>
     <div class="stack-list" id="influencerCityList"></div>
@@ -1567,6 +1567,7 @@
     <form id="influencerTargetForm">
       <label class="field">Name<input id="influencerTargetName" value="New target" required></label>
       <label class="field">Color<input id="influencerTargetColor" type="color" value="#dcfce7" required></label>
+      <label class="field">Font color<input id="influencerTargetTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add target</button>
     </form>
     <div class="stack-list" id="influencerTargetList"></div>
@@ -1575,6 +1576,7 @@
     <form id="influencerTypeForm">
       <label class="field">Name<input id="influencerTypeName" value="New type" required></label>
       <label class="field">Color<input id="influencerTypeColor" type="color" value="#fef3c7" required></label>
+      <label class="field">Font color<input id="influencerTypeTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add type</button>
     </form>
     <div class="stack-list" id="influencerTypeList"></div>
@@ -1583,6 +1585,7 @@
     <form id="influencerStatusForm">
       <label class="field">Name<input id="influencerStatusName" value="New status" required></label>
       <label class="field">Color<input id="influencerStatusColor" type="color" value="#fee2e2" required></label>
+      <label class="field">Font color<input id="influencerStatusTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add status</button>
     </form>
     <div class="stack-list" id="influencerStatusList"></div>
@@ -1591,6 +1594,7 @@
     <form id="influencerWhereForm">
       <label class="field">Name<input id="influencerWhereName" value="New where" required></label>
       <label class="field">Color<input id="influencerWhereColor" type="color" value="#ede9fe" required></label>
+      <label class="field">Font color<input id="influencerWhereTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add where</button>
     </form>
     <div class="stack-list" id="influencerWhereList"></div>
@@ -1599,6 +1603,7 @@
     <form id="influencerWhenForm">
       <label class="field">Name<input id="influencerWhenName" value="New when" required></label>
       <label class="field">Color<input id="influencerWhenColor" type="color" value="#fce7f3" required></label>
+      <label class="field">Font color<input id="influencerWhenTextColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add when</button>
     </form>
     <div class="stack-list" id="influencerWhenList"></div>
@@ -2161,7 +2166,7 @@
           done: Boolean(subtask.done)
         }))
       }));
-      normalized.influencers = (normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key]));
+      normalized.influencers = applyInfluencerStatusAging((normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key])));
       ensureInfluencerOptionsFromRows(normalized);
       return normalized;
     }
@@ -2188,13 +2193,35 @@
         contactTaskId: source.contactTaskId || "",
         contactDate: source.contactDate || "",
         contactMember: source.contactMember || "",
-        contactProjectId: source.contactProjectId || ""
+        contactProjectId: source.contactProjectId || "",
+        contactedAt: source.contactedAt || "",
+        influencerUpdatedAt: source.influencerUpdatedAt || ""
       };
     }
 
+    function isInfluencerStatus(row, status) {
+      return String(row.status || "").trim().toUpperCase() === status;
+    }
+
+    function applyInfluencerStatusAging(rows) {
+      const todayKey = currentDateKey();
+      const ghostThreshold = shiftDateString(todayKey, -30);
+      return rows.map((row) => {
+        const next = { ...row };
+        if (isInfluencerStatus(next, "CONTACTED")) {
+          if (!next.influencerUpdatedAt) next.influencerUpdatedAt = todayKey;
+          if (!next.contactedAt) next.contactedAt = next.influencerUpdatedAt;
+          if (next.influencerUpdatedAt <= ghostThreshold) {
+            next.status = "Ghosted";
+          }
+        }
+        return next;
+      });
+    }
+
     function normalizeInfluencerOption(option, fallbackColor = "#eef2f7") {
-      if (typeof option === "string") return { name: option, color: fallbackColor };
-      return { name: option.name || option.label || "", color: option.color || fallbackColor };
+      if (typeof option === "string") return { name: option, color: fallbackColor, textColor: "#111827" };
+      return { name: option.name || option.label || "", color: option.color || fallbackColor, textColor: option.textColor || "#111827" };
     }
 
     function ensureInfluencerOptionsFromRows(normalized) {
@@ -2320,7 +2347,7 @@
         const importedRows = await loadInfluencerRowsFromSheet();
         if (!importedRows.length) return;
         if (!(data.influencers || []).length) {
-          data.influencers = importedRows;
+          data.influencers = applyInfluencerStatusAging(importedRows);
           ensureInfluencerOptionsFromRows(data);
           await saveData(true);
           return;
@@ -2339,8 +2366,13 @@
             next.igLink = imported.igLink;
             changed = true;
           }
+          if (imported.type && next.type !== imported.type) {
+            next.type = imported.type;
+            changed = true;
+          }
           return next;
         });
+        data.influencers = applyInfluencerStatusAging(data.influencers);
         ensureInfluencerOptionsFromRows(data);
         if (changed) await saveData(true);
       } catch {
@@ -2767,6 +2799,11 @@
       return optionItem?.color || "#eef2f7";
     }
 
+    function influencerOptionTextColor(key, value) {
+      const optionItem = (data.influencerOptions?.[key] || []).find((item) => item.name === value);
+      return optionItem?.textColor || "#111827";
+    }
+
     function influencerProfileUrl(platform, value, row) {
       const storedLink = platform === "tt" ? row.ttLink : row.igLink;
       if (storedLink) return storedLink;
@@ -2781,7 +2818,7 @@
     function influencerCellMarkup(row, column) {
       const value = row[column.key] || "";
       if (["city", "target", "type", "status", "where", "when"].includes(column.key) && value) {
-        return `<span class="influencer-chip" style="background:${escapeHtml(influencerOptionColor(column.key, value))}">${escapeHtml(value)}</span>`;
+        return `<span class="influencer-chip" style="background:${escapeHtml(influencerOptionColor(column.key, value))}; color:${escapeHtml(influencerOptionTextColor(column.key, value))}">${escapeHtml(value)}</span>`;
       }
       if (column.key === "ttProfile" || column.key === "igProfile") {
         const platform = column.key === "ttProfile" ? "tt" : "ig";
@@ -2949,6 +2986,7 @@
           <div class="project-pill">
             <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="${escapeHtml(key)}" data-old-option="${escapeHtml(item.name)}">
             <input type="color" value="${escapeHtml(item.color)}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
+            <input type="color" value="${escapeHtml(item.textColor || "#111827")}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
             <button type="button" aria-label="Delete ${escapeHtml(item.name)}" data-delete-influencer-option="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">x</button>
           </div>
         `).join("");
@@ -3371,6 +3409,8 @@
     document.getElementById("influencerForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const id = document.getElementById("influencerId").value || `inf${Date.now()}`;
+      const previousRow = (data.influencers || []).find((item) => item.id === id);
+      const statusValue = document.getElementById("influencerStatus").value.trim();
       const row = normalizeInfluencerRow({
         id,
         name: document.getElementById("influencerName").value.trim(),
@@ -3383,15 +3423,23 @@
         igLink: document.getElementById("influencerIgLink").value.trim(),
         output: document.getElementById("influencerOutput").value.trim(),
         price: document.getElementById("influencerPrice").value.trim(),
-        status: document.getElementById("influencerStatus").value.trim(),
+        status: statusValue,
         where: document.getElementById("influencerWhere").value.trim(),
         when: document.getElementById("influencerWhen").value.trim(),
         contactTaskEnabled: document.getElementById("influencerAddDate").checked && isContactInfluencerStatus(document.getElementById("influencerStatus").value),
         contactTaskId: (data.influencers || []).find((item) => item.id === id)?.contactTaskId || "",
         contactDate: document.getElementById("influencerContactDate").value,
         contactMember: document.getElementById("influencerContactMember").value,
-        contactProjectId: document.getElementById("influencerContactProject").value
+        contactProjectId: document.getElementById("influencerContactProject").value,
+        contactedAt: previousRow?.contactedAt || "",
+        influencerUpdatedAt: currentDateKey()
       });
+      if (String(statusValue).trim().toUpperCase() === "CONTACTED" && String(previousRow?.status || "").trim().toUpperCase() !== "CONTACTED") {
+        row.contactedAt = currentDateKey();
+      }
+      if (String(statusValue).trim().toUpperCase() !== "CONTACTED") {
+        row.contactedAt = "";
+      }
       if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember || !row.contactProjectId)) return;
       data.influencers = data.influencers || [];
       const index = data.influencers.findIndex((item) => item.id === id);
@@ -3421,19 +3469,22 @@
     document.getElementById("influencerStatus").addEventListener("change", syncInfluencerContactFields);
     document.getElementById("influencerAddDate").addEventListener("change", syncInfluencerContactFields);
 
-    function addInfluencerOption(key, nameInputId, colorInputId, defaultName, defaultColor) {
+    function addInfluencerOption(key, nameInputId, colorInputId, textColorInputId, defaultName, defaultColor) {
       const nameInput = document.getElementById(nameInputId);
       const colorInput = document.getElementById(colorInputId);
+      const textColorInput = document.getElementById(textColorInputId);
       const name = nameInput.value.trim();
       const color = colorInput.value;
+      const textColor = textColorInput.value;
       if (!name) return;
       data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [], status: [], where: [], when: [] };
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => item.name === name)) {
-        data.influencerOptions[key].push({ name, color });
+        data.influencerOptions[key].push({ name, color, textColor });
       }
       nameInput.value = defaultName;
       colorInput.value = defaultColor;
+      textColorInput.value = "#111827";
       saveData();
       renderInfluencerSettings();
       renderInfluencers();
@@ -3441,32 +3492,32 @@
 
     document.getElementById("influencerCityForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("city", "influencerCityName", "influencerCityColor", "New city", "#e0f2fe");
+      addInfluencerOption("city", "influencerCityName", "influencerCityColor", "influencerCityTextColor", "New city", "#e0f2fe");
     });
 
     document.getElementById("influencerTargetForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("target", "influencerTargetName", "influencerTargetColor", "New target", "#dcfce7");
+      addInfluencerOption("target", "influencerTargetName", "influencerTargetColor", "influencerTargetTextColor", "New target", "#dcfce7");
     });
 
     document.getElementById("influencerTypeForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("type", "influencerTypeName", "influencerTypeColor", "New type", "#fef3c7");
+      addInfluencerOption("type", "influencerTypeName", "influencerTypeColor", "influencerTypeTextColor", "New type", "#fef3c7");
     });
 
     document.getElementById("influencerStatusForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("status", "influencerStatusName", "influencerStatusColor", "New status", "#fee2e2");
+      addInfluencerOption("status", "influencerStatusName", "influencerStatusColor", "influencerStatusTextColor", "New status", "#fee2e2");
     });
 
     document.getElementById("influencerWhereForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("where", "influencerWhereName", "influencerWhereColor", "New where", "#ede9fe");
+      addInfluencerOption("where", "influencerWhereName", "influencerWhereColor", "influencerWhereTextColor", "New where", "#ede9fe");
     });
 
     document.getElementById("influencerWhenForm").addEventListener("submit", (event) => {
       event.preventDefault();
-      addInfluencerOption("when", "influencerWhenName", "influencerWhenColor", "New when", "#fce7f3");
+      addInfluencerOption("when", "influencerWhenName", "influencerWhenColor", "influencerWhenTextColor", "New when", "#fce7f3");
     });
 
     document.getElementById("influencerColumnList").addEventListener("change", (event) => {
@@ -3491,6 +3542,16 @@
           }
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => item.name === oldName ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => row[key] === oldName ? { ...row, [key]: newName } : row);
+          saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          return;
+        }
+        const textColorInput = event.target.closest("[data-influencer-option-text-color]");
+        if (textColorInput) {
+          const key = textColorInput.dataset.influencerOptionTextColor;
+          const optionItem = (data.influencerOptions[key] || []).find((item) => item.name === textColorInput.dataset.optionName);
+          if (optionItem) optionItem.textColor = textColorInput.value;
           saveData();
           renderInfluencerSettings();
           renderInfluencers();
