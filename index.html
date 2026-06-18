@@ -1469,6 +1469,7 @@
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
     const accessPassword = "otacos2026";
+    const clientNames = ["Giorgia", "Alice"];
     const zooms = [
       { label: "XS", width: 90 },
       { label: "S", width: 150 },
@@ -1627,6 +1628,30 @@
       return members.map(initials).join(",");
     }
 
+    function isClientName(name) {
+      return clientNames.some((client) => client.toLowerCase() === String(name || "").trim().toLowerCase());
+    }
+
+    function assignableMembers() {
+      return [...new Set(data.members || [])].filter((member) => !isClientName(member));
+    }
+
+    function taskMatchesFilter(task, filterValue) {
+      if (!filterValue || filterValue === "all") return true;
+      if (isClientName(filterValue)) {
+        return String(task.status || "").toLowerCase().includes(filterValue.toLowerCase());
+      }
+      return (task.members || []).includes(filterValue);
+    }
+
+    function filterOptionLabel(filterValue) {
+      const pendingCount = (data.tasks || [])
+        .filter((task) => taskMatchesFilter(task, filterValue))
+        .filter((task) => !isDoneStatus(task.status))
+        .length;
+      return pendingCount > 0 ? `${filterValue} (${pendingCount})` : filterValue;
+    }
+
     function isDoneStatus(status) {
       return String(status || "").replace(/\s+/g, "").toUpperCase() === "DONE";
     }
@@ -1744,6 +1769,7 @@
     function normalizeData(rawData) {
       const normalized = structuredClone(rawData || starterData);
       const defaultStatusColors = ["#6b7280", "#147bd1", "#e4572e", "#15a36d", "#7c5cff", "#c98200"];
+      normalized.members = [...new Set(normalized.members || starterData.members)].filter((member) => !isClientName(member));
       normalized.statuses = normalizeStatusList(normalized.statuses, starterData.statuses, defaultStatusColors);
       normalized.pedStatuses = normalizeStatusList(normalized.pedStatuses || normalized.pedStatus, starterData.pedStatuses, ["#0f172a", "#2563eb", "#16a34a", "#f59e0b"]);
       normalized.labels = [...new Set(normalized.labels || starterData.labels)].filter((label) => String(label).trim().toLowerCase() !== "brief");
@@ -1946,20 +1972,23 @@
       memberFilter.appendChild(option("all", "Overview"));
       memberList.innerHTML = "";
 
-      data.members.forEach((member, index) => {
+      const members = assignableMembers();
+      members.forEach((member, index) => {
         taskMembers.appendChild(checkboxItem(member, "taskMembers"));
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
         newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
         newPedSubtaskMembers.appendChild(checkboxItem(member, "newPedSubtaskMembers"));
         pedPostMembers.appendChild(checkboxItem(member, "pedPostMembers"));
         editPedPostMembers.appendChild(checkboxItem(member, "editPedPostMembers"));
-        memberFilter.appendChild(option(member));
+        memberFilter.appendChild(option(member, filterOptionLabel(member)));
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Move up ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="1" ${index === data.members.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Move up ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="1" ${index === members.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
         memberList.appendChild(pill);
       });
-      memberFilter.value = data.members.includes(previousFilter) ? previousFilter : "all";
+      clientNames.forEach((client) => memberFilter.appendChild(option(client, filterOptionLabel(client))));
+      const filterOptions = ["all", ...members, ...clientNames];
+      memberFilter.value = filterOptions.includes(previousFilter) ? previousFilter : "all";
 
       taskStatus.innerHTML = "";
       editTaskStatus.innerHTML = "";
@@ -2290,14 +2319,14 @@
 
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
-        return data.tasks.some((task) => task.projectId === project.id && task.members.includes(selectedMember));
+        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember));
       });
 
       let projectTop = 0;
       visibleProjects.forEach((project) => {
         const visibleTasks = data.tasks
           .filter((task) => task.projectId === project.id)
-          .filter((task) => selectedMember === "all" || task.members.includes(selectedMember));
+          .filter((task) => taskMatchesFilter(task, selectedMember));
         const rowHeight = Math.max(48, visibleTasks.length * 34 + 14);
         const row = document.createElement("div");
         row.className = "row-label";
@@ -2873,7 +2902,7 @@
     document.getElementById("memberForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const member = document.getElementById("memberName").value.trim();
-      if (!member || data.members.includes(member)) return;
+      if (!member || isClientName(member) || data.members.includes(member)) return;
       data.members.push(member);
       saveData();
       renderBoard();
@@ -2982,7 +3011,7 @@
       if (!input) return;
       const oldMember = input.dataset.editMember;
       const newMember = input.value.trim();
-      if (!newMember || (newMember !== oldMember && data.members.includes(newMember))) {
+      if (!newMember || isClientName(newMember) || (newMember !== oldMember && data.members.includes(newMember))) {
         renderBoard();
         return;
       }
