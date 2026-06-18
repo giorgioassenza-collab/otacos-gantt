@@ -199,6 +199,10 @@
     .icon-btn:hover { background: #fff; }
     .icon-btn:disabled { opacity: .32; cursor: default; }
 
+    .undo-btn {
+      flex: 0 0 auto;
+    }
+
     .zoom-label {
       min-width: 48px;
       text-align: center;
@@ -1119,6 +1123,9 @@
 
   <main class="app">
     <header class="toolbar">
+      <button class="icon-btn undo-btn" id="undoButton" type="button" title="Undo" aria-label="Undo" disabled>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 1 1 0 12h-2"/></svg>
+      </button>
       <div class="brand" aria-label="Gantt Board">
         <div class="brand-mark" aria-hidden="true">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -1410,6 +1417,7 @@
     const taskModal = document.getElementById("taskModal");
     const statusMenu = document.getElementById("statusMenu");
     const taskContextMenu = document.getElementById("taskContextMenu");
+    const undoButton = document.getElementById("undoButton");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
     const today = new Date(2026, 5, 16);
@@ -1442,6 +1450,8 @@
       pedPosts: []
     };
     let data = structuredClone(starterData);
+    let committedData = structuredClone(starterData);
+    let undoStack = [];
     let dataVersion = 0;
     let appStarted = false;
     let boardRef = null;
@@ -1481,8 +1491,10 @@
             const remote = remoteSnapshot.data().data;
             if (!remote || applyingRemoteUpdate) return;
             data = normalizeData(remote);
+            committedData = structuredClone(data);
             renderBoard();
             renderPed();
+            updateUndoButton();
             syncIndicator.textContent = "Sincronizzato live";
           });
           syncIndicator.textContent = "Connesso a Firestore";
@@ -1497,9 +1509,22 @@
       }
     }
 
-    async function saveData() {
+    function sameData(left, right) {
+      return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    function updateUndoButton() {
+      undoButton.disabled = undoStack.length === 0;
+    }
+
+    async function saveData(skipUndo = false) {
       try {
         syncIndicator.textContent = "Salvataggio...";
+        if (!skipUndo && committedData && !sameData(committedData, data)) {
+          undoStack.push(structuredClone(committedData));
+          if (undoStack.length > 30) undoStack.shift();
+          updateUndoButton();
+        }
         if (boardRef) {
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
@@ -1507,14 +1532,20 @@
             updatedAt: serverTimestamp()
           }, { merge: true });
           applyingRemoteUpdate = false;
+          committedData = structuredClone(data);
+          updateUndoButton();
           syncIndicator.textContent = "Sincronizzato live";
           return;
         }
         localStorage.setItem(storageKey, JSON.stringify(data));
+        committedData = structuredClone(data);
+        updateUndoButton();
         syncIndicator.textContent = "Firebase non configurato: salvato locale";
       } catch {
         applyingRemoteUpdate = false;
         localStorage.setItem(storageKey, JSON.stringify(data));
+        committedData = structuredClone(data);
+        updateUndoButton();
         syncIndicator.textContent = "Offline: salvato locale";
       }
     }
@@ -2258,8 +2289,7 @@
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
             const compactPreview = zoomIndex <= 1;
-            const previewMeta = selectedMember === "all" ? memberSummary(task.members || []) : task.status;
-            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(previewMeta)}</span>`}</span>`;
+            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
         const tasksByStart = {};
@@ -2274,7 +2304,7 @@
           indicator.className = "hidden-task-indicator";
           indicator.style.left = `${left + parseFloat(getComputedStyle(root).getPropertyValue("--day")) - 28}px`;
           indicator.style.top = `${projectTop + rowHeight - 24}px`;
-          indicator.textContent = "v";
+          indicator.innerHTML = "";
           bars.appendChild(indicator);
         });
         projectTop += rowHeight;
@@ -2311,6 +2341,8 @@
       appStarted = true;
       document.body.classList.add("is-authenticated");
       data = await loadData();
+      committedData = structuredClone(data);
+      updateUndoButton();
       renderTimeline();
       updateZoom();
       renderBoard();
@@ -2339,6 +2371,23 @@
     if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
       startApp();
     }
+
+    undoButton.addEventListener("click", async () => {
+      const previous = undoStack.pop();
+      if (!previous) {
+        updateUndoButton();
+        return;
+      }
+      data = normalizeData(previous);
+      await saveData(true);
+      renderBoard();
+      renderPed();
+      updateUndoButton();
+      closePanels();
+      closeTaskEditor();
+      closePedPostEditor();
+      hideTaskMenus();
+    });
 
     document.getElementById("zoomOut").addEventListener("click", () => {
       zoomIndex = Math.max(0, zoomIndex - 1);
