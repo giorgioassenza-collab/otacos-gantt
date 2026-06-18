@@ -644,7 +644,7 @@
       font-weight: 800;
       box-shadow: 0 4px 12px rgba(16, 24, 40, .06);
       cursor: pointer;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .ped-post small {
@@ -665,12 +665,11 @@
 
     .ped-preview-line {
       margin-top: 4px;
-      overflow: hidden;
       color: #334155;
       font-size: 10px;
       line-height: 1.25;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
 
     .social-badge {
@@ -2117,7 +2116,7 @@
       const layer = document.createElement("div");
       layer.className = "ped-layer";
       let dayOffset = 0;
-      const stackByDate = {};
+      const postsByDate = {};
       for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
         const date = new Date(2026, 5 + monthOffset, 1);
         const year = date.getFullYear();
@@ -2146,12 +2145,13 @@
           el.innerHTML = `<span class="day-weekday">${weekdayNames[weekDay]}</span><span class="day-number">${day}</span>`;
           daysEl.appendChild(el);
           const dayItems = items.filter((item) => item.date === iso);
-          stackByDate[iso] = dayItems.length;
-          dayItems.forEach((item, itemIndex) => {
+          postsByDate[iso] = [];
+          dayItems.forEach((item) => {
             const post = document.createElement("div");
             post.className = "ped-post";
+            post.dataset.pedDate = iso;
             post.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
-            post.style.top = `${itemIndex * 78 + 10}px`;
+            post.style.top = "10px";
             post.style.width = "calc(var(--day) - 12px)";
             post.style.borderColor = item.color || statusColor(item.status);
             if (item.source === "Gantt") {
@@ -2161,19 +2161,28 @@
             }
             post.innerHTML = `<div>${socialMarkup(item.social)}${escapeHtml(previewName(item.title))}</div><small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.format || "-")}</small><div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div><div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div><div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>`;
             layer.appendChild(post);
+            postsByDate[iso].push(post);
           });
           dayOffset += 1;
         }
         monthEl.appendChild(daysEl);
         months.appendChild(monthEl);
       }
-      const maxStack = Math.max(1, ...Object.values(stackByDate));
-      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxStack * 78 + 24;
-      pedCalendar.style.height = `${height}px`;
       pedCalendar.appendChild(months);
       pedCalendar.appendChild(weekends);
       pedCalendar.appendChild(grid);
       pedCalendar.appendChild(layer);
+      let maxColumnHeight = 88;
+      Object.values(postsByDate).forEach((posts) => {
+        let nextTop = 10;
+        posts.forEach((post) => {
+          post.style.top = `${nextTop}px`;
+          nextTop += post.offsetHeight + 8;
+        });
+        maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
+      });
+      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
+      pedCalendar.style.height = `${height}px`;
     }
 
     function openTaskEditor(taskId) {
