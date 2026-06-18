@@ -1358,6 +1358,7 @@
 
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
   <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
+    <button type="button" data-context-action="modify">Modify</button>
     <button type="button" data-context-action="delete">Delete</button>
     <button type="button" data-context-action="move-next">Move to next day</button>
   </div>
@@ -2536,14 +2537,6 @@
       pedPostMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
     });
 
-    bars.addEventListener("dblclick", (event) => {
-      const bar = event.target.closest("[data-task-id]");
-      if (!bar) return;
-      hideTaskMenus();
-      closePanels();
-      openTaskEditor(bar.dataset.taskId);
-    });
-
     function hideTaskMenus() {
       statusMenu.classList.remove("open");
       taskContextMenu.classList.remove("open");
@@ -2603,6 +2596,12 @@
       const taskId = taskContextMenu.dataset.taskId;
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
+      if (button.dataset.contextAction === "modify") {
+        hideTaskMenus();
+        closePanels();
+        openTaskEditor(taskId);
+        return;
+      }
       if (button.dataset.contextAction === "delete") {
         data.tasks = data.tasks.filter((item) => item.id !== taskId);
       }
