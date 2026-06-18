@@ -796,6 +796,30 @@
       white-space: nowrap;
     }
 
+    .influencer-table th.row-number-head,
+    .influencer-table td.row-number-cell {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      width: 54px;
+      min-width: 54px;
+      max-width: 54px;
+      color: #667085;
+      background: #f8fafc;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .influencer-table th.row-number-head {
+      z-index: 6;
+    }
+
+    .influencer-table tr:hover td.row-number-cell,
+    .influencer-table tr.is-duplicate td.row-number-cell {
+      background: #fff1f2;
+      color: #991b1b;
+    }
+
     .influencer-table td {
       max-width: 260px;
       padding: 9px 10px;
@@ -1509,14 +1533,15 @@
       <label class="field">IG link<input id="influencerIgLink" placeholder="https://www.instagram.com/..."></label>
       <label class="field">Output<textarea id="influencerOutput"></textarea></label>
       <label class="field">Price<textarea id="influencerPrice"></textarea></label>
-      <label class="field">Status<input id="influencerStatus"></label>
+      <label class="field">Status<select id="influencerStatus"></select></label>
       <label class="inline-check contact-task-toggle" id="influencerContactToggle" hidden><input id="influencerAddDate" type="checkbox"> Add date</label>
       <div class="ped-fields" id="influencerContactFields" hidden>
         <label class="field">Date<input id="influencerContactDate" type="date"></label>
         <label class="field">Who<select id="influencerContactMember"></select></label>
+        <label class="field">Project<select id="influencerContactProject"></select></label>
       </div>
-      <label class="field">Where<input id="influencerWhere"></label>
-      <label class="field">When<input id="influencerWhen"></label>
+      <label class="field">Where<select id="influencerWhere"></select></label>
+      <label class="field">When<select id="influencerWhen"></select></label>
       <div class="panel-actions">
         <button class="danger-btn" id="deleteInfluencerButton" type="button">Delete</button>
         <button class="primary-btn" type="submit">Save</button>
@@ -1553,6 +1578,30 @@
       <button class="primary-btn" type="submit">Add type</button>
     </form>
     <div class="stack-list" id="influencerTypeList"></div>
+
+    <h3>Status</h3>
+    <form id="influencerStatusForm">
+      <label class="field">Name<input id="influencerStatusName" value="New status" required></label>
+      <label class="field">Color<input id="influencerStatusColor" type="color" value="#fee2e2" required></label>
+      <button class="primary-btn" type="submit">Add status</button>
+    </form>
+    <div class="stack-list" id="influencerStatusList"></div>
+
+    <h3>Where</h3>
+    <form id="influencerWhereForm">
+      <label class="field">Name<input id="influencerWhereName" value="New where" required></label>
+      <label class="field">Color<input id="influencerWhereColor" type="color" value="#ede9fe" required></label>
+      <button class="primary-btn" type="submit">Add where</button>
+    </form>
+    <div class="stack-list" id="influencerWhereList"></div>
+
+    <h3>When</h3>
+    <form id="influencerWhenForm">
+      <label class="field">Name<input id="influencerWhenName" value="New when" required></label>
+      <label class="field">Color<input id="influencerWhenColor" type="color" value="#fce7f3" required></label>
+      <button class="primary-btn" type="submit">Add when</button>
+    </form>
+    <div class="stack-list" id="influencerWhenList"></div>
     <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
@@ -1742,7 +1791,7 @@
       ],
       pedPosts: [],
       influencers: [],
-      influencerOptions: { city: [], target: [], type: [] },
+      influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
       influencerColumnLabels: {}
     };
     let data = structuredClone(starterData);
@@ -2119,6 +2168,7 @@
 
     function normalizeInfluencerRow(row) {
       const source = row || {};
+      const rawStatus = source.status || source.STATUS || "";
       return {
         id: source.id || `inf${Date.now()}${Math.random()}`,
         name: source.name || source.NAME || "",
@@ -2131,13 +2181,14 @@
         igLink: source.igLink || source["IG LINK"] || "",
         output: source.output || source.OUTPUT || "",
         price: source.price || source.PRICE || "",
-        status: source.status || source.STATUS || "",
+        status: String(rawStatus).trim().toUpperCase() === "TBC" ? "TO CONTACT" : rawStatus,
         where: source.where || source.WHERE || "",
         when: source.when || source.WHEN || "",
         contactTaskEnabled: Boolean(source.contactTaskEnabled),
         contactTaskId: source.contactTaskId || "",
         contactDate: source.contactDate || "",
-        contactMember: source.contactMember || ""
+        contactMember: source.contactMember || "",
+        contactProjectId: source.contactProjectId || ""
       };
     }
 
@@ -2147,9 +2198,9 @@
     }
 
     function ensureInfluencerOptionsFromRows(normalized) {
-      const optionColors = { city: "#e0f2fe", target: "#dcfce7", type: "#fef3c7" };
+      const optionColors = { city: "#e0f2fe", target: "#dcfce7", type: "#fef3c7", status: "#fee2e2", where: "#ede9fe", when: "#fce7f3" };
       normalized.influencerOptions = normalized.influencerOptions || {};
-      ["city", "target", "type"].forEach((key) => {
+      ["city", "target", "type", "status", "where", "when"].forEach((key) => {
         const existing = (normalized.influencerOptions[key] || [])
           .map((item) => normalizeInfluencerOption(item, optionColors[key]))
           .filter((item) => item.name);
@@ -2729,7 +2780,7 @@
 
     function influencerCellMarkup(row, column) {
       const value = row[column.key] || "";
-      if (["city", "target", "type"].includes(column.key) && value) {
+      if (["city", "target", "type", "status", "where", "when"].includes(column.key) && value) {
         return `<span class="influencer-chip" style="background:${escapeHtml(influencerOptionColor(column.key, value))}">${escapeHtml(value)}</span>`;
       }
       if (column.key === "ttProfile" || column.key === "igProfile") {
@@ -2775,7 +2826,7 @@
       fillInfluencerFilter("influencerStatusFilter", "status", "All status");
       fillInfluencerFilter("influencerWhereFilter", "where", "All where");
       const visibleColumns = influencerColumns.filter((column) => !column.hidden);
-      head.innerHTML = `<tr>${visibleColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
+      head.innerHTML = `<tr><th class="row-number-head">#</th>${visibleColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
       const rows = filteredInfluencers();
       body.innerHTML = rows.map((row) => `
         ${(() => {
@@ -2783,6 +2834,7 @@
           const title = duplicate ? `This user may already be present at row ${duplicate.rowNumber}` : "";
           return `<tr data-influencer-id="${escapeHtml(row.id)}" class="${duplicate ? "is-duplicate" : ""}" title="${escapeHtml(title)}">`;
         })()}
+          <td class="row-number-cell">${(data.influencers || []).findIndex((item) => item.id === row.id) + 1}</td>
           ${visibleColumns.map((column) => `<td>${influencerCellMarkup(row, column)}</td>`).join("")}
         </tr>
       `).join("");
@@ -2823,6 +2875,14 @@
       select.value = assignableMembers().includes(selectedValue) ? selectedValue : "";
     }
 
+    function fillInfluencerContactProjects(selectedValue = "") {
+      const select = document.getElementById("influencerContactProject");
+      select.innerHTML = "";
+      const fallback = contactProjectId();
+      (data.projects || []).forEach((project) => select.appendChild(option(project.id, project.name)));
+      select.value = (data.projects || []).some((project) => project.id === selectedValue) ? selectedValue : fallback;
+    }
+
     function contactProjectId() {
       const project = (data.projects || []).find((item) => item.id === "p-customer-care")
         || (data.projects || []).find((item) => String(item.name || "").toLowerCase() === "customer care")
@@ -2843,8 +2903,8 @@
         row.contactTaskId = "";
         return;
       }
-      if (!row.contactDate || !row.contactMember || !row.name) return;
-      const projectId = contactProjectId();
+      if (!row.contactDate || !row.contactMember || !row.name || !row.contactProjectId) return;
+      const projectId = row.contactProjectId;
       if (!projectId) return;
       const taskName = `TO CONTACT ${row.name}`;
       const payload = {
@@ -2880,7 +2940,10 @@
       [
         { key: "city", list: "influencerCityList" },
         { key: "target", list: "influencerTargetList" },
-        { key: "type", list: "influencerTypeList" }
+        { key: "type", list: "influencerTypeList" },
+        { key: "status", list: "influencerStatusList" },
+        { key: "where", list: "influencerWhereList" },
+        { key: "when", list: "influencerWhenList" }
       ].forEach(({ key, list }) => {
         document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => `
           <div class="project-pill">
@@ -2906,13 +2969,14 @@
       document.getElementById("influencerIgLink").value = row.igLink || "";
       document.getElementById("influencerOutput").value = row.output || "";
       document.getElementById("influencerPrice").value = row.price || "";
-      document.getElementById("influencerStatus").value = row.status || "";
+      fillInfluencerSelect("influencerStatus", "status", row.status || "");
       document.getElementById("influencerAddDate").checked = Boolean(row.contactTaskEnabled);
       document.getElementById("influencerContactDate").value = row.contactDate || currentDateKey();
       fillInfluencerContactMembers(row.contactMember || "");
+      fillInfluencerContactProjects(row.contactProjectId || "");
       syncInfluencerContactFields();
-      document.getElementById("influencerWhere").value = row.where || "";
-      document.getElementById("influencerWhen").value = row.when || "";
+      fillInfluencerSelect("influencerWhere", "where", row.where || "");
+      fillInfluencerSelect("influencerWhen", "when", row.when || "");
       document.getElementById("deleteInfluencerButton").hidden = !row.id;
       openPanel("influencerPanel");
     }
@@ -3325,9 +3389,10 @@
         contactTaskEnabled: document.getElementById("influencerAddDate").checked && isContactInfluencerStatus(document.getElementById("influencerStatus").value),
         contactTaskId: (data.influencers || []).find((item) => item.id === id)?.contactTaskId || "",
         contactDate: document.getElementById("influencerContactDate").value,
-        contactMember: document.getElementById("influencerContactMember").value
+        contactMember: document.getElementById("influencerContactMember").value,
+        contactProjectId: document.getElementById("influencerContactProject").value
       });
-      if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember)) return;
+      if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember || !row.contactProjectId)) return;
       data.influencers = data.influencers || [];
       const index = data.influencers.findIndex((item) => item.id === id);
       if (index >= 0) data.influencers[index] = row;
@@ -3353,7 +3418,7 @@
       closePanels();
     });
 
-    document.getElementById("influencerStatus").addEventListener("input", syncInfluencerContactFields);
+    document.getElementById("influencerStatus").addEventListener("change", syncInfluencerContactFields);
     document.getElementById("influencerAddDate").addEventListener("change", syncInfluencerContactFields);
 
     function addInfluencerOption(key, nameInputId, colorInputId, defaultName, defaultColor) {
@@ -3362,7 +3427,7 @@
       const name = nameInput.value.trim();
       const color = colorInput.value;
       if (!name) return;
-      data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [] };
+      data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [], status: [], where: [], when: [] };
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => item.name === name)) {
         data.influencerOptions[key].push({ name, color });
@@ -3389,6 +3454,21 @@
       addInfluencerOption("type", "influencerTypeName", "influencerTypeColor", "New type", "#fef3c7");
     });
 
+    document.getElementById("influencerStatusForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("status", "influencerStatusName", "influencerStatusColor", "New status", "#fee2e2");
+    });
+
+    document.getElementById("influencerWhereForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("where", "influencerWhereName", "influencerWhereColor", "New where", "#ede9fe");
+    });
+
+    document.getElementById("influencerWhenForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("when", "influencerWhenName", "influencerWhenColor", "New when", "#fce7f3");
+    });
+
     document.getElementById("influencerColumnList").addEventListener("change", (event) => {
       const input = event.target.closest("[data-edit-influencer-column]");
       if (!input) return;
@@ -3398,7 +3478,7 @@
       renderInfluencers();
     });
 
-    ["influencerCityList", "influencerTargetList", "influencerTypeList"].forEach((listId) => {
+    ["influencerCityList", "influencerTargetList", "influencerTypeList", "influencerStatusList", "influencerWhereList", "influencerWhenList"].forEach((listId) => {
       document.getElementById(listId).addEventListener("change", (event) => {
         const nameInput = event.target.closest("[data-edit-influencer-option]");
         if (nameInput) {
