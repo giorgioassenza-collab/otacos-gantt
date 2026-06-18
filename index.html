@@ -1216,6 +1216,10 @@
         <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
       </div>
       <label class="field">Link<textarea id="taskInfo" placeholder="Link o note"></textarea></label>
+      <label class="inline-check"><input id="taskPedEnabled" type="checkbox"> Add to PED</label>
+      <div class="ped-fields" id="taskPedFields" hidden>
+        <label class="field">PED date<input id="taskPedDate" type="date" value="2026-06-16"></label>
+      </div>
       <button class="primary-btn" type="submit">Add task</button>
     </form>
     <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
@@ -1427,7 +1431,7 @@
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
       pedStatuses: ["Draft", "Ready", "Published"],
-      labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Brief", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
+      labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
       formats: ["Post", "Reel", "Story"],
       socials: [
         { id: "instagram", label: "Instagram", short: "IG", color: "#e1306c" },
@@ -1722,7 +1726,7 @@
       const defaultStatusColors = ["#6b7280", "#147bd1", "#e4572e", "#15a36d", "#7c5cff", "#c98200"];
       normalized.statuses = normalizeStatusList(normalized.statuses, starterData.statuses, defaultStatusColors);
       normalized.pedStatuses = normalizeStatusList(normalized.pedStatuses || normalized.pedStatus, starterData.pedStatuses, ["#0f172a", "#2563eb", "#16a34a", "#f59e0b"]);
-      normalized.labels = [...new Set([...(normalized.labels || starterData.labels), "Brief"])];
+      normalized.labels = [...new Set(normalized.labels || starterData.labels)].filter((label) => String(label).trim().toLowerCase() !== "brief");
       normalized.formats = normalized.formats && normalized.formats.length ? normalized.formats : structuredClone(starterData.formats);
       normalized.projects = ensureProjectDefaults(normalized.projects || structuredClone(starterData.projects));
       normalized.socials = (normalized.socials || structuredClone(starterData.socials)).map((social) => {
@@ -2282,7 +2286,7 @@
             if (isDoneStatus(task.status)) {
               bar.classList.add("is-done");
             }
-            bar.title = `${task.status}${task.members.length ? ` / ${task.members.join(", ")}` : ""}`;
+            bar.title = `${task.name}\nChi: ${(task.members || []).join(", ") || "-"}`;
             bar.style.left = `${left}px`;
             bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
@@ -2425,6 +2429,13 @@
       if (event.target.checked) document.getElementById("taskEnd").value = document.getElementById("taskStart").value;
     });
 
+    document.getElementById("taskPedEnabled").addEventListener("change", (event) => {
+      document.getElementById("taskPedFields").hidden = !event.target.checked;
+      if (event.target.checked && !document.getElementById("taskPedDate").value) {
+        document.getElementById("taskPedDate").value = document.getElementById("taskStart").value;
+      }
+    });
+
     document.getElementById("editTaskAddEndDate").addEventListener("change", (event) => {
       document.getElementById("editTaskEndWrap").hidden = !event.target.checked;
       if (event.target.checked) document.getElementById("editTaskEnd").value = document.getElementById("editTaskStart").value;
@@ -2440,6 +2451,9 @@
     document.getElementById("taskStart").addEventListener("change", () => {
       if (!document.getElementById("taskAddEndDate").checked) {
         document.getElementById("taskEnd").value = document.getElementById("taskStart").value;
+      }
+      if (document.getElementById("taskPedEnabled").checked) {
+        document.getElementById("taskPedDate").value = document.getElementById("taskStart").value;
       }
       if (!document.getElementById("creatorVideoDate").value) {
         document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
@@ -2472,11 +2486,13 @@
       const end = document.getElementById("taskAddEndDate").checked ? document.getElementById("taskEnd").value : start;
       const label = taskLabel.value;
       const info = document.getElementById("taskInfo").value.trim();
+      const pedEnabled = document.getElementById("taskPedEnabled").checked;
+      const pedDate = document.getElementById("taskPedDate").value || start;
       if (!projectId || !name || !members.length || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
-      const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label };
+      const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate };
       if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
@@ -2491,6 +2507,9 @@
       syncCreatorOptionsVisibility();
       resetCreatorOptions();
       document.getElementById("taskInfo").value = "";
+      document.getElementById("taskPedEnabled").checked = false;
+      document.getElementById("taskPedFields").hidden = true;
+      document.getElementById("taskPedDate").value = document.getElementById("taskStart").value;
     });
 
     document.getElementById("pedPostForm").addEventListener("submit", (event) => {
