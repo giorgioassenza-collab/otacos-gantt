@@ -771,7 +771,7 @@
       margin-top: 12px;
       border: 1px solid #dfe5ec;
       border-radius: 8px;
-      overflow: auto;
+      overflow: visible;
       background: #fff;
     }
 
@@ -783,8 +783,8 @@
 
     .influencer-table th {
       position: sticky;
-      top: 0;
-      z-index: 3;
+      top: 59px;
+      z-index: 5;
       height: 38px;
       padding: 0 10px;
       border-bottom: 1px solid #dfe5ec;
@@ -813,6 +813,37 @@
 
     .influencer-table tr:hover td {
       background: #f4f8fb;
+    }
+
+    .influencer-table tr.is-duplicate td {
+      background: #fff1f2;
+      color: #991b1b;
+    }
+
+    .influencer-table tr.is-duplicate:hover td {
+      background: #ffe4e6;
+    }
+
+    .influencer-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #111827;
+      background: #eef2f7;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .profile-link {
+      color: #147bd1;
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .profile-link:hover {
+      text-decoration: underline;
     }
 
     .influencer-empty {
@@ -1465,9 +1496,9 @@
     <form id="influencerForm">
       <input id="influencerId" type="hidden">
       <label class="field">Name<input id="influencerName"></label>
-      <label class="field">City<input id="influencerCity"></label>
-      <label class="field">Target<input id="influencerTarget"></label>
-      <label class="field">Type<input id="influencerType"></label>
+      <label class="field">City<select id="influencerCity"></select></label>
+      <label class="field">Target<select id="influencerTarget"></select></label>
+      <label class="field">Type<select id="influencerType"></select></label>
       <label class="field">TT profile<input id="influencerTt"></label>
       <label class="field">IG profile<input id="influencerIg"></label>
       <label class="field">Output<textarea id="influencerOutput"></textarea></label>
@@ -1480,6 +1511,37 @@
         <button class="primary-btn" type="submit">Save</button>
       </div>
     </form>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
+  </aside>
+
+  <aside class="settings-panel" id="influencerSettingsPanel" aria-label="Influencer settings">
+    <h2>Influencer settings</h2>
+    <h3>Columns</h3>
+    <div class="stack-list" id="influencerColumnList"></div>
+
+    <h3>City</h3>
+    <form id="influencerCityForm">
+      <label class="field">Name<input id="influencerCityName" value="New city" required></label>
+      <label class="field">Color<input id="influencerCityColor" type="color" value="#e0f2fe" required></label>
+      <button class="primary-btn" type="submit">Add city</button>
+    </form>
+    <div class="stack-list" id="influencerCityList"></div>
+
+    <h3>Target</h3>
+    <form id="influencerTargetForm">
+      <label class="field">Name<input id="influencerTargetName" value="New target" required></label>
+      <label class="field">Color<input id="influencerTargetColor" type="color" value="#dcfce7" required></label>
+      <button class="primary-btn" type="submit">Add target</button>
+    </form>
+    <div class="stack-list" id="influencerTargetList"></div>
+
+    <h3>Type</h3>
+    <form id="influencerTypeForm">
+      <label class="field">Name<input id="influencerTypeName" value="New type" required></label>
+      <label class="field">Color<input id="influencerTypeColor" type="color" value="#fef3c7" required></label>
+      <button class="primary-btn" type="submit">Add type</button>
+    </form>
+    <div class="stack-list" id="influencerTypeList"></div>
     <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
@@ -1552,6 +1614,10 @@
     <button type="button" data-context-action="delete">Delete</button>
     <button type="button" data-context-action="move-next">Move to next day</button>
   </div>
+  <div class="context-menu" id="influencerContextMenu" aria-label="Influencer actions">
+    <button type="button" data-influencer-context-action="modify">Modify</button>
+    <button type="button" data-influencer-context-action="delete">Delete</button>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
@@ -1615,6 +1681,7 @@
     const taskModal = document.getElementById("taskModal");
     const statusMenu = document.getElementById("statusMenu");
     const taskContextMenu = document.getElementById("taskContextMenu");
+    const influencerContextMenu = document.getElementById("influencerContextMenu");
     const undoButton = document.getElementById("undoButton");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
@@ -1660,7 +1727,9 @@
         { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", label: "" }
       ],
       pedPosts: [],
-      influencers: []
+      influencers: [],
+      influencerOptions: { city: [], target: [], type: [] },
+      influencerColumnLabels: {}
     };
     let data = structuredClone(starterData);
     let committedData = structuredClone(starterData);
@@ -2030,6 +2099,7 @@
         }))
       }));
       normalized.influencers = (normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key]));
+      ensureInfluencerOptionsFromRows(normalized);
       return normalized;
     }
 
@@ -2049,6 +2119,30 @@
         where: source.where || source.WHERE || "",
         when: source.when || source.WHEN || ""
       };
+    }
+
+    function normalizeInfluencerOption(option, fallbackColor = "#eef2f7") {
+      if (typeof option === "string") return { name: option, color: fallbackColor };
+      return { name: option.name || option.label || "", color: option.color || fallbackColor };
+    }
+
+    function ensureInfluencerOptionsFromRows(normalized) {
+      const optionColors = { city: "#e0f2fe", target: "#dcfce7", type: "#fef3c7" };
+      normalized.influencerOptions = normalized.influencerOptions || {};
+      ["city", "target", "type"].forEach((key) => {
+        const existing = (normalized.influencerOptions[key] || [])
+          .map((item) => normalizeInfluencerOption(item, optionColors[key]))
+          .filter((item) => item.name);
+        const names = new Set(existing.map((item) => item.name));
+        (normalized.influencers || []).forEach((row) => {
+          if (row[key] && !names.has(row[key])) {
+            existing.push({ name: row[key], color: optionColors[key] });
+            names.add(row[key]);
+          }
+        });
+        normalized.influencerOptions[key] = existing;
+      });
+      normalized.influencerColumnLabels = normalized.influencerColumnLabels || {};
     }
 
     function parseCsv(text) {
@@ -2098,6 +2192,7 @@
             return normalizeInfluencerRow(raw);
           })
           .filter((row) => row.name);
+        ensureInfluencerOptionsFromRows(data);
         if (data.influencers.length) {
           await saveData(true);
         }
@@ -2496,6 +2591,57 @@
         .sort((left, right) => left.localeCompare(right));
     }
 
+    function influencerColumnLabel(column) {
+      return data.influencerColumnLabels?.[column.key] || column.label;
+    }
+
+    function normalizedInfluencerName(value) {
+      return String(value || "")
+        .toLowerCase()
+        .replace(/^@/, "")
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    function duplicateInfluencerInfo(row) {
+      const name = normalizedInfluencerName(row.name);
+      if (name.length < 4) return null;
+      const index = (data.influencers || []).findIndex((candidate) => {
+        if (candidate.id === row.id) return false;
+        const candidateName = normalizedInfluencerName(candidate.name);
+        if (candidateName.length < 4) return false;
+        return candidateName === name || candidateName.includes(name) || name.includes(candidateName);
+      });
+      if (index < 0) return null;
+      return { rowNumber: index + 1, name: data.influencers[index].name };
+    }
+
+    function influencerOptionColor(key, value) {
+      const optionItem = (data.influencerOptions?.[key] || []).find((item) => item.name === value);
+      return optionItem?.color || "#eef2f7";
+    }
+
+    function influencerProfileUrl(platform, value, row) {
+      const clean = String(value || "").trim();
+      if (/^https?:\/\//i.test(clean)) return clean;
+      const source = clean && /[a-zA-Z_@.]/.test(clean) ? clean : row.name;
+      const handle = String(source || "").replace(/^@/, "").split(/\s+/)[0];
+      if (!handle) return "";
+      return platform === "tt" ? `https://www.tiktok.com/@${encodeURIComponent(handle)}` : `https://www.instagram.com/${encodeURIComponent(handle)}/`;
+    }
+
+    function influencerCellMarkup(row, column) {
+      const value = row[column.key] || "";
+      if (["city", "target", "type"].includes(column.key) && value) {
+        return `<span class="influencer-chip" style="background:${escapeHtml(influencerOptionColor(column.key, value))}">${escapeHtml(value)}</span>`;
+      }
+      if (column.key === "ttProfile" || column.key === "igProfile") {
+        const platform = column.key === "ttProfile" ? "tt" : "ig";
+        const url = influencerProfileUrl(platform, value, row);
+        return value && url ? `<a class="profile-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(value)}</a>` : escapeHtml(value);
+      }
+      return escapeHtml(value);
+    }
+
     function fillInfluencerFilter(selectId, key, label) {
       const select = document.getElementById(selectId);
       const previous = select.value || "all";
@@ -2530,23 +2676,61 @@
       fillInfluencerFilter("influencerTargetFilter", "target", "All targets");
       fillInfluencerFilter("influencerStatusFilter", "status", "All status");
       fillInfluencerFilter("influencerWhereFilter", "where", "All where");
-      head.innerHTML = `<tr>${influencerColumns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>`;
+      head.innerHTML = `<tr>${influencerColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
       const rows = filteredInfluencers();
       body.innerHTML = rows.map((row) => `
-        <tr data-influencer-id="${escapeHtml(row.id)}">
-          ${influencerColumns.map((column) => `<td>${escapeHtml(row[column.key] || "")}</td>`).join("")}
+        ${(() => {
+          const duplicate = duplicateInfluencerInfo(row);
+          const title = duplicate ? `This user may already be present at row ${duplicate.rowNumber}` : "";
+          return `<tr data-influencer-id="${escapeHtml(row.id)}" class="${duplicate ? "is-duplicate" : ""}" title="${escapeHtml(title)}">`;
+        })()}
+          ${influencerColumns.map((column) => `<td>${influencerCellMarkup(row, column)}</td>`).join("")}
         </tr>
       `).join("");
       empty.hidden = rows.length > 0;
     }
 
+    function fillInfluencerSelect(selectId, key, selectedValue = "") {
+      const select = document.getElementById(selectId);
+      select.innerHTML = "";
+      select.appendChild(option("", "-"));
+      (data.influencerOptions?.[key] || []).forEach((item) => select.appendChild(option(item.name)));
+      if (selectedValue && ![...select.options].some((item) => item.value === selectedValue)) {
+        select.appendChild(option(selectedValue));
+      }
+      select.value = selectedValue || "";
+    }
+
+    function renderInfluencerSettings() {
+      const columnList = document.getElementById("influencerColumnList");
+      columnList.innerHTML = influencerColumns.map((column) => `
+        <div class="project-pill">
+          <input value="${escapeHtml(influencerColumnLabel(column))}" aria-label="Edit ${escapeHtml(column.label)}" data-edit-influencer-column="${escapeHtml(column.key)}">
+        </div>
+      `).join("");
+      [
+        { key: "city", list: "influencerCityList" },
+        { key: "target", list: "influencerTargetList" },
+        { key: "type", list: "influencerTypeList" }
+      ].forEach(({ key, list }) => {
+        document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => `
+          <div class="project-pill">
+            <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="${escapeHtml(key)}" data-old-option="${escapeHtml(item.name)}">
+            <input type="color" value="${escapeHtml(item.color)}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
+            <button type="button" aria-label="Delete ${escapeHtml(item.name)}" data-delete-influencer-option="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">x</button>
+          </div>
+        `).join("");
+      });
+    }
+
     function openInfluencerEditor(id = "") {
       const row = (data.influencers || []).find((item) => item.id === id) || normalizeInfluencerRow({ id: "" });
+      renderInfluencerSettings();
       document.getElementById("influencerId").value = row.id || "";
       document.getElementById("influencerName").value = row.name || "";
-      document.getElementById("influencerCity").value = row.city || "";
-      document.getElementById("influencerTarget").value = row.target || "";
-      document.getElementById("influencerType").value = row.type || "";
+      fillInfluencerSelect("influencerCity", "city", row.city || "");
+      fillInfluencerSelect("influencerTarget", "target", row.target || "");
+      fillInfluencerSelect("influencerType", "type", row.type || "");
       document.getElementById("influencerTt").value = row.ttProfile || "";
       document.getElementById("influencerIg").value = row.igProfile || "";
       document.getElementById("influencerOutput").value = row.output || "";
@@ -2836,7 +3020,8 @@
     document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
     document.getElementById("settings").addEventListener("click", () => {
       if (document.body.classList.contains("influencer-mode")) {
-        openInfluencerEditor();
+        renderInfluencerSettings();
+        openPanel("influencerSettingsPanel");
         return;
       }
       openPanel(document.body.classList.contains("ped-mode") ? "pedSettingsPanel" : "settingsPanel");
@@ -2933,10 +3118,15 @@
       document.getElementById(id).addEventListener("change", renderInfluencers);
     });
 
-    document.getElementById("influencerBody").addEventListener("click", (event) => {
+    document.getElementById("influencerBody").addEventListener("contextmenu", (event) => {
       const row = event.target.closest("[data-influencer-id]");
       if (!row) return;
-      openInfluencerEditor(row.dataset.influencerId);
+      event.preventDefault();
+      hideTaskMenus();
+      influencerContextMenu.dataset.influencerId = row.dataset.influencerId;
+      influencerContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 180)}px`;
+      influencerContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
+      influencerContextMenu.classList.add("open");
     });
 
     document.getElementById("influencerForm").addEventListener("submit", (event) => {
@@ -2972,6 +3162,89 @@
       saveData();
       renderInfluencers();
       closePanels();
+    });
+
+    function addInfluencerOption(key, nameInputId, colorInputId, defaultName, defaultColor) {
+      const nameInput = document.getElementById(nameInputId);
+      const colorInput = document.getElementById(colorInputId);
+      const name = nameInput.value.trim();
+      const color = colorInput.value;
+      if (!name) return;
+      data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [] };
+      data.influencerOptions[key] = data.influencerOptions[key] || [];
+      if (!data.influencerOptions[key].some((item) => item.name === name)) {
+        data.influencerOptions[key].push({ name, color });
+      }
+      nameInput.value = defaultName;
+      colorInput.value = defaultColor;
+      saveData();
+      renderInfluencerSettings();
+      renderInfluencers();
+    }
+
+    document.getElementById("influencerCityForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("city", "influencerCityName", "influencerCityColor", "New city", "#e0f2fe");
+    });
+
+    document.getElementById("influencerTargetForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("target", "influencerTargetName", "influencerTargetColor", "New target", "#dcfce7");
+    });
+
+    document.getElementById("influencerTypeForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addInfluencerOption("type", "influencerTypeName", "influencerTypeColor", "New type", "#fef3c7");
+    });
+
+    document.getElementById("influencerColumnList").addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-influencer-column]");
+      if (!input) return;
+      data.influencerColumnLabels = data.influencerColumnLabels || {};
+      data.influencerColumnLabels[input.dataset.editInfluencerColumn] = input.value.trim() || influencerColumns.find((column) => column.key === input.dataset.editInfluencerColumn)?.label || "";
+      saveData();
+      renderInfluencers();
+    });
+
+    ["influencerCityList", "influencerTargetList", "influencerTypeList"].forEach((listId) => {
+      document.getElementById(listId).addEventListener("change", (event) => {
+        const nameInput = event.target.closest("[data-edit-influencer-option]");
+        if (nameInput) {
+          const key = nameInput.dataset.editInfluencerOption;
+          const oldName = nameInput.dataset.oldOption;
+          const newName = nameInput.value.trim();
+          if (!newName) {
+            renderInfluencerSettings();
+            return;
+          }
+          data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => item.name === oldName ? { ...item, name: newName } : item);
+          data.influencers = (data.influencers || []).map((row) => row[key] === oldName ? { ...row, [key]: newName } : row);
+          saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          return;
+        }
+        const colorInput = event.target.closest("[data-influencer-option-color]");
+        if (!colorInput) return;
+        const key = colorInput.dataset.influencerOptionColor;
+        const optionItem = (data.influencerOptions[key] || []).find((item) => item.name === colorInput.dataset.optionName);
+        if (optionItem) optionItem.color = colorInput.value;
+        saveData();
+        renderInfluencerSettings();
+        renderInfluencers();
+      });
+
+      document.getElementById(listId).addEventListener("click", (event) => {
+        const button = event.target.closest("[data-delete-influencer-option]");
+        if (!button) return;
+        const key = button.dataset.deleteInfluencerOption;
+        const name = button.dataset.optionName;
+        data.influencerOptions[key] = (data.influencerOptions[key] || []).filter((item) => item.name !== name);
+        data.influencers = (data.influencers || []).map((row) => row[key] === name ? { ...row, [key]: "" } : row);
+        saveData();
+        renderInfluencerSettings();
+        renderInfluencers();
+      });
     });
 
     document.getElementById("taskForm").addEventListener("submit", async (event) => {
@@ -3037,8 +3310,10 @@
     function hideTaskMenus() {
       statusMenu.classList.remove("open");
       taskContextMenu.classList.remove("open");
+      influencerContextMenu.classList.remove("open");
       delete statusMenu.dataset.taskId;
       delete taskContextMenu.dataset.taskId;
+      delete influencerContextMenu.dataset.influencerId;
     }
 
     function showStatusMenu(taskId, x, y) {
@@ -3113,6 +3388,24 @@
       saveData();
       renderBoard();
       renderPed();
+      hideTaskMenus();
+    });
+
+    influencerContextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-influencer-context-action]");
+      if (!button) return;
+      const id = influencerContextMenu.dataset.influencerId;
+      if (!id) return;
+      if (button.dataset.influencerContextAction === "modify") {
+        hideTaskMenus();
+        openInfluencerEditor(id);
+        return;
+      }
+      if (button.dataset.influencerContextAction === "delete") {
+        data.influencers = (data.influencers || []).filter((row) => row.id !== id);
+        saveData();
+        renderInfluencers();
+      }
       hideTaskMenus();
     });
 
