@@ -265,8 +265,23 @@
       display: none;
     }
 
+    body.influencer-mode .board,
+    body.influencer-mode .ped-view,
+    body.influencer-mode #openTaskPanel,
+    body.influencer-mode #openProjectPanel,
+    body.influencer-mode #openPedPostPanel,
+    body.influencer-mode #memberFilter,
+    body.influencer-mode .zoom {
+      display: none;
+    }
+
     body:not(.ped-mode) .ped-view,
     body:not(.ped-mode) .ped-only {
+      display: none;
+    }
+
+    body:not(.influencer-mode) .influencer-view,
+    body:not(.influencer-mode) .influencer-only {
       display: none;
     }
 
@@ -683,6 +698,129 @@
       background: #111827;
       font-size: 8px;
       font-weight: 900;
+    }
+
+    .view-switch {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid #d9e0e8;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 10px 26px rgba(17, 24, 39, .16);
+    }
+
+    .view-switch button {
+      height: 34px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 12px;
+      color: #475467;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .view-switch button.is-active {
+      color: #fff;
+      background: #111827;
+    }
+
+    .influencer-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: #f6f8fb;
+    }
+
+    .influencer-shell {
+      min-width: 1180px;
+      padding: 18px;
+    }
+
+    .influencer-controls {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) repeat(4, 160px) auto;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid #dfe5ec;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, .06);
+    }
+
+    .influencer-controls input,
+    .influencer-controls select {
+      height: 34px;
+      border: 1px solid #cfd6de;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .influencer-table-wrap {
+      margin-top: 12px;
+      border: 1px solid #dfe5ec;
+      border-radius: 8px;
+      overflow: auto;
+      background: #fff;
+    }
+
+    .influencer-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .influencer-table th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      height: 38px;
+      padding: 0 10px;
+      border-bottom: 1px solid #dfe5ec;
+      color: #475467;
+      background: #f8fafc;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .influencer-table td {
+      max-width: 260px;
+      padding: 9px 10px;
+      border-bottom: 1px solid #edf1f5;
+      color: #111827;
+      font-weight: 700;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .influencer-table tr {
+      cursor: pointer;
+    }
+
+    .influencer-table tr:hover td {
+      background: #f4f8fb;
+    }
+
+    .influencer-empty {
+      padding: 30px;
+      color: #667085;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
     }
 
     .manus {
@@ -1178,9 +1316,33 @@
     <section class="ped-view" id="pedView" aria-label="PED">
       <div class="ped-calendar" id="pedCalendar"></div>
     </section>
+
+    <section class="influencer-view" id="influencerView" aria-label="Influencer">
+      <div class="influencer-shell">
+        <div class="influencer-controls">
+          <input id="influencerSearch" type="search" placeholder="Search influencer">
+          <select id="influencerCityFilter" aria-label="City"></select>
+          <select id="influencerTargetFilter" aria-label="Target"></select>
+          <select id="influencerStatusFilter" aria-label="Status"></select>
+          <select id="influencerWhereFilter" aria-label="Where"></select>
+          <button class="toolbar-btn" id="openInfluencerPanel" type="button">New influencer</button>
+        </div>
+        <div class="influencer-table-wrap">
+          <table class="influencer-table">
+            <thead id="influencerHead"></thead>
+            <tbody id="influencerBody"></tbody>
+          </table>
+          <div class="influencer-empty" id="influencerEmpty" hidden>No influencers</div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <button class="ped-fab" id="pedToggle" type="button">PED</button>
+  <div class="view-switch" aria-label="Views">
+    <button id="viewGantt" class="is-active" type="button">GANTT</button>
+    <button id="viewPed" type="button">PED</button>
+    <button id="viewInfluencer" type="button">INFLUENCER</button>
+  </div>
   <div class="sync">Sincronizzazione...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="Project">
     <h2>Project</h2>
@@ -1298,6 +1460,29 @@
     <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
+  <aside class="settings-panel" id="influencerPanel" aria-label="Influencer">
+    <h2>Influencer</h2>
+    <form id="influencerForm">
+      <input id="influencerId" type="hidden">
+      <label class="field">Name<input id="influencerName"></label>
+      <label class="field">City<input id="influencerCity"></label>
+      <label class="field">Target<input id="influencerTarget"></label>
+      <label class="field">Type<input id="influencerType"></label>
+      <label class="field">TT profile<input id="influencerTt"></label>
+      <label class="field">IG profile<input id="influencerIg"></label>
+      <label class="field">Output<textarea id="influencerOutput"></textarea></label>
+      <label class="field">Price<textarea id="influencerPrice"></textarea></label>
+      <label class="field">Status<input id="influencerStatus"></label>
+      <label class="field">Where<input id="influencerWhere"></label>
+      <label class="field">When<input id="influencerWhen"></label>
+      <div class="panel-actions">
+        <button class="danger-btn" id="deleteInfluencerButton" type="button">Delete</button>
+        <button class="primary-btn" type="submit">Save</button>
+      </div>
+    </form>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
+  </aside>
+
   <div class="modal-backdrop" id="taskModal" aria-label="Edit task">
     <div class="modal">
       <h2>Edit task</h2>
@@ -1397,7 +1582,9 @@
     const taskStatus = document.getElementById("taskStatus");
     const taskLabel = document.getElementById("taskLabel");
     const pedCalendar = document.getElementById("pedCalendar");
-    const pedToggle = document.getElementById("pedToggle");
+    const viewGantt = document.getElementById("viewGantt");
+    const viewPed = document.getElementById("viewPed");
+    const viewInfluencer = document.getElementById("viewInfluencer");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
@@ -1434,6 +1621,20 @@
     const today = new Date(2026, 5, 16);
     const timelineStart = new Date(2026, 5, 1);
     const storageKey = "tacos-gantt-board-data-v5";
+    const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
+    const influencerColumns = [
+      { key: "name", label: "NAME" },
+      { key: "city", label: "CITY" },
+      { key: "target", label: "TARGET" },
+      { key: "type", label: "TYPE" },
+      { key: "ttProfile", label: "TT PROFILE" },
+      { key: "igProfile", label: "IG PROFILE" },
+      { key: "output", label: "OUTPUT" },
+      { key: "price", label: "PRICE" },
+      { key: "status", label: "STATUS" },
+      { key: "where", label: "WHERE" },
+      { key: "when", label: "WHEN" }
+    ];
     const starterData = {
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
@@ -1458,7 +1659,8 @@
         { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", label: "" },
         { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", label: "" }
       ],
-      pedPosts: []
+      pedPosts: [],
+      influencers: []
     };
     let data = structuredClone(starterData);
     let committedData = structuredClone(starterData);
@@ -1506,6 +1708,7 @@
             committedData = structuredClone(data);
             renderBoard();
             renderPed();
+            renderInfluencers();
             updateUndoButton();
             syncIndicator.textContent = "Sincronizzato live";
           });
@@ -1826,7 +2029,81 @@
           done: Boolean(subtask.done)
         }))
       }));
+      normalized.influencers = (normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key]));
       return normalized;
+    }
+
+    function normalizeInfluencerRow(row) {
+      const source = row || {};
+      return {
+        id: source.id || `inf${Date.now()}${Math.random()}`,
+        name: source.name || source.NAME || "",
+        city: source.city || source.CITY || "",
+        target: source.target || source.TARGET || "",
+        type: source.type || source.TYPE || "",
+        ttProfile: source.ttProfile || source["TT PROFILE"] || "",
+        igProfile: source.igProfile || source["IG PROFILE"] || "",
+        output: source.output || source.OUTPUT || "",
+        price: source.price || source.PRICE || "",
+        status: source.status || source.STATUS || "",
+        where: source.where || source.WHERE || "",
+        when: source.when || source.WHEN || ""
+      };
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let quoted = false;
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const next = text[index + 1];
+        if (char === '"' && quoted && next === '"') {
+          cell += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          row.push(cell);
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") index += 1;
+          row.push(cell);
+          if (row.some((value) => value.trim())) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+      row.push(cell);
+      if (row.some((value) => value.trim())) rows.push(row);
+      return rows;
+    }
+
+    async function importInfluencerSeedIfNeeded() {
+      if ((data.influencers || []).length) return;
+      try {
+        const response = await fetch(influencerCsvUrl);
+        if (!response.ok) return;
+        const rows = parseCsv(await response.text());
+        const headerIndex = rows.findIndex((row) => row.map((cell) => cell.trim().toUpperCase()).includes("NAME"));
+        if (headerIndex < 0) return;
+        const headers = rows[headerIndex].map((cell) => cell.trim().toUpperCase());
+        data.influencers = rows.slice(headerIndex + 1)
+          .map((row) => {
+            const raw = {};
+            headers.forEach((header, index) => { raw[header] = (row[index] || "").trim(); });
+            return normalizeInfluencerRow(raw);
+          })
+          .filter((row) => row.name);
+        if (data.influencers.length) {
+          await saveData(true);
+        }
+      } catch {
+        data.influencers = data.influencers || [];
+      }
     }
 
     function translationCacheKey(text) {
@@ -2214,6 +2491,73 @@
       pedCalendar.style.height = `${height}px`;
     }
 
+    function uniqueInfluencerValues(key) {
+      return [...new Set((data.influencers || []).map((row) => row[key]).filter(Boolean))]
+        .sort((left, right) => left.localeCompare(right));
+    }
+
+    function fillInfluencerFilter(selectId, key, label) {
+      const select = document.getElementById(selectId);
+      const previous = select.value || "all";
+      select.innerHTML = "";
+      select.appendChild(option("all", label));
+      uniqueInfluencerValues(key).forEach((value) => select.appendChild(option(value)));
+      select.value = [...select.options].some((item) => item.value === previous) ? previous : "all";
+    }
+
+    function filteredInfluencers() {
+      const query = document.getElementById("influencerSearch").value.trim().toLowerCase();
+      const city = document.getElementById("influencerCityFilter").value;
+      const target = document.getElementById("influencerTargetFilter").value;
+      const status = document.getElementById("influencerStatusFilter").value;
+      const where = document.getElementById("influencerWhereFilter").value;
+      return (data.influencers || []).filter((row) => {
+        const searchable = influencerColumns.map((column) => row[column.key] || "").join(" ").toLowerCase();
+        if (query && !searchable.includes(query)) return false;
+        if (city !== "all" && row.city !== city) return false;
+        if (target !== "all" && row.target !== target) return false;
+        if (status !== "all" && row.status !== status) return false;
+        if (where !== "all" && row.where !== where) return false;
+        return true;
+      });
+    }
+
+    function renderInfluencers() {
+      const head = document.getElementById("influencerHead");
+      const body = document.getElementById("influencerBody");
+      const empty = document.getElementById("influencerEmpty");
+      fillInfluencerFilter("influencerCityFilter", "city", "All cities");
+      fillInfluencerFilter("influencerTargetFilter", "target", "All targets");
+      fillInfluencerFilter("influencerStatusFilter", "status", "All status");
+      fillInfluencerFilter("influencerWhereFilter", "where", "All where");
+      head.innerHTML = `<tr>${influencerColumns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>`;
+      const rows = filteredInfluencers();
+      body.innerHTML = rows.map((row) => `
+        <tr data-influencer-id="${escapeHtml(row.id)}">
+          ${influencerColumns.map((column) => `<td>${escapeHtml(row[column.key] || "")}</td>`).join("")}
+        </tr>
+      `).join("");
+      empty.hidden = rows.length > 0;
+    }
+
+    function openInfluencerEditor(id = "") {
+      const row = (data.influencers || []).find((item) => item.id === id) || normalizeInfluencerRow({ id: "" });
+      document.getElementById("influencerId").value = row.id || "";
+      document.getElementById("influencerName").value = row.name || "";
+      document.getElementById("influencerCity").value = row.city || "";
+      document.getElementById("influencerTarget").value = row.target || "";
+      document.getElementById("influencerType").value = row.type || "";
+      document.getElementById("influencerTt").value = row.ttProfile || "";
+      document.getElementById("influencerIg").value = row.igProfile || "";
+      document.getElementById("influencerOutput").value = row.output || "";
+      document.getElementById("influencerPrice").value = row.price || "";
+      document.getElementById("influencerStatus").value = row.status || "";
+      document.getElementById("influencerWhere").value = row.where || "";
+      document.getElementById("influencerWhen").value = row.when || "";
+      document.getElementById("deleteInfluencerButton").hidden = !row.id;
+      openPanel("influencerPanel");
+    }
+
     function openTaskEditor(taskId) {
       renderSettingsLists();
       const task = data.tasks.find((item) => item.id === taskId);
@@ -2422,8 +2766,10 @@
       updateUndoButton();
       renderTimeline();
       updateZoom();
+      await importInfluencerSeedIfNeeded();
       renderBoard();
       renderPed();
+      renderInfluencers();
       scrollToToday();
       setInterval(refreshSharedData, 1800);
     }
@@ -2459,6 +2805,7 @@
       await saveData(true);
       renderBoard();
       renderPed();
+      renderInfluencers();
       updateUndoButton();
       closePanels();
       closeTaskEditor();
@@ -2488,6 +2835,10 @@
     document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
     document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
     document.getElementById("settings").addEventListener("click", () => {
+      if (document.body.classList.contains("influencer-mode")) {
+        openInfluencerEditor();
+        return;
+      }
       openPanel(document.body.classList.contains("ped-mode") ? "pedSettingsPanel" : "settingsPanel");
     });
 
@@ -2495,22 +2846,33 @@
       button.addEventListener("click", closePanels);
     });
 
-    pedToggle.addEventListener("click", () => {
-      const pedMode = !document.body.classList.contains("ped-mode");
+    function setView(view) {
+      const pedMode = view === "ped";
+      const influencerMode = view === "influencer";
       document.body.classList.toggle("ped-mode", pedMode);
-      pedToggle.textContent = pedMode ? "GANTT" : "PED";
-      document.querySelector(".brand-title").textContent = pedMode ? "PED" : "Gantt Board";
-      document.getElementById("currentMonth").textContent = pedMode ? "PED" : "O'TACOS";
+      document.body.classList.toggle("influencer-mode", influencerMode);
+      viewGantt.classList.toggle("is-active", view === "gantt");
+      viewPed.classList.toggle("is-active", pedMode);
+      viewInfluencer.classList.toggle("is-active", influencerMode);
+      document.querySelector(".brand-title").textContent = influencerMode ? "Influencer" : pedMode ? "PED" : "Gantt Board";
+      document.getElementById("currentMonth").textContent = influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
       closePanels();
-      zoomIndex = zooms.length - 1;
-      updateZoom();
+      if (!influencerMode) {
+        zoomIndex = zooms.length - 1;
+        updateZoom();
+      }
       renderBoard();
       renderPed();
+      renderInfluencers();
       requestAnimationFrame(() => {
         if (pedMode) scrollPedToToday();
-        else scrollToToday();
+        else if (!influencerMode) scrollToToday();
       });
-    });
+    }
+
+    viewGantt.addEventListener("click", () => setView("gantt"));
+    viewPed.addEventListener("click", () => setView("ped"));
+    viewInfluencer.addEventListener("click", () => setView("influencer"));
 
     document.getElementById("taskAddEndDate").addEventListener("change", (event) => {
       document.getElementById("taskEndWrap").hidden = !event.target.checked;
@@ -2562,6 +2924,54 @@
       event.currentTarget.reset();
       document.getElementById("projectName").value = "New project";
       document.getElementById("projectColor").value = "#147bd1";
+    });
+
+    document.getElementById("openInfluencerPanel").addEventListener("click", () => openInfluencerEditor());
+
+    ["influencerSearch", "influencerCityFilter", "influencerTargetFilter", "influencerStatusFilter", "influencerWhereFilter"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", renderInfluencers);
+      document.getElementById(id).addEventListener("change", renderInfluencers);
+    });
+
+    document.getElementById("influencerBody").addEventListener("click", (event) => {
+      const row = event.target.closest("[data-influencer-id]");
+      if (!row) return;
+      openInfluencerEditor(row.dataset.influencerId);
+    });
+
+    document.getElementById("influencerForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const id = document.getElementById("influencerId").value || `inf${Date.now()}`;
+      const row = normalizeInfluencerRow({
+        id,
+        name: document.getElementById("influencerName").value.trim(),
+        city: document.getElementById("influencerCity").value.trim(),
+        target: document.getElementById("influencerTarget").value.trim(),
+        type: document.getElementById("influencerType").value.trim(),
+        ttProfile: document.getElementById("influencerTt").value.trim(),
+        igProfile: document.getElementById("influencerIg").value.trim(),
+        output: document.getElementById("influencerOutput").value.trim(),
+        price: document.getElementById("influencerPrice").value.trim(),
+        status: document.getElementById("influencerStatus").value.trim(),
+        where: document.getElementById("influencerWhere").value.trim(),
+        when: document.getElementById("influencerWhen").value.trim()
+      });
+      data.influencers = data.influencers || [];
+      const index = data.influencers.findIndex((item) => item.id === id);
+      if (index >= 0) data.influencers[index] = row;
+      else data.influencers.push(row);
+      saveData();
+      renderInfluencers();
+      closePanels();
+    });
+
+    document.getElementById("deleteInfluencerButton").addEventListener("click", () => {
+      const id = document.getElementById("influencerId").value;
+      if (!id) return;
+      data.influencers = (data.influencers || []).filter((row) => row.id !== id);
+      saveData();
+      renderInfluencers();
+      closePanels();
     });
 
     document.getElementById("taskForm").addEventListener("submit", async (event) => {
@@ -3279,6 +3689,7 @@
       saveData();
       renderBoard();
       renderPed();
+      renderInfluencers();
       scrollToToday();
     });
   </script>
