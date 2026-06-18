@@ -1809,6 +1809,47 @@
     let applyingRemoteUpdate = false;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
+    const legacyInfluencerOptionColors = {
+      city: "#e0f2fe",
+      target: "#dcfce7",
+      type: "#fef3c7",
+      status: "#fee2e2",
+      where: "#ede9fe",
+      when: "#fce7f3"
+    };
+    const influencerPalette = {
+      city: ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#e0f2fe"],
+      target: ["#dcfce7", "#dbeafe", "#fef3c7", "#fee2e2", "#ede9fe", "#ccfbf1"],
+      type: ["#fef3c7", "#e0f2fe", "#ede9fe", "#dcfce7", "#fee2e2", "#fce7f3"],
+      status: ["#fee2e2", "#dbeafe", "#dcfce7", "#e5e7eb", "#fef3c7", "#ede9fe"],
+      where: ["#ede9fe", "#dbeafe", "#dcfce7", "#fef3c7", "#fee2e2", "#ccfbf1"],
+      when: ["#e0f2fe", "#fef3c7", "#dcfce7", "#fce7f3", "#ede9fe", "#e5e7eb"]
+    };
+    const influencerSemanticColors = {
+      status: {
+        "to contact": "#fee2e2",
+        "tbc": "#fee2e2",
+        "contacted": "#dbeafe",
+        "ghosted": "#e5e7eb",
+        "approved": "#dcfce7",
+        "rejected": "#fee2e2",
+        "pending": "#fef3c7",
+        "in progress": "#e0f2fe",
+        "done": "#dcfce7"
+      },
+      type: {
+        "creator": "#ede9fe",
+        "influencer": "#dbeafe",
+        "ugc": "#fef3c7",
+        "ambassador": "#dcfce7",
+        "vip": "#fce7f3"
+      },
+      when: {
+        "now": "#dcfce7",
+        "soon": "#fef3c7",
+        "later": "#e0f2fe"
+      }
+    };
     const zooms = [
       { label: "XS", width: 90 },
       { label: "S", width: 150 },
@@ -2097,6 +2138,61 @@
       return projects;
     }
 
+    function colorKey(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function projectColorForName(projects, value) {
+      const key = colorKey(value);
+      if (!key) return "";
+      const project = (projects || []).find((item) => colorKey(item.name) === key);
+      return project?.color || "";
+    }
+
+    function hexToRgb(hex) {
+      const clean = String(hex || "").replace("#", "").trim();
+      const full = clean.length === 3 ? clean.split("").map((char) => char + char).join("") : clean;
+      if (!/^[0-9a-f]{6}$/i.test(full)) return null;
+      return {
+        r: parseInt(full.slice(0, 2), 16),
+        g: parseInt(full.slice(2, 4), 16),
+        b: parseInt(full.slice(4, 6), 16)
+      };
+    }
+
+    function readableTextColor(backgroundColor) {
+      const rgb = hexToRgb(backgroundColor);
+      if (!rgb) return "#111827";
+      const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
+      return luminance > 0.58 ? "#111827" : "#ffffff";
+    }
+
+    function isDefaultInfluencerTextColor(color) {
+      return !color || color.toLowerCase() === "#111827";
+    }
+
+    function uxInfluencerOptionColor(key, value, index = 0, projects = []) {
+      const projectColor = projectColorForName(projects, value);
+      if (projectColor) return projectColor;
+      const semanticColor = influencerSemanticColors[key]?.[colorKey(value)];
+      if (semanticColor) return semanticColor;
+      const palette = influencerPalette[key] || ["#eef2f7"];
+      return palette[index % palette.length];
+    }
+
+    function shouldRefreshInfluencerOptionColor(key, optionColor, expectedColor) {
+      if (!optionColor) return true;
+      if (optionColor.toLowerCase() === expectedColor.toLowerCase()) return false;
+      const legacy = legacyInfluencerOptionColors[key];
+      return Boolean(legacy && optionColor.toLowerCase() === legacy.toLowerCase());
+    }
+
     function moveItem(list, fromIndex, direction) {
       const toIndex = fromIndex + direction;
       if (fromIndex < 0 || toIndex < 0 || toIndex >= list.length) return list;
@@ -2225,20 +2321,29 @@
     }
 
     function ensureInfluencerOptionsFromRows(normalized) {
-      const optionColors = { city: "#e0f2fe", target: "#dcfce7", type: "#fef3c7", status: "#fee2e2", where: "#ede9fe", when: "#fce7f3" };
       normalized.influencerOptions = normalized.influencerOptions || {};
       ["city", "target", "type", "status", "where", "when"].forEach((key) => {
         const existing = (normalized.influencerOptions[key] || [])
-          .map((item) => normalizeInfluencerOption(item, optionColors[key]))
+          .map((item) => normalizeInfluencerOption(item, legacyInfluencerOptionColors[key]))
           .filter((item) => item.name);
         const names = new Set(existing.map((item) => item.name));
         (normalized.influencers || []).forEach((row) => {
           if (row[key] && !names.has(row[key])) {
-            existing.push({ name: row[key], color: optionColors[key] });
+            const color = uxInfluencerOptionColor(key, row[key], existing.length, normalized.projects);
+            existing.push({ name: row[key], color, textColor: readableTextColor(color) });
             names.add(row[key]);
           }
         });
-        normalized.influencerOptions[key] = existing;
+        normalized.influencerOptions[key] = existing.map((item, index) => {
+          const color = projectColorForName(normalized.projects, item.name) || item.color;
+          const expectedColor = uxInfluencerOptionColor(key, item.name, index, normalized.projects);
+          const nextColor = shouldRefreshInfluencerOptionColor(key, item.color, expectedColor) ? expectedColor : color;
+          return {
+            ...item,
+            color: nextColor,
+            textColor: isDefaultInfluencerTextColor(item.textColor) ? readableTextColor(nextColor) : item.textColor
+          };
+        });
       });
       normalized.influencerColumnLabels = normalized.influencerColumnLabels || {};
     }
@@ -2795,13 +2900,16 @@
     }
 
     function influencerOptionColor(key, value) {
+      const projectColor = projectColorForName(data.projects, value);
+      if (projectColor) return projectColor;
       const optionItem = (data.influencerOptions?.[key] || []).find((item) => item.name === value);
-      return optionItem?.color || "#eef2f7";
+      return optionItem?.color || uxInfluencerOptionColor(key, value, 0, data.projects);
     }
 
     function influencerOptionTextColor(key, value) {
       const optionItem = (data.influencerOptions?.[key] || []).find((item) => item.name === value);
-      return optionItem?.textColor || "#111827";
+      const backgroundColor = influencerOptionColor(key, value);
+      return isDefaultInfluencerTextColor(optionItem?.textColor) ? readableTextColor(backgroundColor) : optionItem.textColor;
     }
 
     function influencerProfileUrl(platform, value, row) {
@@ -2985,8 +3093,8 @@
         document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => `
           <div class="project-pill">
             <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="${escapeHtml(key)}" data-old-option="${escapeHtml(item.name)}">
-            <input type="color" value="${escapeHtml(item.color)}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
-            <input type="color" value="${escapeHtml(item.textColor || "#111827")}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
+            <input type="color" value="${escapeHtml(influencerOptionColor(key, item.name))}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
+            <input type="color" value="${escapeHtml(influencerOptionTextColor(key, item.name))}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
             <button type="button" aria-label="Delete ${escapeHtml(item.name)}" data-delete-influencer-option="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">x</button>
           </div>
         `).join("");
@@ -3383,6 +3491,8 @@
       data.projects.push({ id: `p${Date.now()}`, name, color });
       saveData();
       renderBoard();
+      renderInfluencerSettings();
+      renderInfluencers();
       event.currentTarget.reset();
       document.getElementById("projectName").value = "New project";
       document.getElementById("projectColor").value = "#147bd1";
@@ -3993,6 +4103,8 @@
         data.projects = moveItem(data.projects, index, Number(moveButton.dataset.moveDirection));
         saveData();
         renderBoard();
+        renderInfluencerSettings();
+        renderInfluencers();
         return;
       }
       const button = event.target.closest("[data-delete-project]");
@@ -4002,6 +4114,8 @@
       data.tasks = data.tasks.filter((task) => task.projectId !== id);
       saveData();
       renderBoard();
+      renderInfluencerSettings();
+      renderInfluencers();
     });
 
     projectList.addEventListener("change", (event) => {
@@ -4016,6 +4130,8 @@
         project.name = name;
         saveData();
         renderBoard();
+        renderInfluencerSettings();
+        renderInfluencers();
         return;
       }
       const colorInput = event.target.closest("[data-project-color]");
@@ -4025,6 +4141,8 @@
       project.color = colorInput.value;
       saveData();
       renderBoard();
+      renderInfluencerSettings();
+      renderInfluencers();
     });
 
     memberList.addEventListener("click", (event) => {
