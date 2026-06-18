@@ -514,6 +514,12 @@
       z-index: 30;
     }
 
+    .status-menu {
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
     .status-menu.open,
     .context-menu.open {
       display: grid;
@@ -2585,9 +2591,10 @@
         button.innerHTML = `<span class="status-swatch" style="background:${escapeHtml(statusColor(name))}"></span>${escapeHtml(name)}`;
         statusMenu.appendChild(button);
       });
-      statusMenu.style.left = `${Math.min(x, window.innerWidth - 190)}px`;
-      statusMenu.style.top = `${Math.min(y, window.innerHeight - 220)}px`;
       statusMenu.classList.add("open");
+      const menuHeight = Math.min(statusMenu.scrollHeight, window.innerHeight - 24);
+      statusMenu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - 210))}px`;
+      statusMenu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - menuHeight - 12))}px`;
       taskContextMenu.classList.remove("open");
     }
 
