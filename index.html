@@ -1659,6 +1659,19 @@
       return `${year}-${month}-${day}`;
     }
 
+    function currentDateKey() {
+      return dateKey(new Date());
+    }
+
+    function setNewTaskDefaultDates() {
+      const todayKey = currentDateKey();
+      document.getElementById("taskStart").value = todayKey;
+      document.getElementById("taskEnd").value = todayKey;
+      document.getElementById("taskPedDate").value = todayKey;
+      document.getElementById("creatorVideoDate").value = todayKey;
+      document.getElementById("creatorPublishDate").value = todayKey;
+    }
+
     function shiftDateString(value, days) {
       const date = new Date(`${value}T00:00:00`);
       date.setDate(date.getDate() + days);
@@ -2201,7 +2214,7 @@
       document.getElementById("editPedPostId").value = post.id;
       document.getElementById("editPedPostTitle").value = post.title || "";
       document.getElementById("editPedPostDate").value = post.date || "";
-      document.getElementById("editPedPostDate").closest(".field").hidden = Boolean(post.sourceTaskId);
+      document.getElementById("editPedPostDate").closest(".field").hidden = false;
       editPedPostStatus.value = post.status || "";
       editPedPostFormat.value = post.format || data.formats[0] || "";
       [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
@@ -2546,7 +2559,7 @@
       document.getElementById("taskInfo").value = "";
       document.getElementById("taskPedEnabled").checked = false;
       document.getElementById("taskPedFields").hidden = true;
-      document.getElementById("taskPedDate").value = document.getElementById("taskStart").value;
+      setNewTaskDefaultDates();
     });
 
     document.getElementById("pedPostForm").addEventListener("submit", (event) => {
@@ -2831,7 +2844,11 @@
       const format = editPedPostFormat.value;
       if (!title || !date || !status || !format) return;
       post.title = title;
-      post.date = post.sourceTaskId ? post.date : date;
+      post.date = date;
+      if (post.sourceTaskId) {
+        const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
+        if (sourceTask) sourceTask.pedDate = date;
+      }
       post.status = status;
       post.members = members;
       post.social = social;
@@ -2839,6 +2856,7 @@
       post.asset = document.getElementById("editPedPostAsset").value.trim();
       post.copy = document.getElementById("editPedPostCopy").value.trim();
       saveData();
+      renderBoard();
       renderPed();
       closePedPostEditor();
     });
@@ -3216,6 +3234,7 @@
 
     memberFilter.addEventListener("change", renderBoard);
     boardEl.addEventListener("scroll", updateHiddenTaskIndicators);
+    setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
       data = structuredClone(starterData);
