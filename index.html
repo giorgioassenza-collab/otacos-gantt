@@ -885,8 +885,10 @@
       pointer-events: none;
       transition: opacity .16s ease, transform .16s ease;
       z-index: 10;
-      max-height: calc(100vh - 82px);
+      max-height: calc(100vh - 150px);
       overflow: auto;
+      margin-bottom: 74px;
+      scroll-padding-bottom: 96px;
     }
 
     .modal-backdrop {
@@ -905,8 +907,10 @@
     .modal {
       width: 360px;
       max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 122px);
+      max-height: calc(100vh - 190px);
       overflow: auto;
+      margin-bottom: 74px;
+      scroll-padding-bottom: 96px;
       padding: 16px;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -1506,6 +1510,11 @@
       <label class="field">Output<textarea id="influencerOutput"></textarea></label>
       <label class="field">Price<textarea id="influencerPrice"></textarea></label>
       <label class="field">Status<input id="influencerStatus"></label>
+      <label class="inline-check contact-task-toggle" id="influencerContactToggle" hidden><input id="influencerAddDate" type="checkbox"> Add date</label>
+      <div class="ped-fields" id="influencerContactFields" hidden>
+        <label class="field">Date<input id="influencerContactDate" type="date"></label>
+        <label class="field">Who<select id="influencerContactMember"></select></label>
+      </div>
       <label class="field">Where<input id="influencerWhere"></label>
       <label class="field">When<input id="influencerWhen"></label>
       <div class="panel-actions">
@@ -2124,7 +2133,11 @@
         price: source.price || source.PRICE || "",
         status: source.status || source.STATUS || "",
         where: source.where || source.WHERE || "",
-        when: source.when || source.WHEN || ""
+        when: source.when || source.WHEN || "",
+        contactTaskEnabled: Boolean(source.contactTaskEnabled),
+        contactTaskId: source.contactTaskId || "",
+        contactDate: source.contactDate || "",
+        contactMember: source.contactMember || ""
       };
     }
 
@@ -2787,6 +2800,76 @@
       select.value = selectedValue || "";
     }
 
+    function isContactInfluencerStatus(status) {
+      const normalized = String(status || "").trim().toUpperCase();
+      return normalized === "TBC" || normalized === "TO CONTACT";
+    }
+
+    function syncInfluencerContactFields() {
+      const canSchedule = isContactInfluencerStatus(document.getElementById("influencerStatus").value);
+      const enabled = document.getElementById("influencerAddDate").checked;
+      document.getElementById("influencerContactToggle").hidden = !canSchedule;
+      document.getElementById("influencerContactFields").hidden = !canSchedule || !enabled;
+      if (canSchedule && enabled && !document.getElementById("influencerContactDate").value) {
+        document.getElementById("influencerContactDate").value = currentDateKey();
+      }
+    }
+
+    function fillInfluencerContactMembers(selectedValue = "") {
+      const select = document.getElementById("influencerContactMember");
+      select.innerHTML = "";
+      select.appendChild(option("", "-"));
+      assignableMembers().forEach((member) => select.appendChild(option(member)));
+      select.value = assignableMembers().includes(selectedValue) ? selectedValue : "";
+    }
+
+    function contactProjectId() {
+      const project = (data.projects || []).find((item) => item.id === "p-customer-care")
+        || (data.projects || []).find((item) => String(item.name || "").toLowerCase() === "customer care")
+        || (data.projects || [])[0];
+      return project ? project.id : "";
+    }
+
+    function contactTaskStatus() {
+      const todo = (data.statuses || []).find((item) => statusName(item).toUpperCase() === "TO DO");
+      return todo ? statusName(todo) : data.statuses?.[0] ? statusName(data.statuses[0]) : "TO DO";
+    }
+
+    function syncInfluencerContactTask(row) {
+      const existingId = row.contactTaskId || "";
+      const existingTask = existingId ? data.tasks.find((task) => task.id === existingId) : null;
+      if (!row.contactTaskEnabled) {
+        if (existingTask) data.tasks = data.tasks.filter((task) => task.id !== existingId);
+        row.contactTaskId = "";
+        return;
+      }
+      if (!row.contactDate || !row.contactMember || !row.name) return;
+      const projectId = contactProjectId();
+      if (!projectId) return;
+      const taskName = `TO CONTACT ${row.name}`;
+      const payload = {
+        projectId,
+        name: taskName,
+        nameEn: taskName,
+        members: [row.contactMember],
+        status: contactTaskStatus(),
+        start: row.contactDate,
+        end: row.contactDate,
+        info: row.ttLink || row.igLink || "",
+        label: "",
+        pedEnabled: false,
+        pedDate: "",
+        subtasks: []
+      };
+      if (existingTask) {
+        Object.assign(existingTask, payload);
+      } else {
+        const task = { id: `t${Date.now()}-influencer-contact`, ...payload };
+        data.tasks.push(task);
+        row.contactTaskId = task.id;
+      }
+    }
+
     function renderInfluencerSettings() {
       const columnList = document.getElementById("influencerColumnList");
       columnList.innerHTML = influencerColumns.map((column) => `
@@ -2824,6 +2907,10 @@
       document.getElementById("influencerOutput").value = row.output || "";
       document.getElementById("influencerPrice").value = row.price || "";
       document.getElementById("influencerStatus").value = row.status || "";
+      document.getElementById("influencerAddDate").checked = Boolean(row.contactTaskEnabled);
+      document.getElementById("influencerContactDate").value = row.contactDate || currentDateKey();
+      fillInfluencerContactMembers(row.contactMember || "");
+      syncInfluencerContactFields();
       document.getElementById("influencerWhere").value = row.where || "";
       document.getElementById("influencerWhen").value = row.when || "";
       document.getElementById("deleteInfluencerButton").hidden = !row.id;
@@ -3234,13 +3321,20 @@
         price: document.getElementById("influencerPrice").value.trim(),
         status: document.getElementById("influencerStatus").value.trim(),
         where: document.getElementById("influencerWhere").value.trim(),
-        when: document.getElementById("influencerWhen").value.trim()
+        when: document.getElementById("influencerWhen").value.trim(),
+        contactTaskEnabled: document.getElementById("influencerAddDate").checked && isContactInfluencerStatus(document.getElementById("influencerStatus").value),
+        contactTaskId: (data.influencers || []).find((item) => item.id === id)?.contactTaskId || "",
+        contactDate: document.getElementById("influencerContactDate").value,
+        contactMember: document.getElementById("influencerContactMember").value
       });
+      if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember)) return;
       data.influencers = data.influencers || [];
       const index = data.influencers.findIndex((item) => item.id === id);
       if (index >= 0) data.influencers[index] = row;
       else data.influencers.push(row);
+      syncInfluencerContactTask(row);
       saveData();
+      renderBoard();
       renderInfluencers();
       closePanels();
     });
@@ -3248,11 +3342,19 @@
     document.getElementById("deleteInfluencerButton").addEventListener("click", () => {
       const id = document.getElementById("influencerId").value;
       if (!id) return;
+      const row = (data.influencers || []).find((item) => item.id === id);
+      if (row?.contactTaskId) {
+        data.tasks = data.tasks.filter((task) => task.id !== row.contactTaskId);
+      }
       data.influencers = (data.influencers || []).filter((row) => row.id !== id);
       saveData();
+      renderBoard();
       renderInfluencers();
       closePanels();
     });
+
+    document.getElementById("influencerStatus").addEventListener("input", syncInfluencerContactFields);
+    document.getElementById("influencerAddDate").addEventListener("change", syncInfluencerContactFields);
 
     function addInfluencerOption(key, nameInputId, colorInputId, defaultName, defaultColor) {
       const nameInput = document.getElementById(nameInputId);
@@ -3492,8 +3594,13 @@
         return;
       }
       if (button.dataset.influencerContextAction === "delete") {
+        const row = (data.influencers || []).find((item) => item.id === id);
+        if (row?.contactTaskId) {
+          data.tasks = data.tasks.filter((task) => task.id !== row.contactTaskId);
+        }
         data.influencers = (data.influencers || []).filter((row) => row.id !== id);
         saveData();
+        renderBoard();
         renderInfluencers();
       }
       hideTaskMenus();
