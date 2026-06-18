@@ -1500,7 +1500,9 @@
       <label class="field">Target<select id="influencerTarget"></select></label>
       <label class="field">Type<select id="influencerType"></select></label>
       <label class="field">TT profile<input id="influencerTt"></label>
+      <label class="field">TT link<input id="influencerTtLink" placeholder="https://www.tiktok.com/@..."></label>
       <label class="field">IG profile<input id="influencerIg"></label>
+      <label class="field">IG link<input id="influencerIgLink" placeholder="https://www.instagram.com/..."></label>
       <label class="field">Output<textarea id="influencerOutput"></textarea></label>
       <label class="field">Price<textarea id="influencerPrice"></textarea></label>
       <label class="field">Status<input id="influencerStatus"></label>
@@ -1619,6 +1621,7 @@
     <button type="button" data-influencer-context-action="delete">Delete</button>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -1696,6 +1699,8 @@
       { key: "type", label: "TYPE" },
       { key: "ttProfile", label: "TT PROFILE" },
       { key: "igProfile", label: "IG PROFILE" },
+      { key: "ttLink", label: "TT LINK", hidden: true },
+      { key: "igLink", label: "IG LINK", hidden: true },
       { key: "output", label: "OUTPUT" },
       { key: "price", label: "PRICE" },
       { key: "status", label: "STATUS" },
@@ -2113,6 +2118,8 @@
         type: source.type || source.TYPE || "",
         ttProfile: source.ttProfile || source["TT PROFILE"] || "",
         igProfile: source.igProfile || source["IG PROFILE"] || "",
+        ttLink: source.ttLink || source["TT LINK"] || "",
+        igLink: source.igLink || source["IG LINK"] || "",
         output: source.output || source.OUTPUT || "",
         price: source.price || source.PRICE || "",
         status: source.status || source.STATUS || "",
@@ -2176,26 +2183,102 @@
       return rows;
     }
 
-    async function importInfluencerSeedIfNeeded() {
-      if ((data.influencers || []).length) return;
-      try {
-        const response = await fetch(influencerCsvUrl);
-        if (!response.ok) return;
-        const rows = parseCsv(await response.text());
-        const headerIndex = rows.findIndex((row) => row.map((cell) => cell.trim().toUpperCase()).includes("NAME"));
-        if (headerIndex < 0) return;
-        const headers = rows[headerIndex].map((cell) => cell.trim().toUpperCase());
-        data.influencers = rows.slice(headerIndex + 1)
-          .map((row) => {
-            const raw = {};
-            headers.forEach((header, index) => { raw[header] = (row[index] || "").trim(); });
-            return normalizeInfluencerRow(raw);
-          })
-          .filter((row) => row.name);
-        ensureInfluencerOptionsFromRows(data);
-        if (data.influencers.length) {
-          await saveData(true);
+    function rowMatchKey(row) {
+      return [row.name, row.city, row.target, row.ttProfile, row.igProfile]
+        .map((value) => String(value || "").trim().toLowerCase())
+        .join("|");
+    }
+
+    function rowsFromInfluencerWorkbook(workbook) {
+      const sheetName = workbook.SheetNames.find((name) => name.toLowerCase().includes("influencer") || name.toLowerCase().includes("creator")) || workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const range = window.XLSX.utils.decode_range(sheet["!ref"]);
+      let headerRow = -1;
+      let headers = [];
+      for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+        const values = [];
+        for (let colIndex = range.s.c; colIndex <= range.e.c; colIndex += 1) {
+          const cell = sheet[window.XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })];
+          values.push(String(cell?.v || "").trim().toUpperCase());
         }
+        if (values.includes("NAME") && values.includes("TT PROFILE") && values.includes("IG PROFILE")) {
+          headerRow = rowIndex;
+          headers = values;
+          break;
+        }
+      }
+      if (headerRow < 0) return [];
+      const ttIndex = headers.indexOf("TT PROFILE");
+      const igIndex = headers.indexOf("IG PROFILE");
+      const rows = [];
+      for (let rowIndex = headerRow + 1; rowIndex <= range.e.r; rowIndex += 1) {
+        const raw = {};
+        headers.forEach((header, colIndex) => {
+          const cell = sheet[window.XLSX.utils.encode_cell({ r: rowIndex, c: colIndex })];
+          raw[header] = cell?.v == null ? "" : String(cell.v).trim();
+        });
+        const ttCell = sheet[window.XLSX.utils.encode_cell({ r: rowIndex, c: ttIndex })];
+        const igCell = sheet[window.XLSX.utils.encode_cell({ r: rowIndex, c: igIndex })];
+        raw["TT LINK"] = ttCell?.l?.Target || "";
+        raw["IG LINK"] = igCell?.l?.Target || "";
+        const normalized = normalizeInfluencerRow(raw);
+        if (normalized.name) rows.push(normalized);
+      }
+      return rows;
+    }
+
+    async function loadInfluencerRowsFromSheet() {
+      if (window.XLSX) {
+        const response = await fetch("https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=xlsx");
+        if (response.ok) {
+          const workbook = window.XLSX.read(await response.arrayBuffer(), { type: "array", cellHTML: false, cellFormula: false });
+          const rows = rowsFromInfluencerWorkbook(workbook);
+          if (rows.length) return rows;
+        }
+      }
+      const response = await fetch(influencerCsvUrl);
+      if (!response.ok) return [];
+      const rows = parseCsv(await response.text());
+      const headerIndex = rows.findIndex((row) => row.map((cell) => cell.trim().toUpperCase()).includes("NAME"));
+      if (headerIndex < 0) return [];
+      const headers = rows[headerIndex].map((cell) => cell.trim().toUpperCase());
+      return rows.slice(headerIndex + 1)
+        .map((row) => {
+          const raw = {};
+          headers.forEach((header, index) => { raw[header] = (row[index] || "").trim(); });
+          return normalizeInfluencerRow(raw);
+        })
+        .filter((row) => row.name);
+    }
+
+    async function importInfluencerSeedIfNeeded() {
+      try {
+        const importedRows = await loadInfluencerRowsFromSheet();
+        if (!importedRows.length) return;
+        if (!(data.influencers || []).length) {
+          data.influencers = importedRows;
+          ensureInfluencerOptionsFromRows(data);
+          await saveData(true);
+          return;
+        }
+        const importedByKey = new Map(importedRows.map((row) => [rowMatchKey(row), row]));
+        let changed = false;
+        data.influencers = (data.influencers || []).map((row) => {
+          const imported = importedByKey.get(rowMatchKey(row));
+          if (!imported) return row;
+          const next = { ...row };
+          if (!next.ttLink && imported.ttLink) {
+            next.ttLink = imported.ttLink;
+            changed = true;
+          }
+          if (!next.igLink && imported.igLink) {
+            next.igLink = imported.igLink;
+            changed = true;
+          }
+          return next;
+        });
+        ensureInfluencerOptionsFromRows(data);
+        if (changed) await saveData(true);
       } catch {
         data.influencers = data.influencers || [];
       }
@@ -2621,6 +2704,8 @@
     }
 
     function influencerProfileUrl(platform, value, row) {
+      const storedLink = platform === "tt" ? row.ttLink : row.igLink;
+      if (storedLink) return storedLink;
       const clean = String(value || "").trim();
       if (/^https?:\/\//i.test(clean)) return clean;
       const source = clean && /[a-zA-Z_@.]/.test(clean) ? clean : row.name;
@@ -2676,7 +2761,8 @@
       fillInfluencerFilter("influencerTargetFilter", "target", "All targets");
       fillInfluencerFilter("influencerStatusFilter", "status", "All status");
       fillInfluencerFilter("influencerWhereFilter", "where", "All where");
-      head.innerHTML = `<tr>${influencerColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
+      const visibleColumns = influencerColumns.filter((column) => !column.hidden);
+      head.innerHTML = `<tr>${visibleColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
       const rows = filteredInfluencers();
       body.innerHTML = rows.map((row) => `
         ${(() => {
@@ -2684,7 +2770,7 @@
           const title = duplicate ? `This user may already be present at row ${duplicate.rowNumber}` : "";
           return `<tr data-influencer-id="${escapeHtml(row.id)}" class="${duplicate ? "is-duplicate" : ""}" title="${escapeHtml(title)}">`;
         })()}
-          ${influencerColumns.map((column) => `<td>${influencerCellMarkup(row, column)}</td>`).join("")}
+          ${visibleColumns.map((column) => `<td>${influencerCellMarkup(row, column)}</td>`).join("")}
         </tr>
       `).join("");
       empty.hidden = rows.length > 0;
@@ -2732,7 +2818,9 @@
       fillInfluencerSelect("influencerTarget", "target", row.target || "");
       fillInfluencerSelect("influencerType", "type", row.type || "");
       document.getElementById("influencerTt").value = row.ttProfile || "";
+      document.getElementById("influencerTtLink").value = row.ttLink || "";
       document.getElementById("influencerIg").value = row.igProfile || "";
+      document.getElementById("influencerIgLink").value = row.igLink || "";
       document.getElementById("influencerOutput").value = row.output || "";
       document.getElementById("influencerPrice").value = row.price || "";
       document.getElementById("influencerStatus").value = row.status || "";
@@ -3139,7 +3227,9 @@
         target: document.getElementById("influencerTarget").value.trim(),
         type: document.getElementById("influencerType").value.trim(),
         ttProfile: document.getElementById("influencerTt").value.trim(),
+        ttLink: document.getElementById("influencerTtLink").value.trim(),
         igProfile: document.getElementById("influencerIg").value.trim(),
+        igLink: document.getElementById("influencerIgLink").value.trim(),
         output: document.getElementById("influencerOutput").value.trim(),
         price: document.getElementById("influencerPrice").value.trim(),
         status: document.getElementById("influencerStatus").value.trim(),
