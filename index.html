@@ -497,6 +497,63 @@
       color: #111827;
     }
 
+    .status-menu,
+    .context-menu {
+      position: fixed;
+      display: none;
+      min-width: 164px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 14px 42px rgba(16, 24, 40, .18);
+      z-index: 30;
+    }
+
+    .status-menu.open,
+    .context-menu.open {
+      display: grid;
+      gap: 4px;
+    }
+
+    .status-menu button,
+    .context-menu button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 9px;
+      color: #243040;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .status-menu button:hover,
+    .context-menu button:hover {
+      background: #f2f5f8;
+    }
+
+    .hidden-task-indicator {
+      position: absolute;
+      bottom: 4px;
+      width: 20px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #475569;
+      background: rgba(255, 255, 255, .88);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, .12);
+      font-size: 12px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
     .sync {
       display: none;
     }
@@ -589,6 +646,10 @@
     }
 
     .ped-fields[hidden] {
+      display: none;
+    }
+
+    .end-date-wrap[hidden] {
       display: none;
     }
 
@@ -844,6 +905,17 @@
       align-items: center;
     }
 
+    .panel-footer {
+      position: sticky;
+      bottom: -16px;
+      display: flex;
+      justify-content: flex-end;
+      margin: 16px -16px -16px;
+      padding: 12px 16px 16px;
+      border-top: 1px solid #e6ebf1;
+      background: #fff;
+    }
+
     .primary-btn,
     .secondary-btn {
       height: 34px;
@@ -1068,8 +1140,8 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
         </button>
       </div>
-      <button class="toolbar-btn" id="openTaskPanel" type="button">New task</button>
-      <button class="toolbar-btn" id="openProjectPanel" type="button">New project</button>
+      <button class="toolbar-btn" id="openTaskPanel" type="button">Task</button>
+      <button class="toolbar-btn" id="openProjectPanel" type="button">Project</button>
       <button class="toolbar-btn ped-only" id="openPedPostPanel" type="button">New post</button>
       <select class="member-select" id="memberFilter" aria-label="Who"></select>
       <button class="icon-btn" id="settings" type="button" title="General settings" aria-label="General settings">
@@ -1098,8 +1170,8 @@
 
   <button class="ped-fab" id="pedToggle" type="button">PED</button>
   <div class="sync">Sincronizzazione...</div>
-  <aside class="settings-panel" id="projectPanel" aria-label="New project">
-    <h2>New project</h2>
+  <aside class="settings-panel" id="projectPanel" aria-label="Project">
+    <h2>Project</h2>
     <form id="projectForm">
       <label class="field">Name<input id="projectName" value="New project" required></label>
       <label class="field">Project color<input id="projectColor" type="color" value="#147bd1" required></label>
@@ -1110,23 +1182,26 @@
     </form>
     <h3>Projects</h3>
     <div class="project-list" id="projectList"></div>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
-  <aside class="settings-panel" id="taskPanel" aria-label="New task">
-    <h2>New task</h2>
+  <aside class="settings-panel" id="taskPanel" aria-label="Task">
+    <h2>Task</h2>
     <form id="taskForm">
       <label class="field">Project<select id="taskProject"></select></label>
       <label class="field">Name<input id="taskName" value="New task" required></label>
       <label class="field">Status<select id="taskStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="taskMembers"></div></label>
-      <label class="field">Start<input id="taskStart" type="date" value="2026-06-16" required></label>
-      <label class="field">End<input id="taskEnd" type="date" value="2026-06-24" required></label>
+      <label class="field">Date<input id="taskStart" type="date" value="2026-06-16" required></label>
+      <label class="inline-check"><input id="taskAddEndDate" type="checkbox"> Add end date</label>
+      <label class="field end-date-wrap" id="taskEndWrap" hidden>End<input id="taskEnd" type="date" value="2026-06-16"></label>
       <label class="field">Label<select id="taskLabel"></select></label>
       <div class="creator-block" id="creatorOptions" hidden>
         <div class="creator-block-title">Creator duplicates</div>
         <label class="inline-check"><input id="creatorContact" type="checkbox"> Contattare</label>
         <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Ok Alice</label>
         <label class="inline-check"><input id="creatorContract" type="checkbox"> Mandare contratto</label>
+        <label class="inline-check"><input id="creatorBrief" type="checkbox"> Brief</label>
         <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
         <label class="inline-check"><input id="creatorVideo" type="checkbox"> Video in store</label>
         <label class="field">Video in store date<input id="creatorVideoDate" type="date" value="2026-06-16"></label>
@@ -1136,6 +1211,7 @@
       <label class="field">Link<textarea id="taskInfo" placeholder="Link o note"></textarea></label>
       <button class="primary-btn" type="submit">Add task</button>
     </form>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
   <aside class="settings-panel" id="pedPostPanel" aria-label="New post">
@@ -1146,14 +1222,16 @@
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
       <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
+      <label class="field">Format<select id="pedPostFormat" required></select></label>
       <label class="field">Asset<textarea id="pedPostAsset" placeholder="Link asset"></textarea></label>
       <label class="field">Copy<textarea id="pedPostCopy" placeholder="Copy"></textarea></label>
       <button class="primary-btn" type="submit">Add post</button>
     </form>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
-  <aside class="settings-panel" id="settingsPanel" aria-label="General settings">
-    <h2>General settings</h2>
+  <aside class="settings-panel" id="settingsPanel" aria-label="GANTT settings">
+    <h2>GANTT settings</h2>
     <h3>Who</h3>
     <form id="memberForm">
       <label class="field">New person<input id="memberName" value="New person" required></label>
@@ -1174,14 +1252,34 @@
       <button class="primary-btn" type="submit">Add label</button>
     </form>
     <div class="stack-list" id="labelList"></div>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
+  </aside>
+
+  <aside class="settings-panel" id="pedSettingsPanel" aria-label="PED settings">
+    <h2>PED settings</h2>
+    <h3>PED Status</h3>
+    <form id="pedStatusForm">
+      <label class="field">New PED status<input id="pedStatusName" value="New PED status" required></label>
+      <button class="primary-btn" type="submit">Add status</button>
+    </form>
+    <div class="stack-list" id="pedStatusList"></div>
+
+    <h3>Format</h3>
+    <form id="formatForm">
+      <label class="field">New format<input id="formatName" value="New format" required></label>
+      <button class="primary-btn" type="submit">Add format</button>
+    </form>
+    <div class="stack-list" id="formatList"></div>
 
     <h3>Social</h3>
     <form id="socialForm">
       <label class="field">Name<input id="socialName" value="New social" required></label>
       <label class="field">Short<input id="socialShort" value="NS" maxlength="4" required></label>
+      <label class="field">Color<input id="socialColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add social</button>
     </form>
     <div class="stack-list" id="socialList"></div>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
   <div class="modal-backdrop" id="taskModal" aria-label="Edit task">
@@ -1193,8 +1291,9 @@
         <label class="field">Name<input id="editTaskName" required></label>
         <label class="field">Status<select id="editTaskStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editTaskMembers"></div></label>
-        <label class="field">Start<input id="editTaskStart" type="date" required></label>
-        <label class="field">End<input id="editTaskEnd" type="date" required></label>
+        <label class="field">Date<input id="editTaskStart" type="date" required></label>
+        <label class="inline-check"><input id="editTaskAddEndDate" type="checkbox"> Add end date</label>
+        <label class="field end-date-wrap" id="editTaskEndWrap" hidden>End<input id="editTaskEnd" type="date"></label>
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
@@ -1227,8 +1326,16 @@
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
         <label class="field">Social<div class="check-list" id="editPedPostSocials"></div></label>
+        <label class="field">Format<select id="editPedPostFormat" required></select></label>
         <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
         <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
+        <section class="subtasks">
+          <div class="subtasks-title">Subtasks</div>
+          <div class="stack-list" id="pedSubtaskList"></div>
+          <label class="field">New subtask<input id="newPedSubtaskTitle" placeholder="Subtask name"></label>
+          <label class="field">Who<div class="check-list" id="newPedSubtaskMembers"></div></label>
+          <button class="secondary-btn" id="addPedSubtaskButton" type="button">Add subtask</button>
+        </section>
         <div class="modal-actions">
           <button class="danger-btn" id="deletePedPostButton" type="button">Delete</button>
           <button class="secondary-btn" id="closePedPostModal" type="button">Close</button>
@@ -1236,6 +1343,12 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
+  <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
+    <button type="button" data-context-action="delete">Delete</button>
+    <button type="button" data-context-action="move-next">Move to next day</button>
   </div>
 
   <script type="module">
@@ -1270,9 +1383,11 @@
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
+    const pedPostFormat = document.getElementById("pedPostFormat");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
     const editPedPostSocials = document.getElementById("editPedPostSocials");
+    const editPedPostFormat = document.getElementById("editPedPostFormat");
     const pedPostModal = document.getElementById("pedPostModal");
     const creatorOptions = document.getElementById("creatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
@@ -1281,14 +1396,20 @@
     const editTaskLabel = document.getElementById("editTaskLabel");
     const newSubtaskMembers = document.getElementById("newSubtaskMembers");
     const subtaskList = document.getElementById("subtaskList");
+    const newPedSubtaskMembers = document.getElementById("newPedSubtaskMembers");
+    const pedSubtaskList = document.getElementById("pedSubtaskList");
     const memberFilter = document.getElementById("memberFilter");
     const projectList = document.getElementById("projectList");
     const memberList = document.getElementById("memberList");
     const statusList = document.getElementById("statusList");
+    const pedStatusList = document.getElementById("pedStatusList");
     const labelList = document.getElementById("labelList");
+    const formatList = document.getElementById("formatList");
     const socialList = document.getElementById("socialList");
     const panels = [...document.querySelectorAll(".settings-panel")];
     const taskModal = document.getElementById("taskModal");
+    const statusMenu = document.getElementById("statusMenu");
+    const taskContextMenu = document.getElementById("taskContextMenu");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
     const today = new Date(2026, 5, 16);
@@ -1297,16 +1418,20 @@
     const starterData = {
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
-      labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
+      pedStatuses: ["Draft", "Ready", "Published"],
+      labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Brief", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
+      formats: ["Post", "Reel", "Story"],
       socials: [
-        { id: "instagram", label: "Instagram", short: "IG" },
-        { id: "tiktok", label: "TikTok", short: "TT" }
+        { id: "instagram", label: "Instagram", short: "IG", color: "#e1306c" },
+        { id: "tiktok", label: "TikTok", short: "TT", color: "#111827" }
       ],
       projects: [
         { id: "p1", name: "Tortillas", color: "#147bd1" },
         { id: "p2", name: "Salse", color: "#15a36d" },
         { id: "p3", name: "Carne", color: "#7c5cff" },
-        { id: "p4", name: "Lancio", color: "#e4572e" }
+        { id: "p4", name: "Lancio", color: "#e4572e" },
+        { id: "p-accounting", name: "Accounting", color: "#64748b" },
+        { id: "p-customer-care", name: "Customer Care", color: "#0f9f6e" }
       ],
       tasks: [
         { id: "t1", projectId: "p1", name: "Impasto e test", nameEn: "Dough and testing", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", label: "" },
@@ -1491,6 +1616,12 @@
       return `${year}-${month}-${day}`;
     }
 
+    function shiftDateString(value, days) {
+      const date = new Date(`${value}T00:00:00`);
+      date.setDate(date.getDate() + days);
+      return dateKey(date);
+    }
+
     function option(value, label = value) {
       const item = document.createElement("option");
       item.value = value;
@@ -1521,6 +1652,31 @@
         .replace(/^-|-$/g, "") || `social-${Date.now()}`;
     }
 
+    function normalizeStatusList(list, fallback, colors) {
+      return (list && list.length ? list : fallback).map((status, index) => {
+        if (typeof status === "string") {
+          return { name: status, color: colors[index % colors.length] };
+        }
+        return {
+          name: status.name || "Status",
+          color: status.color || colors[index % colors.length]
+        };
+      });
+    }
+
+    function ensureProjectDefaults(projects) {
+      const defaults = [
+        { id: "p-accounting", name: "Accounting", color: "#64748b" },
+        { id: "p-customer-care", name: "Customer Care", color: "#0f9f6e" }
+      ];
+      defaults.forEach((project) => {
+        if (!projects.some((item) => item.id === project.id || item.name.toLowerCase() === project.name.toLowerCase())) {
+          projects.push({ ...project });
+        }
+      });
+      return projects;
+    }
+
     function moveItem(list, fromIndex, direction) {
       const toIndex = fromIndex + direction;
       if (fromIndex < 0 || toIndex < 0 || toIndex >= list.length) return list;
@@ -1533,30 +1689,27 @@
     function normalizeData(rawData) {
       const normalized = structuredClone(rawData || starterData);
       const defaultStatusColors = ["#6b7280", "#147bd1", "#e4572e", "#15a36d", "#7c5cff", "#c98200"];
-      normalized.statuses = (normalized.statuses || []).map((status, index) => {
-        if (typeof status === "string") {
-          return { name: status, color: defaultStatusColors[index % defaultStatusColors.length] };
-        }
-        return {
-          name: status.name || "Status",
-          color: status.color || defaultStatusColors[index % defaultStatusColors.length]
-        };
-      });
-      normalized.labels = normalized.labels || structuredClone(starterData.labels);
+      normalized.statuses = normalizeStatusList(normalized.statuses, starterData.statuses, defaultStatusColors);
+      normalized.pedStatuses = normalizeStatusList(normalized.pedStatuses || normalized.pedStatus, starterData.pedStatuses, ["#0f172a", "#2563eb", "#16a34a", "#f59e0b"]);
+      normalized.labels = [...new Set([...(normalized.labels || starterData.labels), "Brief"])];
+      normalized.formats = normalized.formats && normalized.formats.length ? normalized.formats : structuredClone(starterData.formats);
+      normalized.projects = ensureProjectDefaults(normalized.projects || structuredClone(starterData.projects));
       normalized.socials = (normalized.socials || structuredClone(starterData.socials)).map((social) => {
         if (typeof social === "string") {
-          return { id: slugify(social), label: social, short: social.slice(0, 2).toUpperCase() };
+          return { id: slugify(social), label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" };
         }
         const label = social.label || social.name || "Social";
         return {
           id: social.id || slugify(label),
           label,
-          short: (social.short || label.slice(0, 2)).toUpperCase()
+          short: (social.short || label.slice(0, 2)).toUpperCase(),
+          color: social.color || "#111827"
         };
       });
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
         nameEn: task.nameEn || "",
+        end: task.end || task.start || "2026-06-16",
         info: task.info || "",
         label: task.label || (task.hasHomeLabel ? "Video in store" : ""),
         pedEnabled: Boolean(task.pedEnabled),
@@ -1577,13 +1730,20 @@
         sourceTaskId: post.sourceTaskId || "",
         title: post.title || "Post",
         date: post.date || "2026-06-16",
-        status: post.status || (normalized.statuses[0] ? statusName(normalized.statuses[0]) : ""),
+        status: post.status || (normalized.pedStatuses[0] ? statusName(normalized.pedStatuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
+        format: post.format || normalized.formats[0] || "",
         social: Array.isArray(post.social)
           ? post.social.map((item) => item === "tiktok" ? "tiktok" : item === "instagram" ? "instagram" : item)
           : [],
         asset: post.asset || post.link || "",
-        copy: post.copy || ""
+        copy: post.copy || "",
+        subtasks: (post.subtasks || []).map((subtask) => ({
+          id: subtask.id || `ps${Date.now()}${Math.random()}`,
+          title: subtask.title || "",
+          members: Array.isArray(subtask.members) ? subtask.members : [],
+          done: Boolean(subtask.done)
+        }))
       }));
       return normalized;
     }
@@ -1623,6 +1783,16 @@
       return status && typeof status !== "string" ? status.color : "#d7dde5";
     }
 
+    function pedStatusColor(name) {
+      const status = data.pedStatuses.find((item) => statusName(item) === name);
+      return status && typeof status !== "string" ? status.color : "#d7dde5";
+    }
+
+    function socialColor(id) {
+      const social = (data.socials || []).find((item) => item.id === id);
+      return social ? social.color : "#111827";
+    }
+
     function homeIconMarkup() {
       return `<svg class="bar-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/></svg>`;
     }
@@ -1658,6 +1828,7 @@
         { checked: document.getElementById("creatorContact").checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
         { checked: document.getElementById("creatorAskOk").checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
         { checked: document.getElementById("creatorContract").checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
+        { checked: document.getElementById("creatorBrief").checked, name: `Brief ${baseTask.name}`, label: "Brief" },
         { checked: document.getElementById("creatorGiorgia").checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
       ]
         .filter((item) => item.checked)
@@ -1713,6 +1884,7 @@
       taskMembers.innerHTML = "";
       editTaskMembers.innerHTML = "";
       newSubtaskMembers.innerHTML = "";
+      newPedSubtaskMembers.innerHTML = "";
       pedPostMembers.innerHTML = "";
       editPedPostMembers.innerHTML = "";
       memberFilter.innerHTML = "";
@@ -1723,6 +1895,7 @@
         taskMembers.appendChild(checkboxItem(member, "taskMembers"));
         editTaskMembers.appendChild(checkboxItem(member, "editTaskMembers"));
         newSubtaskMembers.appendChild(checkboxItem(member, "newSubtaskMembers"));
+        newPedSubtaskMembers.appendChild(checkboxItem(member, "newPedSubtaskMembers"));
         pedPostMembers.appendChild(checkboxItem(member, "pedPostMembers"));
         editPedPostMembers.appendChild(checkboxItem(member, "editPedPostMembers"));
         memberFilter.appendChild(option(member));
@@ -1735,16 +1908,12 @@
 
       taskStatus.innerHTML = "";
       editTaskStatus.innerHTML = "";
-      pedPostStatus.innerHTML = "";
-      editPedPostStatus.innerHTML = "";
       statusList.innerHTML = "";
       data.statuses.forEach((status, index) => {
         const name = statusName(status);
         const color = typeof status === "string" ? "#d7dde5" : status.color;
         taskStatus.appendChild(option(name));
         editTaskStatus.appendChild(option(name));
-        pedPostStatus.appendChild(option(name));
-        editPedPostStatus.appendChild(option(name));
         const pill = document.createElement("div");
         pill.className = "project-pill";
         pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.statuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-status="${escapeHtml(name)}">x</button>`;
@@ -1752,8 +1921,22 @@
       });
       taskStatus.disabled = data.statuses.length === 0;
       editTaskStatus.disabled = data.statuses.length === 0;
-      pedPostStatus.disabled = data.statuses.length === 0;
-      editPedPostStatus.disabled = data.statuses.length === 0;
+
+      pedPostStatus.innerHTML = "";
+      editPedPostStatus.innerHTML = "";
+      pedStatusList.innerHTML = "";
+      data.pedStatuses.forEach((status, index) => {
+        const name = statusName(status);
+        const color = typeof status === "string" ? "#d7dde5" : status.color;
+        pedPostStatus.appendChild(option(name));
+        editPedPostStatus.appendChild(option(name));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-ped-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-ped-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-ped-status="${escapeHtml(name)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-ped-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.pedStatuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-ped-status="${escapeHtml(name)}">x</button>`;
+        pedStatusList.appendChild(pill);
+      });
+      pedPostStatus.disabled = data.pedStatuses.length === 0;
+      editPedPostStatus.disabled = data.pedStatuses.length === 0;
 
       taskLabel.innerHTML = "";
       editTaskLabel.innerHTML = "";
@@ -1769,6 +1952,20 @@
         labelList.appendChild(pill);
       });
 
+      pedPostFormat.innerHTML = "";
+      editPedPostFormat.innerHTML = "";
+      formatList.innerHTML = "";
+      data.formats.forEach((format, index) => {
+        pedPostFormat.appendChild(option(format));
+        editPedPostFormat.appendChild(option(format));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(format)}" aria-label="Edit ${escapeHtml(format)}" data-edit-format="${escapeHtml(format)}"><button type="button" aria-label="Move up ${escapeHtml(format)}" data-move-format="${escapeHtml(format)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(format)}" data-move-format="${escapeHtml(format)}" data-move-direction="1" ${index === data.formats.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(format)}" data-delete-format="${escapeHtml(format)}">x</button>`;
+        formatList.appendChild(pill);
+      });
+      pedPostFormat.disabled = data.formats.length === 0;
+      editPedPostFormat.disabled = data.formats.length === 0;
+
       pedPostSocials.innerHTML = "";
       editPedPostSocials.innerHTML = "";
       socialList.innerHTML = "";
@@ -1779,7 +1976,7 @@
         editPedPostSocials.lastElementChild.lastChild.textContent = social.label;
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input value="${escapeHtml(social.short)}" maxlength="4" aria-label="Short ${escapeHtml(social.label)}" data-social-short="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input value="${escapeHtml(social.short)}" maxlength="4" aria-label="Short ${escapeHtml(social.label)}" data-social-short="${escapeHtml(social.id)}"><input type="color" value="${escapeHtml(social.color)}" aria-label="Color ${escapeHtml(social.label)}" data-social-color="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
         socialList.appendChild(pill);
       });
     }
@@ -1792,21 +1989,29 @@
       panels.forEach((panel) => panel.classList.remove("open"));
     }
 
-    function renderSubtasks(task) {
-      subtaskList.innerHTML = "";
-      (task.subtasks || []).forEach((subtask) => {
+    function renderSubtasksFor(container, owner, doneAttr, deleteAttr) {
+      container.innerHTML = "";
+      (owner.subtasks || []).forEach((subtask) => {
         const row = document.createElement("div");
         row.className = `subtask-row${subtask.done ? " is-done" : ""}`;
         row.innerHTML = `
-          <input type="checkbox" ${subtask.done ? "checked" : ""} data-subtask-done="${escapeHtml(subtask.id)}">
+          <input type="checkbox" ${subtask.done ? "checked" : ""} ${doneAttr}="${escapeHtml(subtask.id)}">
           <div>
             <div class="subtask-title">${escapeHtml(subtask.title)}</div>
             <div class="subtask-members">${escapeHtml((subtask.members || []).join(", "))}</div>
           </div>
-          <button class="subtask-delete" type="button" aria-label="Delete ${escapeHtml(subtask.title)}" data-delete-subtask="${escapeHtml(subtask.id)}">x</button>
+          <button class="subtask-delete" type="button" aria-label="Delete ${escapeHtml(subtask.title)}" ${deleteAttr}="${escapeHtml(subtask.id)}">x</button>
         `;
-        subtaskList.appendChild(row);
+        container.appendChild(row);
       });
+    }
+
+    function renderSubtasks(task) {
+      renderSubtasksFor(subtaskList, task, "data-subtask-done", "data-delete-subtask");
+    }
+
+    function renderPedSubtasks(post) {
+      renderSubtasksFor(pedSubtaskList, post, "data-ped-subtask-done", "data-delete-ped-subtask");
     }
 
     function pedItems() {
@@ -1819,9 +2024,10 @@
             id: `task-${task.id}`,
             title: linkedPost?.title || task.nameEn || task.name,
             date: task.pedDate,
-            status: linkedPost?.status || task.status,
+            status: linkedPost?.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status),
             members: linkedPost?.members || task.members || [],
             social: linkedPost?.social || [],
+            format: linkedPost?.format || data.formats[0] || "",
             asset: linkedPost?.asset || "",
             copy: linkedPost?.copy || "",
             color: project ? project.color : statusColor(task.status),
@@ -1830,7 +2036,7 @@
         });
       const manualPosts = (data.pedPosts || []).map((post) => ({
         ...post,
-        color: statusColor(post.status),
+        color: pedStatusColor(post.status),
         source: "PED"
       })).filter((post) => !post.sourceTaskId);
       return [...linkedTasks, ...manualPosts];
@@ -1839,7 +2045,7 @@
     function socialMarkup(social = []) {
       return social.map((item) => {
         const socialItem = (data.socials || []).find((entry) => entry.id === item);
-        return `<span class="social-badge">${escapeHtml(socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase())}</span>`;
+        return `<span class="social-badge" style="background:${escapeHtml(socialItem ? socialItem.color : "#111827")}">${escapeHtml(socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase())}</span>`;
       }).join("");
     }
 
@@ -1897,7 +2103,7 @@
             } else {
               post.dataset.pedPostId = item.id;
             }
-            post.innerHTML = `<div>${socialMarkup(item.social)}${escapeHtml(previewName(item.title))}</div><small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.source)}</small><div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div><div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>`;
+            post.innerHTML = `<div>${socialMarkup(item.social)}${escapeHtml(previewName(item.title))}</div><small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.format || "-")}</small><div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div><div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div><div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>`;
             layer.appendChild(post);
           });
           dayOffset += 1;
@@ -1927,7 +2133,10 @@
         item.checked = task.members.includes(item.value);
       });
       document.getElementById("editTaskStart").value = task.start;
-      document.getElementById("editTaskEnd").value = task.end;
+      document.getElementById("editTaskEnd").value = task.end || task.start;
+      const hasEndDate = Boolean(task.end && task.end !== task.start);
+      document.getElementById("editTaskAddEndDate").checked = hasEndDate;
+      document.getElementById("editTaskEndWrap").hidden = !hasEndDate;
       document.getElementById("editTaskInfo").value = task.info || "";
       document.getElementById("editTaskPedEnabled").checked = Boolean(task.pedEnabled);
       document.getElementById("editTaskPedFields").hidden = !task.pedEnabled;
@@ -1951,6 +2160,7 @@
       document.getElementById("editPedPostDate").value = post.date || "";
       document.getElementById("editPedPostDate").closest(".field").hidden = Boolean(post.sourceTaskId);
       editPedPostStatus.value = post.status || "";
+      editPedPostFormat.value = post.format || data.formats[0] || "";
       [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = (post.members || []).includes(item.value);
       });
@@ -1959,6 +2169,9 @@
       });
       document.getElementById("editPedPostAsset").value = post.asset || "";
       document.getElementById("editPedPostCopy").value = post.copy || "";
+      document.getElementById("newPedSubtaskTitle").value = "";
+      newPedSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      renderPedSubtasks(post);
       pedPostModal.classList.add("open");
     }
 
@@ -1973,11 +2186,13 @@
           sourceTaskId: task.id,
           title: task.nameEn || task.name,
           date: task.pedDate || task.start,
-          status: task.status,
+          status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
           members: task.members || [],
           social: [],
+          format: data.formats[0] || "",
           asset: "",
-          copy: ""
+          copy: "",
+          subtasks: []
         };
         data.pedPosts.push(post);
         saveData();
@@ -2004,7 +2219,7 @@
 
         const pill = document.createElement("div");
         pill.className = "project-pill";
-        pill.innerHTML = `<span>${escapeHtml(project.name)}</span><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(project.name)}" aria-label="Edit ${escapeHtml(project.name)}" data-edit-project="${escapeHtml(project.id)}"><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
         projectList.appendChild(pill);
       });
 
@@ -2036,16 +2251,32 @@
             if (isDoneStatus(task.status)) {
               bar.classList.add("is-done");
             }
-            bar.title = `${task.name}: ${task.start} - ${task.end}`;
+            bar.title = `${task.status}${task.members.length ? ` / ${task.members.join(", ")}` : ""}`;
             bar.style.left = `${left}px`;
             bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
             const compactPreview = zoomIndex <= 1;
-            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
+            const previewMeta = selectedMember === "all" ? memberSummary(task.members || []) : task.status;
+            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(previewMeta)}</span>`}</span>`;
             bars.appendChild(bar);
           });
+        const tasksByStart = {};
+        visibleTasks.forEach((task) => {
+          tasksByStart[task.start] = (tasksByStart[task.start] || 0) + 1;
+        });
+        Object.entries(tasksByStart).forEach(([date, count]) => {
+          if (count < 2) return;
+          const start = new Date(`${date}T00:00:00`);
+          const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+          const indicator = document.createElement("div");
+          indicator.className = "hidden-task-indicator";
+          indicator.style.left = `${left + parseFloat(getComputedStyle(root).getPropertyValue("--day")) - 28}px`;
+          indicator.style.top = `${projectTop + rowHeight - 24}px`;
+          indicator.textContent = "v";
+          bars.appendChild(indicator);
+        });
         projectTop += rowHeight;
       });
 
@@ -2068,6 +2299,11 @@
     function scrollToToday() {
       const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       scroller.scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+    }
+
+    function scrollPedToToday() {
+      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
     }
 
     async function startApp() {
@@ -2109,7 +2345,8 @@
       updateZoom();
       renderBoard();
       renderPed();
-      if (!document.body.classList.contains("ped-mode")) scrollToToday();
+      if (document.body.classList.contains("ped-mode")) scrollPedToToday();
+      else scrollToToday();
     });
 
     document.getElementById("zoomIn").addEventListener("click", () => {
@@ -2117,14 +2354,19 @@
       updateZoom();
       renderBoard();
       renderPed();
-      if (!document.body.classList.contains("ped-mode")) scrollToToday();
+      if (document.body.classList.contains("ped-mode")) scrollPedToToday();
+      else scrollToToday();
     });
 
     document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
     document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
     document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
     document.getElementById("settings").addEventListener("click", () => {
-      openPanel("settingsPanel");
+      openPanel(document.body.classList.contains("ped-mode") ? "pedSettingsPanel" : "settingsPanel");
+    });
+
+    document.querySelectorAll("[data-close-panel]").forEach((button) => {
+      button.addEventListener("click", closePanels);
     });
 
     pedToggle.addEventListener("click", () => {
@@ -2134,11 +2376,37 @@
       document.querySelector(".brand-title").textContent = pedMode ? "PED" : "Gantt Board";
       document.getElementById("currentMonth").textContent = pedMode ? "PED" : "O'TACOS";
       closePanels();
-      if (pedMode) renderPed();
+      zoomIndex = zooms.length - 1;
+      updateZoom();
+      renderBoard();
+      renderPed();
+      requestAnimationFrame(() => {
+        if (pedMode) scrollPedToToday();
+        else scrollToToday();
+      });
+    });
+
+    document.getElementById("taskAddEndDate").addEventListener("change", (event) => {
+      document.getElementById("taskEndWrap").hidden = !event.target.checked;
+      if (event.target.checked) document.getElementById("taskEnd").value = document.getElementById("taskStart").value;
+    });
+
+    document.getElementById("editTaskAddEndDate").addEventListener("change", (event) => {
+      document.getElementById("editTaskEndWrap").hidden = !event.target.checked;
+      if (event.target.checked) document.getElementById("editTaskEnd").value = document.getElementById("editTaskStart").value;
+    });
+
+    document.getElementById("editTaskStart").addEventListener("change", () => {
+      if (!document.getElementById("editTaskAddEndDate").checked) {
+        document.getElementById("editTaskEnd").value = document.getElementById("editTaskStart").value;
+      }
     });
 
     taskLabel.addEventListener("change", syncCreatorOptionsVisibility);
     document.getElementById("taskStart").addEventListener("change", () => {
+      if (!document.getElementById("taskAddEndDate").checked) {
+        document.getElementById("taskEnd").value = document.getElementById("taskStart").value;
+      }
       if (!document.getElementById("creatorVideoDate").value) {
         document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
       }
@@ -2167,7 +2435,7 @@
       const members = selectedMembers(taskMembers);
       const status = taskStatus.value;
       const start = document.getElementById("taskStart").value;
-      const end = document.getElementById("taskEnd").value;
+      const end = document.getElementById("taskAddEndDate").checked ? document.getElementById("taskEnd").value : start;
       const label = taskLabel.value;
       const info = document.getElementById("taskInfo").value.trim();
       if (!projectId || !name || !members.length || !status || !start || !end) return;
@@ -2198,11 +2466,12 @@
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
+      const format = pedPostFormat.value;
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
-      if (!title || !date || !status) return;
+      if (!title || !date || !status || !format) return;
       data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, social, asset, copy });
+      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, social, format, asset, copy, subtasks: [] });
       saveData();
       renderPed();
       event.currentTarget.reset();
@@ -2217,8 +2486,89 @@
     bars.addEventListener("dblclick", (event) => {
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
+      hideTaskMenus();
       closePanels();
       openTaskEditor(bar.dataset.taskId);
+    });
+
+    function hideTaskMenus() {
+      statusMenu.classList.remove("open");
+      taskContextMenu.classList.remove("open");
+      delete statusMenu.dataset.taskId;
+      delete taskContextMenu.dataset.taskId;
+    }
+
+    function showStatusMenu(taskId, x, y) {
+      statusMenu.innerHTML = "";
+      statusMenu.dataset.taskId = taskId;
+      data.statuses.forEach((status) => {
+        const name = statusName(status);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.statusValue = name;
+        button.innerHTML = `<span class="status-swatch" style="background:${escapeHtml(statusColor(name))}"></span>${escapeHtml(name)}`;
+        statusMenu.appendChild(button);
+      });
+      statusMenu.style.left = `${Math.min(x, window.innerWidth - 190)}px`;
+      statusMenu.style.top = `${Math.min(y, window.innerHeight - 220)}px`;
+      statusMenu.classList.add("open");
+      taskContextMenu.classList.remove("open");
+    }
+
+    bars.addEventListener("click", (event) => {
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      showStatusMenu(bar.dataset.taskId, event.clientX, event.clientY);
+    });
+
+    statusMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-status-value]");
+      if (!button) return;
+      const task = data.tasks.find((item) => item.id === statusMenu.dataset.taskId);
+      if (!task) return;
+      task.status = button.dataset.statusValue;
+      saveData();
+      renderBoard();
+      renderPed();
+      hideTaskMenus();
+    });
+
+    bars.addEventListener("contextmenu", (event) => {
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      event.preventDefault();
+      taskContextMenu.dataset.taskId = bar.dataset.taskId;
+      taskContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 190)}px`;
+      taskContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 120)}px`;
+      taskContextMenu.classList.add("open");
+      statusMenu.classList.remove("open");
+    });
+
+    taskContextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-context-action]");
+      if (!button) return;
+      const taskId = taskContextMenu.dataset.taskId;
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      if (button.dataset.contextAction === "delete") {
+        data.tasks = data.tasks.filter((item) => item.id !== taskId);
+      }
+      if (button.dataset.contextAction === "move-next") {
+        const originalStart = task.start;
+        const originalEnd = task.end || task.start;
+        task.start = shiftDateString(originalStart, 1);
+        task.end = shiftDateString(originalEnd, 1);
+        task.pedDate = task.pedEnabled && task.pedDate ? shiftDateString(task.pedDate, 1) : task.pedDate;
+      }
+      saveData();
+      renderBoard();
+      renderPed();
+      hideTaskMenus();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(".bar") || event.target.closest(".status-menu") || event.target.closest(".context-menu")) return;
+      hideTaskMenus();
     });
 
     pedCalendar.addEventListener("dblclick", (event) => {
@@ -2306,6 +2656,45 @@
       renderSubtasks(task);
     });
 
+    document.getElementById("addPedSubtaskButton").addEventListener("click", () => {
+      const postId = document.getElementById("editPedPostId").value;
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      const title = document.getElementById("newPedSubtaskTitle").value.trim();
+      const members = selectedMembers(newPedSubtaskMembers);
+      if (!title || !members.length) return;
+      post.subtasks = post.subtasks || [];
+      post.subtasks.push({ id: `ps${Date.now()}`, title, members, done: false });
+      document.getElementById("newPedSubtaskTitle").value = "";
+      newPedSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      saveData();
+      renderPedSubtasks(post);
+    });
+
+    pedSubtaskList.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-ped-subtask-done]");
+      if (!checkbox) return;
+      const postId = document.getElementById("editPedPostId").value;
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      const subtask = (post.subtasks || []).find((item) => item.id === checkbox.dataset.pedSubtaskDone);
+      if (!subtask) return;
+      subtask.done = checkbox.checked;
+      saveData();
+      renderPedSubtasks(post);
+    });
+
+    pedSubtaskList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delete-ped-subtask]");
+      if (!button) return;
+      const postId = document.getElementById("editPedPostId").value;
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      post.subtasks = (post.subtasks || []).filter((item) => item.id !== button.dataset.deletePedSubtask);
+      saveData();
+      renderPedSubtasks(post);
+    });
+
     document.getElementById("editTaskForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const taskId = document.getElementById("editTaskId").value;
@@ -2316,7 +2705,7 @@
       const status = editTaskStatus.value;
       const members = selectedMembers(editTaskMembers);
       const start = document.getElementById("editTaskStart").value;
-      const end = document.getElementById("editTaskEnd").value;
+      const end = document.getElementById("editTaskAddEndDate").checked ? document.getElementById("editTaskEnd").value : start;
       const label = editTaskLabel.value;
       const info = document.getElementById("editTaskInfo").value.trim();
       const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
@@ -2350,12 +2739,14 @@
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
       const social = selectedValues(editPedPostSocials);
-      if (!title || !date || !status) return;
+      const format = editPedPostFormat.value;
+      if (!title || !date || !status || !format) return;
       post.title = title;
       post.date = post.sourceTaskId ? post.date : date;
       post.status = status;
       post.members = members;
       post.social = social;
+      post.format = format;
       post.asset = document.getElementById("editPedPostAsset").value.trim();
       post.copy = document.getElementById("editPedPostCopy").value.trim();
       saveData();
@@ -2397,14 +2788,16 @@
       event.preventDefault();
       const label = document.getElementById("socialName").value.trim();
       const short = document.getElementById("socialShort").value.trim().toUpperCase();
+      const color = document.getElementById("socialColor").value;
       const id = slugify(label);
       if (!label || !short || data.socials.some((social) => social.id === id || social.label === label)) return;
-      data.socials.push({ id, label, short });
+      data.socials.push({ id, label, short, color });
       saveData();
       renderBoard();
       renderPed();
       document.getElementById("socialName").value = "New social";
       document.getElementById("socialShort").value = "NS";
+      document.getElementById("socialColor").value = "#111827";
     });
 
     projectList.addEventListener("click", (event) => {
@@ -2426,11 +2819,24 @@
     });
 
     projectList.addEventListener("change", (event) => {
-      const input = event.target.closest("[data-project-color]");
-      if (!input) return;
-      const project = data.projects.find((item) => item.id === input.dataset.projectColor);
+      const nameInput = event.target.closest("[data-edit-project]");
+      if (nameInput) {
+        const project = data.projects.find((item) => item.id === nameInput.dataset.editProject);
+        const name = nameInput.value.trim();
+        if (!project || !name || data.projects.some((item) => item.id !== project.id && item.name === name)) {
+          renderBoard();
+          return;
+        }
+        project.name = name;
+        saveData();
+        renderBoard();
+        return;
+      }
+      const colorInput = event.target.closest("[data-project-color]");
+      if (!colorInput) return;
+      const project = data.projects.find((item) => item.id === colorInput.dataset.projectColor);
       if (!project) return;
-      project.color = input.value;
+      project.color = colorInput.value;
       saveData();
       renderBoard();
     });
@@ -2551,6 +2957,112 @@
       renderBoard();
     });
 
+    pedStatusList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-ped-status]");
+      if (moveButton) {
+        const index = data.pedStatuses.findIndex((item) => statusName(item) === moveButton.dataset.movePedStatus);
+        data.pedStatuses = moveItem(data.pedStatuses, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        renderPed();
+        return;
+      }
+      const button = event.target.closest("[data-delete-ped-status]");
+      if (!button) return;
+      const status = button.dataset.deletePedStatus;
+      data.pedStatuses = data.pedStatuses.filter((item) => statusName(item) !== status);
+      const fallback = data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : "";
+      data.pedPosts = (data.pedPosts || []).map((post) => post.status === status ? { ...post, status: fallback } : post);
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
+    pedStatusList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-ped-status]");
+      if (input) {
+        const oldStatus = input.dataset.editPedStatus;
+        const newStatus = input.value.trim();
+        if (!newStatus || (newStatus !== oldStatus && data.pedStatuses.some((item) => statusName(item) === newStatus))) {
+          renderBoard();
+          return;
+        }
+        data.pedStatuses = data.pedStatuses.map((item) => statusName(item) === oldStatus ? { ...item, name: newStatus } : item);
+        data.pedPosts = (data.pedPosts || []).map((post) => post.status === oldStatus ? { ...post, status: newStatus } : post);
+        saveData();
+        renderBoard();
+        renderPed();
+        return;
+      }
+      const colorInput = event.target.closest("[data-ped-status-color]");
+      if (!colorInput) return;
+      const status = data.pedStatuses.find((item) => statusName(item) === colorInput.dataset.pedStatusColor);
+      if (!status || typeof status === "string") return;
+      status.color = colorInput.value;
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
+    formatList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-format]");
+      if (moveButton) {
+        const index = data.formats.indexOf(moveButton.dataset.moveFormat);
+        data.formats = moveItem(data.formats, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderBoard();
+        renderPed();
+        return;
+      }
+      const button = event.target.closest("[data-delete-format]");
+      if (!button) return;
+      const format = button.dataset.deleteFormat;
+      data.formats = data.formats.filter((item) => item !== format);
+      const fallback = data.formats[0] || "";
+      data.pedPosts = (data.pedPosts || []).map((post) => post.format === format ? { ...post, format: fallback } : post);
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
+    formatList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-format]");
+      if (!input) return;
+      const oldFormat = input.dataset.editFormat;
+      const newFormat = input.value.trim();
+      if (!newFormat || (newFormat !== oldFormat && data.formats.includes(newFormat))) {
+        renderBoard();
+        return;
+      }
+      data.formats = data.formats.map((item) => item === oldFormat ? newFormat : item);
+      data.pedPosts = (data.pedPosts || []).map((post) => post.format === oldFormat ? { ...post, format: newFormat } : post);
+      saveData();
+      renderBoard();
+      renderPed();
+    });
+
+    document.getElementById("pedStatusForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const status = document.getElementById("pedStatusName").value.trim();
+      if (!status || data.pedStatuses.some((item) => statusName(item) === status)) return;
+      data.pedStatuses.push({ name: status, color: "#6b7280" });
+      saveData();
+      renderBoard();
+      renderPed();
+      document.getElementById("pedStatusName").value = "New PED status";
+    });
+
+    document.getElementById("formatForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const format = document.getElementById("formatName").value.trim();
+      if (!format || data.formats.includes(format)) return;
+      data.formats.push(format);
+      saveData();
+      renderBoard();
+      renderPed();
+      document.getElementById("formatName").value = "New format";
+    });
+
     socialList.addEventListener("click", (event) => {
       const moveButton = event.target.closest("[data-move-social]");
       if (moveButton) {
@@ -2590,14 +3102,24 @@
         return;
       }
       const shortInput = event.target.closest("[data-social-short]");
-      if (!shortInput) return;
-      const social = data.socials.find((item) => item.id === shortInput.dataset.socialShort);
-      const short = shortInput.value.trim().toUpperCase();
-      if (!social || !short) {
+      if (shortInput) {
+        const social = data.socials.find((item) => item.id === shortInput.dataset.socialShort);
+        const short = shortInput.value.trim().toUpperCase();
+        if (!social || !short) {
+          renderBoard();
+          return;
+        }
+        social.short = short;
+        saveData();
         renderBoard();
+        renderPed();
         return;
       }
-      social.short = short;
+      const colorInput = event.target.closest("[data-social-color]");
+      if (!colorInput) return;
+      const social = data.socials.find((item) => item.id === colorInput.dataset.socialColor);
+      if (!social) return;
+      social.color = colorInput.value;
       saveData();
       renderBoard();
       renderPed();
