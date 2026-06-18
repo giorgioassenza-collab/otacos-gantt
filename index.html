@@ -2309,10 +2309,11 @@
         projectTop = 48;
       }
 
-      const boardContentHeight = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + projectTop;
+      const bottomScrollBuffer = 260;
+      const boardContentHeight = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + projectTop + bottomScrollBuffer;
       sidebar.style.minHeight = `${boardContentHeight}px`;
       timelineEl.style.minHeight = `${boardContentHeight}px`;
-      bars.style.height = `${projectTop}px`;
+      bars.style.height = `${projectTop + bottomScrollBuffer}px`;
 
       taskProject.disabled = data.projects.length === 0;
       updateHiddenTaskIndicators();
