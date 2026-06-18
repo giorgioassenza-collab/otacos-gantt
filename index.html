@@ -2292,21 +2292,6 @@
             bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
-        const tasksByStart = {};
-        visibleTasks.forEach((task) => {
-          tasksByStart[task.start] = (tasksByStart[task.start] || 0) + 1;
-        });
-        Object.entries(tasksByStart).forEach(([date, count]) => {
-          if (count < 2) return;
-          const start = new Date(`${date}T00:00:00`);
-          const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-          const indicator = document.createElement("div");
-          indicator.className = "hidden-task-indicator";
-          indicator.style.left = `${left + parseFloat(getComputedStyle(root).getPropertyValue("--day")) - 28}px`;
-          indicator.style.top = `${projectTop + rowHeight - 24}px`;
-          indicator.innerHTML = "";
-          bars.appendChild(indicator);
-        });
         projectTop += rowHeight;
       });
 
