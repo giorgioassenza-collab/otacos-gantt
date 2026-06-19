@@ -367,14 +367,14 @@
     }
 
     .months {
-      position: sticky;
-      top: 0;
-      z-index: 7;
+      position: relative;
+      z-index: 20;
       display: flex;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #f9fafb;
       box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
+      will-change: transform;
     }
 
     .month {
@@ -723,8 +723,8 @@
 
     .ped-post {
       position: absolute;
-      height: calc(var(--ped-hour) - 16px);
-      min-height: 78px;
+      height: auto;
+      min-height: 92px;
       padding: 9px 118px 9px 9px;
       border: 2px solid #111827;
       border-radius: 8px;
@@ -737,17 +737,7 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      overflow: auto;
-      overscroll-behavior: contain;
-    }
-
-    .ped-post::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .ped-post::-webkit-scrollbar-thumb {
-      border-radius: 999px;
-      background: #cbd5e1;
+      overflow: visible;
     }
 
     .ped-post-title {
@@ -2234,6 +2224,9 @@
     let boardRef = null;
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
+    let suppressRemoteUntil = 0;
+    let pendingLocalRevision = 0;
+    let pendingLocalData = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
     const legacyInfluencerOptionColors = {
@@ -2302,16 +2295,29 @@
             await setDoc(boardRef, {
               data: structuredClone(starterData),
               history: [],
+              revision: 0,
               updatedAt: serverTimestamp()
             });
           }
           if (unsubscribeBoard) unsubscribeBoard();
           unsubscribeBoard = onSnapshot(boardRef, (remoteSnapshot) => {
             if (!remoteSnapshot.exists()) return;
-            const remote = remoteSnapshot.data().data;
-            if (!remote || applyingRemoteUpdate) return;
-            data = normalizeData(remote);
-            historyEntries = normalizeHistory(remoteSnapshot.data().history);
+            const remoteDoc = remoteSnapshot.data();
+            const remote = remoteDoc.data;
+            const remoteRevision = Number(remoteDoc.revision || 0);
+            if (!remote) return;
+            if (remoteRevision < dataVersion) return;
+            const normalizedRemote = normalizeData(remote);
+            if (pendingLocalData && remoteRevision <= pendingLocalRevision && !sameData(normalizedRemote, pendingLocalData)) return;
+            if (pendingLocalData && remoteRevision >= pendingLocalRevision && sameData(normalizedRemote, pendingLocalData)) {
+              pendingLocalData = null;
+              pendingLocalRevision = 0;
+            }
+            if (remoteRevision <= dataVersion && Date.now() < suppressRemoteUntil && !sameData(normalizedRemote, data)) return;
+            if (remoteRevision <= dataVersion && applyingRemoteUpdate && Date.now() < suppressRemoteUntil) return;
+            dataVersion = Math.max(dataVersion, remoteRevision);
+            data = normalizedRemote;
+            historyEntries = normalizeHistory(remoteDoc.history);
             committedData = structuredClone(data);
             renderBoard();
             renderPed();
@@ -2322,8 +2328,10 @@
           });
           syncIndicator.textContent = "Connesso a Firestore";
           if (snapshot.exists()) {
-            historyEntries = normalizeHistory(snapshot.data().history);
-            return normalizeData(snapshot.data().data);
+            const snapshotData = snapshot.data();
+            dataVersion = Number(snapshotData.revision || 0);
+            historyEntries = normalizeHistory(snapshotData.history);
+            return normalizeData(snapshotData.data);
           }
           historyEntries = [];
           return normalizeData(starterData);
@@ -2486,13 +2494,21 @@
       updateUndoButton();
       try {
         if (boardRef) {
+          const nextRevision = Math.max(dataVersion + 1, Date.now());
+          dataVersion = nextRevision;
+          suppressRemoteUntil = Date.now() + 1500;
+          pendingLocalRevision = nextRevision;
+          pendingLocalData = structuredClone(data);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
-            data,
-            history: historyEntries,
+            data: pendingLocalData,
+            history: structuredClone(historyEntries),
+            revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
-          applyingRemoteUpdate = false;
+          setTimeout(() => {
+            applyingRemoteUpdate = false;
+          }, 250);
         } else {
           localStorage.setItem(storageKey, JSON.stringify(data));
           localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
@@ -2507,6 +2523,8 @@
         syncIndicator.textContent = "Version restored";
       } catch {
         applyingRemoteUpdate = false;
+        pendingLocalData = null;
+        pendingLocalRevision = 0;
         syncIndicator.textContent = "Restore failed";
       }
     }
@@ -2526,13 +2544,21 @@
           updateUndoButton();
         }
         if (boardRef) {
+          const nextRevision = Math.max(dataVersion + 1, Date.now());
+          dataVersion = nextRevision;
+          suppressRemoteUntil = Date.now() + 1500;
+          pendingLocalRevision = nextRevision;
+          pendingLocalData = structuredClone(data);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
-            data,
-            history: historyEntries,
+            data: pendingLocalData,
+            history: structuredClone(historyEntries),
+            revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
-          applyingRemoteUpdate = false;
+          setTimeout(() => {
+            applyingRemoteUpdate = false;
+          }, 250);
           committedData = structuredClone(data);
           updateUndoButton();
           syncIndicator.textContent = "Sincronizzato live";
@@ -2545,6 +2571,8 @@
         syncIndicator.textContent = "Firebase non configurato: salvato locale";
       } catch {
         applyingRemoteUpdate = false;
+        pendingLocalData = null;
+        pendingLocalRevision = 0;
         localStorage.setItem(storageKey, JSON.stringify(data));
         localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
         committedData = structuredClone(data);
@@ -3646,22 +3674,28 @@
       pedCalendar.appendChild(grid);
       pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
-      let maxColumnHeight = pedHourHeight() * 10 + 80;
-      Object.values(postsByDate).forEach((posts) => {
-        let nextTop = 10;
-        posts
-          .sort((left, right) => Number(left.dataset.timeTop) - Number(right.dataset.timeTop))
-          .forEach((post) => {
-            const top = Math.max(Number(post.dataset.timeTop) + 10, nextTop);
-            post.style.top = `${top}px`;
-            nextTop = top + post.offsetHeight + 8;
+      const layoutPosts = () => {
+        let maxColumnHeight = pedHourHeight() * 10 + 80;
+        Object.values(postsByDate).forEach((posts) => {
+          let nextTop = 10;
+          posts
+            .sort((left, right) => Number(left.dataset.timeTop) - Number(right.dataset.timeTop))
+            .forEach((post) => {
+              const top = Math.max(Number(post.dataset.timeTop) + 10, nextTop);
+              post.style.top = `${top}px`;
+              nextTop = top + post.scrollHeight + 10;
+            });
+          maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
         });
-        maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
+        const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
+        pedCalendar.style.height = `${height}px`;
+        updatePedHourLabels();
+        updatePedHiddenIndicators();
+      };
+      layoutPosts();
+      pedCalendar.querySelectorAll(".ped-post img, .ped-post iframe").forEach((media) => {
+        media.addEventListener("load", layoutPosts, { once: true });
       });
-      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
-      pedCalendar.style.height = `${height}px`;
-      updatePedHourLabels();
-      updatePedHiddenIndicators();
     }
 
     function updatePedHourLabels() {
@@ -4270,7 +4304,16 @@
       bars.style.height = `${projectTop + bottomScrollBuffer}px`;
 
       taskProject.disabled = data.projects.length === 0;
+      syncGanttHeaderPosition();
       updateHiddenTaskIndicators();
+    }
+
+    function syncGanttHeaderPosition() {
+      if (document.body.classList.contains("ped-mode") || document.body.classList.contains("influencer-mode") || document.body.classList.contains("creator-calendar-mode")) {
+        monthsEl.style.transform = "";
+        return;
+      }
+      monthsEl.style.transform = `translateY(${boardEl.scrollTop}px)`;
     }
 
     function updateHiddenTaskIndicators() {
@@ -4855,7 +4898,7 @@
       return `${String(hour).padStart(2, "0")}:00`;
     }
 
-    function finishDrag(event) {
+    async function finishDrag(event) {
       if (!dragState) return;
       const state = dragState;
       dragState = null;
@@ -4876,10 +4919,10 @@
         const newStart = dateFromTimelineClientX(event.clientX, scroller);
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
-        saveData();
         renderBoard();
         renderPed();
         renderCreatorCalendar();
+        await saveData();
         return;
       }
       if (state.type === "ped") {
@@ -4904,8 +4947,8 @@
             post.time = time;
           }
         }
-        saveData();
         renderPed();
+        await saveData();
       }
     }
 
@@ -5948,7 +5991,10 @@
     });
 
     memberFilter.addEventListener("change", renderBoard);
-    boardEl.addEventListener("scroll", updateHiddenTaskIndicators);
+    boardEl.addEventListener("scroll", () => {
+      syncGanttHeaderPosition();
+      updateHiddenTaskIndicators();
+    });
     document.getElementById("pedView").addEventListener("scroll", updatePedHiddenIndicators);
     setNewTaskDefaultDates();
 
