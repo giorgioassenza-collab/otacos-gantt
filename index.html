@@ -723,7 +723,8 @@
 
     .ped-post {
       position: absolute;
-      min-height: 62px;
+      height: calc(var(--ped-hour) - 16px);
+      min-height: 78px;
       padding: 9px 118px 9px 9px;
       border: 2px solid #111827;
       border-radius: 8px;
@@ -736,7 +737,17 @@
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
-      overflow: visible;
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
+    .ped-post::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .ped-post::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: #cbd5e1;
     }
 
     .ped-post-title {
@@ -2373,10 +2384,6 @@
       }
     }
 
-    function historyProjectName(snapshot, projectId) {
-      return (snapshot.projects || []).find((project) => project.id === projectId)?.name || "-";
-    }
-
     function historyListItems(items, formatter, limit = 12) {
       if (!items.length) return "<li>-</li>";
       const visible = items.slice(0, limit).map((item) => `<li>${escapeHtml(formatter(item))}</li>`).join("");
@@ -2384,25 +2391,60 @@
       return visible + more;
     }
 
-    function historyPreviewMarkup(entry) {
-      const snapshot = entry.data || {};
-      const creatorTasks = (snapshot.tasks || []).filter((task) => isVideoInStoreLabel(task.label));
+    function itemTitle(item, fallback = "Item") {
+      return item?.nameEn || item?.name || item?.title || fallback;
+    }
+
+    function compactValue(value) {
+      if (Array.isArray(value)) return value.join(", ");
+      if (value && typeof value === "object") return JSON.stringify(value);
+      return value === undefined || value === null || value === "" ? "-" : String(value);
+    }
+
+    function diffFields(before = {}, after = {}, fields = []) {
+      return fields
+        .filter((field) => JSON.stringify(before[field] ?? "") !== JSON.stringify(after[field] ?? ""))
+        .map((field) => `${field}: ${compactValue(before[field])} → ${compactValue(after[field])}`);
+    }
+
+    function diffCollection(beforeItems = [], afterItems = [], label, fields, nameFallback) {
+      const beforeMap = new Map(beforeItems.map((item) => [item.id, item]));
+      const afterMap = new Map(afterItems.map((item) => [item.id, item]));
+      const lines = [];
+      afterMap.forEach((after, id) => {
+        if (!beforeMap.has(id)) {
+          lines.push(`${label} added: ${itemTitle(after, nameFallback)}`);
+          return;
+        }
+        const before = beforeMap.get(id);
+        const changed = diffFields(before, after, fields);
+        if (changed.length) lines.push(`${label} changed: ${itemTitle(after, nameFallback)} (${changed.slice(0, 3).join("; ")})`);
+      });
+      beforeMap.forEach((before, id) => {
+        if (!afterMap.has(id)) lines.push(`${label} removed: ${itemTitle(before, nameFallback)}`);
+      });
+      return lines;
+    }
+
+    function historyChangeLines(beforeSnapshot, afterSnapshot) {
+      const before = beforeSnapshot || {};
+      const after = afterSnapshot || {};
+      return [
+        ...diffCollection(before.tasks || [], after.tasks || [], "GANTT task", ["name", "nameEn", "projectId", "status", "members", "start", "end", "label", "pedEnabled", "pedDate", "creatorStatus"], "Task"),
+        ...diffCollection(before.pedPosts || [], after.pedPosts || [], "PED post", ["title", "projectId", "date", "time", "status", "members", "social", "format", "asset", "copy"], "Post"),
+        ...diffCollection(before.influencers || [], after.influencers || [], "Influencer", ["name", "city", "target", "type", "status", "where", "when", "contactDate", "contactMember", "contactProjectId"], "Influencer"),
+        ...diffCollection(before.projects || [], after.projects || [], "Project", ["name", "color"], "Project")
+      ];
+    }
+
+    function historyPreviewMarkup(entry, index) {
+      const beforeSnapshot = entry.data || {};
+      const afterSnapshot = index === 0 ? data : historyEntries[index - 1]?.data;
+      const changes = historyChangeLines(beforeSnapshot, afterSnapshot || {});
       return `
         <section>
-          <h3>GANTT</h3>
-          <ul>${historyListItems(snapshot.tasks || [], (task) => `${task.nameEn || task.name || "Task"} · ${historyProjectName(snapshot, task.projectId)} · ${task.start || "-"} · ${task.status || "-"}`)}</ul>
-        </section>
-        <section>
-          <h3>PED</h3>
-          <ul>${historyListItems(snapshot.pedPosts || [], (post) => `${post.title || "Post"} · ${historyProjectName(snapshot, post.projectId)} · ${post.date || "-"} ${post.time || ""} · ${post.status || "-"}`)}</ul>
-        </section>
-        <section>
-          <h3>Creator Calendar</h3>
-          <ul>${historyListItems(creatorTasks, (task) => `${task.nameEn || task.name || "Creator"} · ${historyProjectName(snapshot, task.projectId)} · ${task.start || "-"} · ${task.creatorStatus || "-"}`)}</ul>
-        </section>
-        <section>
-          <h3>Influencer</h3>
-          <ul>${historyListItems(snapshot.influencers || [], (row) => `${row.name || "Influencer"} · ${row.status || "-"} · ${row.city || "-"}`)}</ul>
+          <h3>Changes in this version</h3>
+          <ul>${historyListItems(changes, (line) => line, 18)}</ul>
         </section>
       `;
     }
@@ -2417,7 +2459,7 @@
         historyList.appendChild(empty);
         return;
       }
-      historyEntries.forEach((entry) => {
+      historyEntries.forEach((entry, index) => {
         const row = document.createElement("div");
         row.className = "history-row";
         row.innerHTML = `
@@ -2427,7 +2469,7 @@
             <button class="secondary-history-btn" type="button" data-preview-history="${escapeHtml(entry.id)}">Preview</button>
             <button type="button" data-restore-history="${escapeHtml(entry.id)}">Restore</button>
           </div>
-          <div class="history-preview" data-history-preview="${escapeHtml(entry.id)}" hidden>${historyPreviewMarkup(entry)}</div>
+          <div class="history-preview" data-history-preview="${escapeHtml(entry.id)}" hidden>${historyPreviewMarkup(entry, index)}</div>
         `;
         historyList.appendChild(row);
       });
