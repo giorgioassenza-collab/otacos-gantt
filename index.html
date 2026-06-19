@@ -802,7 +802,7 @@
     .creator-card {
       position: absolute;
       min-height: 86px;
-      padding: 9px 10px;
+      padding: 9px 118px 9px 10px;
       border: 2px solid #111827;
       border-radius: 8px;
       background: #fff;
@@ -813,6 +813,30 @@
       line-height: 1.25;
       overflow-wrap: anywhere;
       white-space: normal;
+    }
+
+    .creator-status-badge {
+      position: absolute;
+      top: 9px;
+      right: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      max-width: 104px;
+      color: #334155;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1.1;
+      text-align: right;
+    }
+
+    .creator-status-swatch {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+      border-radius: 5px;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12);
     }
 
     .creator-card-title {
@@ -3297,9 +3321,9 @@
             card.style.width = "calc(var(--day) - 12px)";
             card.style.borderColor = item.color;
             card.innerHTML = `
+              <div class="creator-status-badge"><span class="creator-status-swatch" style="background:${escapeHtml(creatorStatusColor(item.status))}"></span><span>${escapeHtml(item.status || "-")}</span></div>
               <div class="creator-card-title">${homeIconMarkup()}<span>${escapeHtml(previewName(item.title))}</span></div>
-              <div class="creator-card-line">Project: ${escapeHtml(item.project || "-")}</div>
-              <div class="creator-card-line"><span class="status-swatch" style="background:${escapeHtml(creatorStatusColor(item.status))}"></span> Status: ${escapeHtml(item.status || "-")}</div>
+              <div class="creator-card-line">${escapeHtml(item.project || "-")}</div>
               <div class="creator-card-line">Store: ${escapeHtml(item.store || "-")}</div>
               <div class="creator-card-line">Time: ${escapeHtml(item.time || "10:00")}</div>
               <div class="creator-card-line">Video in store: ${escapeHtml(formatDateLabel(item.date))}</div>
@@ -3804,17 +3828,23 @@
     }
 
     function scrollToToday() {
-      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const todayDate = new Date(`${currentDateKey()}T00:00:00`);
+      const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
+      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       scroller.scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
     }
 
     function scrollPedToToday() {
-      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const todayDate = new Date(`${currentDateKey()}T00:00:00`);
+      const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
+      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
     }
 
     function scrollCreatorCalendarToToday() {
-      const offset = 15 * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const todayDate = new Date(`${currentDateKey()}T00:00:00`);
+      const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
+      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       document.getElementById("creatorCalendarView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
     }
 
@@ -3832,7 +3862,14 @@
       renderPed();
       renderInfluencers();
       renderCreatorCalendar();
-      scrollToToday();
+      document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode");
+      viewGantt.classList.add("is-active");
+      viewPed.classList.remove("is-active");
+      viewInfluencer.classList.remove("is-active");
+      viewCreatorCalendar.classList.remove("is-active");
+      document.querySelector(".brand-title").textContent = "Workflow";
+      document.getElementById("currentMonth").textContent = "O'TACOS";
+      requestAnimationFrame(scrollToToday);
       setInterval(refreshSharedData, 1800);
     }
 
