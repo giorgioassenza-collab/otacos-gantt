@@ -307,8 +307,12 @@
     }
 
     .corner {
+      position: sticky;
+      top: 0;
+      z-index: 8;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
+      background: #fff;
     }
 
     .row-label {
@@ -343,7 +347,8 @@
     }
 
     .timeline-scroll {
-      overflow: auto hidden;
+      overflow-x: auto;
+      overflow-y: visible;
       background: var(--bg);
       scrollbar-width: none;
       min-height: 100%;
@@ -358,10 +363,14 @@
     }
 
     .months {
+      position: sticky;
+      top: 0;
+      z-index: 7;
       display: flex;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #f9fafb;
+      box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
     }
 
     .month {
@@ -650,9 +659,31 @@
       inset: var(--timeline-head) 0 0;
       background:
         repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), var(--line-soft) calc(var(--day) - 1px), var(--line-soft) var(--day)),
-        repeating-linear-gradient(to bottom, transparent 0, transparent 77px, var(--line-soft) 77px, var(--line-soft) 78px),
+        repeating-linear-gradient(to bottom, transparent 0, transparent 69px, var(--line-soft) 69px, var(--line-soft) 70px),
         var(--bg);
       z-index: 1;
+    }
+
+    .ped-hour-labels {
+      position: absolute;
+      inset: var(--timeline-head) auto 0 0;
+      width: 52px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .ped-hour-label {
+      position: absolute;
+      left: 0;
+      width: 46px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .9);
+      color: #667085;
+      font-size: 10px;
+      font-weight: 900;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, .08);
     }
 
     .ped-weekends {
@@ -664,7 +695,7 @@
 
     .ped-post {
       position: absolute;
-      min-height: 64px;
+      min-height: 62px;
       padding: 7px 9px;
       border: 2px solid #111827;
       border-radius: 8px;
@@ -675,6 +706,59 @@
       box-shadow: 0 4px 12px rgba(16, 24, 40, .06);
       cursor: pointer;
       overflow: visible;
+    }
+
+    .ped-post-title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 4px;
+    }
+
+    .ped-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+      color: #344054;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .ped-subtask-preview {
+      margin-top: 4px;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .asset-preview {
+      display: block;
+      width: 100%;
+      max-height: 76px;
+      margin-top: 5px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #f8fafc;
+    }
+
+    .ped-hidden-indicator {
+      position: absolute;
+      z-index: 6;
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #d0d7e2;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .94);
+      color: #111827;
+      font-size: 15px;
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, .18);
+      pointer-events: none;
     }
 
     .ped-post small {
@@ -1521,6 +1605,7 @@
     <form id="pedPostForm">
       <label class="field">Name<input id="pedPostTitle" value="New post" required></label>
       <label class="field">Date<input id="pedPostDate" type="date" value="2026-06-16" required></label>
+      <label class="field">Time<input id="pedPostTime" type="time" value="10:00" required></label>
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
       <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
@@ -1581,6 +1666,25 @@
       <button class="primary-btn" type="submit">Add social</button>
     </form>
     <div class="stack-list" id="socialList"></div>
+    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
+  </aside>
+
+  <aside class="settings-panel" id="creatorSettingsPanel" aria-label="Creator Calendar settings">
+    <h2>Creator Calendar settings</h2>
+    <h3>Status</h3>
+    <form id="creatorStatusForm">
+      <label class="field">New status<input id="creatorStatusName" value="New status" required></label>
+      <label class="field">Color<input id="creatorStatusColor" type="color" value="#dbeafe" required></label>
+      <button class="primary-btn" type="submit">Add status</button>
+    </form>
+    <div class="stack-list" id="creatorStatusList"></div>
+
+    <h3>Store</h3>
+    <form id="creatorStoreForm">
+      <label class="field">New store<input id="creatorStoreName" value="New store" required></label>
+      <button class="primary-btn" type="submit">Add store</button>
+    </form>
+    <div class="stack-list" id="creatorStoreList"></div>
     <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
   </aside>
 
@@ -1717,6 +1821,7 @@
         <input id="editPedPostId" type="hidden">
         <label class="field">Name<input id="editPedPostTitle" required></label>
         <label class="field">Date<input id="editPedPostDate" type="date" required></label>
+        <label class="field">Time<input id="editPedPostTime" type="time" required></label>
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
         <label class="field">Social<div class="check-list" id="editPedPostSocials"></div></label>
@@ -1733,6 +1838,25 @@
         <div class="modal-actions">
           <button class="danger-btn" id="deletePedPostButton" type="button">Delete</button>
           <button class="secondary-btn" id="closePedPostModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="creatorCalendarModal" aria-label="Edit Creator Calendar item">
+    <div class="modal">
+      <h2>Edit Creator Calendar item</h2>
+      <form id="creatorCalendarForm">
+        <input id="creatorCalendarTaskId" type="hidden">
+        <label class="field">Name<input id="creatorCalendarTitle" required></label>
+        <label class="field">Video in store date<input id="creatorCalendarDate" type="date" required></label>
+        <label class="field">Publication date<input id="creatorCalendarPublicationDate" type="date"></label>
+        <label class="field">Status<select id="creatorCalendarStatus"></select></label>
+        <label class="field">Store<select id="creatorCalendarStore"></select></label>
+        <label class="field">Time<input id="creatorCalendarTime" type="time" value="10:00"></label>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closeCreatorCalendarModal" type="button">Close</button>
           <button class="primary-btn" type="submit">Save</button>
         </div>
       </form>
@@ -1789,11 +1913,16 @@
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
     const pedPostFormat = document.getElementById("pedPostFormat");
+    const pedPostTime = document.getElementById("pedPostTime");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
     const editPedPostSocials = document.getElementById("editPedPostSocials");
     const editPedPostFormat = document.getElementById("editPedPostFormat");
+    const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
+    const creatorCalendarModal = document.getElementById("creatorCalendarModal");
+    const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
+    const creatorCalendarStore = document.getElementById("creatorCalendarStore");
     const creatorOptions = document.getElementById("creatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
     const editTaskMembers = document.getElementById("editTaskMembers");
@@ -1811,6 +1940,8 @@
     const labelList = document.getElementById("labelList");
     const formatList = document.getElementById("formatList");
     const socialList = document.getElementById("socialList");
+    const creatorStatusList = document.getElementById("creatorStatusList");
+    const creatorStoreList = document.getElementById("creatorStoreList");
     const panels = [...document.querySelectorAll(".settings-panel")];
     const taskModal = document.getElementById("taskModal");
     const statusMenu = document.getElementById("statusMenu");
@@ -1842,6 +1973,8 @@
       members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
       statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
       pedStatuses: ["Draft", "Ready", "Published"],
+      creatorStatuses: ["Scheduled", "Waiting", "Published"],
+      creatorStores: ["GIGA TACOS"],
       labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
       formats: ["Post", "Reel", "Story"],
       socials: [
@@ -2284,6 +2417,8 @@
       normalized.members = [...new Set(normalized.members || starterData.members)].filter((member) => !isClientName(member));
       normalized.statuses = normalizeStatusList(normalized.statuses, starterData.statuses, defaultStatusColors);
       normalized.pedStatuses = normalizeStatusList(normalized.pedStatuses || normalized.pedStatus, starterData.pedStatuses, ["#0f172a", "#2563eb", "#16a34a", "#f59e0b"]);
+      normalized.creatorStatuses = normalizeStatusList(normalized.creatorStatuses, starterData.creatorStatuses, ["#dbeafe", "#fef3c7", "#dcfce7", "#fee2e2"]);
+      normalized.creatorStores = normalized.creatorStores && normalized.creatorStores.length ? normalized.creatorStores : structuredClone(starterData.creatorStores);
       normalized.labels = [...new Set(normalized.labels || starterData.labels)].filter((label) => String(label).trim().toLowerCase() !== "brief");
       normalized.formats = normalized.formats && normalized.formats.length ? normalized.formats : structuredClone(starterData.formats);
       normalized.projects = ensureProjectDefaults(normalized.projects || structuredClone(starterData.projects));
@@ -2311,6 +2446,9 @@
         pedSocial: Array.isArray(task.pedSocial) ? task.pedSocial : [],
         pedAsset: task.pedAsset || "",
         pedCopy: task.pedCopy || "",
+        creatorStatus: task.creatorStatus || (normalized.creatorStatuses[0] ? statusName(normalized.creatorStatuses[0]) : ""),
+        creatorStore: task.creatorStore || "",
+        creatorTime: task.creatorTime || "10:00",
         subtasks: (task.subtasks || []).map((subtask) => ({
           id: subtask.id || `s${Date.now()}${Math.random()}`,
           title: subtask.title || "",
@@ -2323,6 +2461,7 @@
         sourceTaskId: post.sourceTaskId || "",
         title: post.title || "Post",
         date: post.date || "2026-06-16",
+        time: post.time || "10:00",
         status: post.status || (normalized.pedStatuses[0] ? statusName(normalized.pedStatuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
         format: post.format || normalized.formats[0] || "",
@@ -2601,6 +2740,11 @@
       return status && typeof status !== "string" ? status.color : "#d7dde5";
     }
 
+    function creatorStatusColor(name) {
+      const status = (data.creatorStatuses || []).find((item) => statusName(item) === name);
+      return status && typeof status !== "string" ? status.color : "#d7dde5";
+    }
+
     function socialColor(id) {
       const social = (data.socials || []).find((item) => item.id === id);
       return social ? social.color : "#111827";
@@ -2762,6 +2906,30 @@
       pedPostStatus.disabled = data.pedStatuses.length === 0;
       editPedPostStatus.disabled = data.pedStatuses.length === 0;
 
+      creatorCalendarStatus.innerHTML = "";
+      creatorStatusList.innerHTML = "";
+      (data.creatorStatuses || []).forEach((status, index) => {
+        const name = statusName(status);
+        const color = typeof status === "string" ? "#d7dde5" : status.color;
+        creatorCalendarStatus.appendChild(option(name));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(name)}" aria-label="Edit ${escapeHtml(name)}" data-edit-creator-status="${escapeHtml(name)}"><input type="color" value="${escapeHtml(color)}" aria-label="Color ${escapeHtml(name)}" data-creator-status-color="${escapeHtml(name)}"><button type="button" aria-label="Move up ${escapeHtml(name)}" data-move-creator-status="${escapeHtml(name)}" data-move-direction="-1" ${index === data.creatorStatuses.length - 1 ? "" : ""} ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(name)}" data-move-creator-status="${escapeHtml(name)}" data-move-direction="1" ${index === data.creatorStatuses.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(name)}" data-delete-creator-status="${escapeHtml(name)}">x</button>`;
+        creatorStatusList.appendChild(pill);
+      });
+      creatorCalendarStatus.disabled = (data.creatorStatuses || []).length === 0;
+
+      creatorCalendarStore.innerHTML = "";
+      creatorCalendarStore.appendChild(option("", "-"));
+      creatorStoreList.innerHTML = "";
+      (data.creatorStores || []).forEach((store, index) => {
+        creatorCalendarStore.appendChild(option(store));
+        const pill = document.createElement("div");
+        pill.className = "project-pill";
+        pill.innerHTML = `<input value="${escapeHtml(store)}" aria-label="Edit ${escapeHtml(store)}" data-edit-creator-store="${escapeHtml(store)}"><button type="button" aria-label="Move up ${escapeHtml(store)}" data-move-creator-store="${escapeHtml(store)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(store)}" data-move-creator-store="${escapeHtml(store)}" data-move-direction="1" ${index === data.creatorStores.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(store)}" data-delete-creator-store="${escapeHtml(store)}">x</button>`;
+        creatorStoreList.appendChild(pill);
+      });
+
       taskLabel.innerHTML = "";
       editTaskLabel.innerHTML = "";
       labelList.innerHTML = "";
@@ -2848,18 +3016,24 @@
             id: `task-${task.id}`,
             title: linkedPost?.title || task.nameEn || task.name,
             date: task.pedDate,
+            time: linkedPost?.time || task.pedTime || "10:00",
             status: linkedPost?.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status),
             members: linkedPost?.members || task.members || [],
             social: linkedPost?.social || [],
             format: linkedPost?.format || data.formats[0] || "",
             asset: linkedPost?.asset || "",
             copy: linkedPost?.copy || "",
+            subtasks: linkedPost?.subtasks || task.subtasks || [],
+            project: project?.name || "",
             color: project ? project.color : statusColor(task.status),
             source: "Gantt"
           };
         });
       const manualPosts = (data.pedPosts || []).map((post) => ({
         ...post,
+        time: post.time || "10:00",
+        project: post.project || "",
+        subtasks: post.subtasks || [],
         color: pedStatusColor(post.status),
         source: "PED"
       })).filter((post) => !post.sourceTaskId);
@@ -2873,6 +3047,50 @@
       }).join("");
     }
 
+    function normalizeHour(value) {
+      const match = String(value || "").match(/^(\d{1,2})(?::(\d{2}))?/);
+      if (!match) return "10:00";
+      const hour = Math.min(20, Math.max(10, Number(match[1])));
+      const minute = match[2] || "00";
+      return `${String(hour).padStart(2, "0")}:${minute}`;
+    }
+
+    function timeTop(value) {
+      const [hourRaw, minuteRaw] = normalizeHour(value).split(":").map(Number);
+      return (hourRaw - 10) * 70 + Math.round((minuteRaw / 60) * 70);
+    }
+
+    function drivePreviewUrl(value) {
+      const url = String(value || "").trim();
+      if (!url.includes("drive.google.com")) return "";
+      const id = url.match(/\/d\/([^/]+)/)?.[1] || url.match(/[?&]id=([^&]+)/)?.[1];
+      return id ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w320` : "";
+    }
+
+    function pedSubtaskPreview(subtasks = []) {
+      if (!subtasks.length) return "-";
+      return subtasks
+        .slice(0, 4)
+        .map((subtask) => `${subtask.done ? "✓" : "□"} ${subtask.title}${subtask.members?.length ? ` (${subtask.members.join(", ")})` : ""}`)
+        .join(" · ");
+    }
+
+    function pedPreviewMarkup(item) {
+      const status = item.status || "";
+      const statusColorValue = pedStatusColor(status);
+      const assetPreview = drivePreviewUrl(item.asset);
+      return `
+        <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+        <div class="ped-status-chip"><span class="status-swatch" style="background:${escapeHtml(statusColorValue)}"></span>${escapeHtml(status || "-")}</div>
+        <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
+        <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
+        <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
+        <div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>
+        ${assetPreview ? `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy">` : ""}
+        <div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>
+      `;
+    }
+
     function renderPed() {
       pedCalendar.innerHTML = "";
       const items = pedItems();
@@ -2882,6 +3100,15 @@
       weekends.className = "ped-weekends";
       const grid = document.createElement("div");
       grid.className = "ped-grid";
+      const hourLabels = document.createElement("div");
+      hourLabels.className = "ped-hour-labels";
+      for (let hour = 10; hour <= 20; hour += 1) {
+        const label = document.createElement("div");
+        label.className = "ped-hour-label";
+        label.style.top = `${(hour - 10) * 70 + 4}px`;
+        label.textContent = `${String(hour).padStart(2, "0")}:00`;
+        hourLabels.appendChild(label);
+      }
       const layer = document.createElement("div");
       layer.className = "ped-layer";
       let dayOffset = 0;
@@ -2919,6 +3146,7 @@
             const post = document.createElement("div");
             post.className = "ped-post";
             post.dataset.pedDate = iso;
+            post.dataset.timeTop = String(timeTop(item.time));
             post.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
             post.style.top = "10px";
             post.style.width = "calc(var(--day) - 12px)";
@@ -2928,7 +3156,7 @@
             } else {
               post.dataset.pedPostId = item.id;
             }
-            post.innerHTML = `<div>${socialMarkup(item.social)}${escapeHtml(previewName(item.title))}</div><small>${escapeHtml(item.status || "")}${item.members.length ? ` / ${escapeHtml(item.members.join(", "))}` : ""} / ${escapeHtml(item.format || "-")}</small><div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div><div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div><div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>`;
+            post.innerHTML = pedPreviewMarkup(item);
             layer.appendChild(post);
             postsByDate[iso].push(post);
           });
@@ -2940,18 +3168,51 @@
       pedCalendar.appendChild(months);
       pedCalendar.appendChild(weekends);
       pedCalendar.appendChild(grid);
+      pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
-      let maxColumnHeight = 88;
+      let maxColumnHeight = 70 * 11 + 80;
       Object.values(postsByDate).forEach((posts) => {
         let nextTop = 10;
-        posts.forEach((post) => {
-          post.style.top = `${nextTop}px`;
-          nextTop += post.offsetHeight + 8;
+        posts
+          .sort((left, right) => Number(left.dataset.timeTop) - Number(right.dataset.timeTop))
+          .forEach((post) => {
+            const top = Math.max(Number(post.dataset.timeTop) + 10, nextTop);
+            post.style.top = `${top}px`;
+            nextTop = top + post.offsetHeight + 8;
         });
         maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
       });
       const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
       pedCalendar.style.height = `${height}px`;
+      updatePedHiddenIndicators();
+    }
+
+    function updatePedHiddenIndicators() {
+      if (!document.body.classList.contains("ped-mode")) return;
+      pedCalendar.querySelectorAll(".ped-hidden-indicator").forEach((indicator) => indicator.remove());
+      const pedView = document.getElementById("pedView");
+      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
+      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const visibleBottom = pedView.scrollTop + pedView.clientHeight - timelineHead;
+      const datesWithHidden = new Map();
+      pedCalendar.querySelectorAll(".ped-post").forEach((post) => {
+        const bottom = post.offsetTop + post.offsetHeight;
+        if (bottom <= visibleBottom + 8) return;
+        const date = post.dataset.pedDate;
+        if (!date || datesWithHidden.has(date)) return;
+        datesWithHidden.set(date, post);
+      });
+      datesWithHidden.forEach((post, date) => {
+        const dayIndex = Math.round((parseFloat(post.style.left) || 0) / dayWidth);
+        const indicator = document.createElement("div");
+        indicator.className = "ped-hidden-indicator";
+        indicator.textContent = "↓";
+        indicator.title = "More posts below";
+        indicator.style.left = post.style.left;
+        indicator.style.top = `${Math.max(8, visibleBottom - 30)}px`;
+        indicator.dataset.pedHiddenDate = date;
+        pedCalendar.appendChild(indicator);
+      });
     }
 
     function creatorCalendarKey(task) {
@@ -2971,11 +3232,15 @@
           const publication = publicationByKey.get(creatorCalendarKey(task));
           return {
             id: task.id,
+            publicationTaskId: publication?.id || "",
             title: task.nameEn || task.name,
             project: project?.name || "",
             color: project?.color || statusColor(task.status),
             date: task.start,
             publicationDate: publication?.start || "",
+            status: task.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : ""),
+            store: task.creatorStore || "",
+            time: task.creatorTime || "10:00",
             members: task.members || []
           };
         })
@@ -3034,6 +3299,9 @@
             card.innerHTML = `
               <div class="creator-card-title">${homeIconMarkup()}<span>${escapeHtml(previewName(item.title))}</span></div>
               <div class="creator-card-line">Project: ${escapeHtml(item.project || "-")}</div>
+              <div class="creator-card-line"><span class="status-swatch" style="background:${escapeHtml(creatorStatusColor(item.status))}"></span> Status: ${escapeHtml(item.status || "-")}</div>
+              <div class="creator-card-line">Store: ${escapeHtml(item.store || "-")}</div>
+              <div class="creator-card-line">Time: ${escapeHtml(item.time || "10:00")}</div>
               <div class="creator-card-line">Video in store: ${escapeHtml(formatDateLabel(item.date))}</div>
               <div class="creator-card-line">${cameraIconMarkup()} Publication date: ${escapeHtml(item.publicationDate ? formatDateLabel(item.publicationDate) : "-")}</div>
               <div class="creator-card-line">Who: ${escapeHtml(item.members.join(", ") || "-")}</div>
@@ -3061,6 +3329,30 @@
       });
       const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
       creatorCalendar.style.height = `${height}px`;
+    }
+
+    function findPublicationTaskFor(videoTask) {
+      const key = creatorCalendarKey(videoTask);
+      return (data.tasks || []).find((task) => isPublicationLabel(task.label) && creatorCalendarKey(task) === key);
+    }
+
+    function openCreatorCalendarEditor(taskId) {
+      renderSettingsLists();
+      const task = (data.tasks || []).find((item) => item.id === taskId);
+      if (!task) return;
+      const publication = findPublicationTaskFor(task);
+      document.getElementById("creatorCalendarTaskId").value = task.id;
+      document.getElementById("creatorCalendarTitle").value = task.name || task.nameEn || "";
+      document.getElementById("creatorCalendarDate").value = task.start || "";
+      document.getElementById("creatorCalendarPublicationDate").value = publication?.start || "";
+      creatorCalendarStatus.value = task.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "");
+      creatorCalendarStore.value = task.creatorStore || "";
+      document.getElementById("creatorCalendarTime").value = task.creatorTime || "10:00";
+      creatorCalendarModal.classList.add("open");
+    }
+
+    function closeCreatorCalendarEditor() {
+      creatorCalendarModal.classList.remove("open");
     }
 
     function uniqueInfluencerValues(key) {
@@ -3358,6 +3650,7 @@
       document.getElementById("editPedPostId").value = post.id;
       document.getElementById("editPedPostTitle").value = post.title || "";
       document.getElementById("editPedPostDate").value = post.date || "";
+      editPedPostTime.value = post.time || "10:00";
       document.getElementById("editPedPostDate").closest(".field").hidden = false;
       editPedPostStatus.value = post.status || "";
       editPedPostFormat.value = post.format || data.formats[0] || "";
@@ -3386,6 +3679,7 @@
           sourceTaskId: task.id,
           title: task.nameEn || task.name,
           date: task.pedDate || task.start,
+          time: task.pedTime || "10:00",
           status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
           members: task.members || [],
           social: [],
@@ -3534,10 +3828,10 @@
       renderTimeline();
       updateZoom();
       await importInfluencerSeedIfNeeded();
-      if (view === "gantt") renderBoard();
-      if (pedMode) renderPed();
-      if (influencerMode) renderInfluencers();
-      if (creatorCalendarMode) renderCreatorCalendar();
+      renderBoard();
+      renderPed();
+      renderInfluencers();
+      renderCreatorCalendar();
       scrollToToday();
       setInterval(refreshSharedData, 1800);
     }
@@ -3621,6 +3915,10 @@
         openPanel("influencerSettingsPanel");
         return;
       }
+      if (document.body.classList.contains("creator-calendar-mode")) {
+        openPanel("creatorSettingsPanel");
+        return;
+      }
       openPanel(document.body.classList.contains("ped-mode") ? "pedSettingsPanel" : "settingsPanel");
     });
 
@@ -3646,10 +3944,10 @@
         zoomIndex = zooms.length - 1;
         updateZoom();
       }
-      renderBoard();
-      renderPed();
-      renderInfluencers();
-      renderCreatorCalendar();
+      if (view === "gantt") renderBoard();
+      if (pedMode) renderPed();
+      if (influencerMode) renderInfluencers();
+      if (creatorCalendarMode) renderCreatorCalendar();
       requestAnimationFrame(() => {
         if (pedMode) scrollPedToToday();
         else if (creatorCalendarMode) scrollCreatorCalendarToToday();
@@ -3949,6 +4247,7 @@
       event.preventDefault();
       const title = document.getElementById("pedPostTitle").value.trim();
       const date = document.getElementById("pedPostDate").value;
+      const time = pedPostTime.value || "10:00";
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
@@ -3957,12 +4256,13 @@
       const copy = document.getElementById("pedPostCopy").value.trim();
       if (!title || !date || !status || !format) return;
       data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, status, members, social, format, asset, copy, subtasks: [] });
+      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, time, status, members, social, format, asset, copy, subtasks: [] });
       saveData();
       renderPed();
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
       document.getElementById("pedPostDate").value = "2026-06-16";
+      pedPostTime.value = "10:00";
       document.getElementById("pedPostAsset").value = "";
       document.getElementById("pedPostCopy").value = "";
       pedPostSocials.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
@@ -4094,6 +4394,13 @@
       if (post.dataset.pedPostId) openPedPostEditor(post.dataset.pedPostId);
     });
 
+    creatorCalendar.addEventListener("dblclick", (event) => {
+      const card = event.target.closest(".creator-card");
+      if (!card) return;
+      closePanels();
+      openCreatorCalendarEditor(card.dataset.taskId);
+    });
+
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
     taskModal.addEventListener("click", (event) => {
       if (event.target === taskModal) closeTaskEditor();
@@ -4107,8 +4414,12 @@
     });
 
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
+    document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
     pedPostModal.addEventListener("click", (event) => {
       if (event.target === pedPostModal) closePedPostEditor();
+    });
+    creatorCalendarModal.addEventListener("click", (event) => {
+      if (event.target === creatorCalendarModal) closeCreatorCalendarEditor();
     });
 
     document.getElementById("deletePedPostButton").addEventListener("click", () => {
@@ -4250,6 +4561,7 @@
       if (!post) return;
       const title = document.getElementById("editPedPostTitle").value.trim();
       const date = document.getElementById("editPedPostDate").value;
+      const time = editPedPostTime.value || "10:00";
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
       const social = selectedValues(editPedPostSocials);
@@ -4257,9 +4569,13 @@
       if (!title || !date || !status || !format) return;
       post.title = title;
       post.date = date;
+      post.time = time;
       if (post.sourceTaskId) {
         const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
-        if (sourceTask) sourceTask.pedDate = date;
+        if (sourceTask) {
+          sourceTask.pedDate = date;
+          sourceTask.pedTime = time;
+        }
       }
       post.status = status;
       post.members = members;
@@ -4271,6 +4587,49 @@
       renderBoard();
       renderPed();
       closePedPostEditor();
+    });
+
+    document.getElementById("creatorCalendarForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const taskId = document.getElementById("creatorCalendarTaskId").value;
+      const task = (data.tasks || []).find((item) => item.id === taskId);
+      if (!task) return;
+      const title = document.getElementById("creatorCalendarTitle").value.trim();
+      const date = document.getElementById("creatorCalendarDate").value;
+      const publicationDate = document.getElementById("creatorCalendarPublicationDate").value;
+      if (!title || !date) return;
+      let publication = findPublicationTaskFor(task);
+      task.name = title;
+      task.nameEn = title;
+      task.start = date;
+      task.end = date;
+      task.creatorStatus = creatorCalendarStatus.value;
+      task.creatorStore = creatorCalendarStore.value;
+      task.creatorTime = document.getElementById("creatorCalendarTime").value || "10:00";
+      if (publicationDate) {
+        if (!publication) {
+          publication = {
+            ...task,
+            id: `t${Date.now()}-creator-publish`,
+            label: "Pubblicazione",
+            info: "",
+            subtasks: []
+          };
+          data.tasks.push(publication);
+        }
+        publication.name = title;
+        publication.nameEn = title;
+        publication.projectId = task.projectId;
+        publication.members = task.members || [];
+        publication.status = task.status;
+        publication.start = publicationDate;
+        publication.end = publicationDate;
+        publication.label = "Pubblicazione";
+      }
+      saveData();
+      renderBoard();
+      renderCreatorCalendar();
+      closeCreatorCalendarEditor();
     });
 
     document.getElementById("memberForm").addEventListener("submit", (event) => {
@@ -4597,6 +4956,113 @@
       document.getElementById("formatName").value = "New format";
     });
 
+    document.getElementById("creatorStatusForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const status = document.getElementById("creatorStatusName").value.trim();
+      const color = document.getElementById("creatorStatusColor").value;
+      if (!status || (data.creatorStatuses || []).some((item) => statusName(item) === status)) return;
+      data.creatorStatuses = data.creatorStatuses || [];
+      data.creatorStatuses.push({ name: status, color });
+      saveData();
+      renderSettingsLists();
+      renderCreatorCalendar();
+      document.getElementById("creatorStatusName").value = "New status";
+    });
+
+    document.getElementById("creatorStoreForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const store = document.getElementById("creatorStoreName").value.trim();
+      if (!store || (data.creatorStores || []).includes(store)) return;
+      data.creatorStores = data.creatorStores || [];
+      data.creatorStores.push(store);
+      saveData();
+      renderSettingsLists();
+      renderCreatorCalendar();
+      document.getElementById("creatorStoreName").value = "New store";
+    });
+
+    creatorStatusList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-creator-status]");
+      if (moveButton) {
+        const index = data.creatorStatuses.findIndex((item) => statusName(item) === moveButton.dataset.moveCreatorStatus);
+        data.creatorStatuses = moveItem(data.creatorStatuses, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderSettingsLists();
+        renderCreatorCalendar();
+        return;
+      }
+      const deleteButton = event.target.closest("[data-delete-creator-status]");
+      if (!deleteButton) return;
+      const status = deleteButton.dataset.deleteCreatorStatus;
+      data.creatorStatuses = (data.creatorStatuses || []).filter((item) => statusName(item) !== status);
+      const fallback = data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "";
+      data.tasks = (data.tasks || []).map((task) => task.creatorStatus === status ? { ...task, creatorStatus: fallback } : task);
+      saveData();
+      renderSettingsLists();
+      renderCreatorCalendar();
+    });
+
+    creatorStatusList.addEventListener("change", (event) => {
+      const nameInput = event.target.closest("[data-edit-creator-status]");
+      if (nameInput) {
+        const oldStatus = nameInput.dataset.editCreatorStatus;
+        const newStatus = nameInput.value.trim();
+        if (!newStatus || (newStatus !== oldStatus && data.creatorStatuses.some((item) => statusName(item) === newStatus))) {
+          renderSettingsLists();
+          return;
+        }
+        data.creatorStatuses = data.creatorStatuses.map((item) => statusName(item) === oldStatus ? { ...item, name: newStatus } : item);
+        data.tasks = (data.tasks || []).map((task) => task.creatorStatus === oldStatus ? { ...task, creatorStatus: newStatus } : task);
+        saveData();
+        renderSettingsLists();
+        renderCreatorCalendar();
+        return;
+      }
+      const colorInput = event.target.closest("[data-creator-status-color]");
+      if (!colorInput) return;
+      const status = data.creatorStatuses.find((item) => statusName(item) === colorInput.dataset.creatorStatusColor);
+      if (!status || typeof status === "string") return;
+      status.color = colorInput.value;
+      saveData();
+      renderCreatorCalendar();
+    });
+
+    creatorStoreList.addEventListener("click", (event) => {
+      const moveButton = event.target.closest("[data-move-creator-store]");
+      if (moveButton) {
+        const index = data.creatorStores.indexOf(moveButton.dataset.moveCreatorStore);
+        data.creatorStores = moveItem(data.creatorStores, index, Number(moveButton.dataset.moveDirection));
+        saveData();
+        renderSettingsLists();
+        renderCreatorCalendar();
+        return;
+      }
+      const deleteButton = event.target.closest("[data-delete-creator-store]");
+      if (!deleteButton) return;
+      const store = deleteButton.dataset.deleteCreatorStore;
+      data.creatorStores = (data.creatorStores || []).filter((item) => item !== store);
+      data.tasks = (data.tasks || []).map((task) => task.creatorStore === store ? { ...task, creatorStore: "" } : task);
+      saveData();
+      renderSettingsLists();
+      renderCreatorCalendar();
+    });
+
+    creatorStoreList.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-edit-creator-store]");
+      if (!input) return;
+      const oldStore = input.dataset.editCreatorStore;
+      const newStore = input.value.trim();
+      if (!newStore || (newStore !== oldStore && data.creatorStores.includes(newStore))) {
+        renderSettingsLists();
+        return;
+      }
+      data.creatorStores = data.creatorStores.map((item) => item === oldStore ? newStore : item);
+      data.tasks = (data.tasks || []).map((task) => task.creatorStore === oldStore ? { ...task, creatorStore: newStore } : task);
+      saveData();
+      renderSettingsLists();
+      renderCreatorCalendar();
+    });
+
     socialList.addEventListener("click", (event) => {
       const moveButton = event.target.closest("[data-move-social]");
       if (moveButton) {
@@ -4661,6 +5127,7 @@
 
     memberFilter.addEventListener("change", renderBoard);
     boardEl.addEventListener("scroll", updateHiddenTaskIndicators);
+    document.getElementById("pedView").addEventListener("scroll", updatePedHiddenIndicators);
     setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
@@ -4669,6 +5136,7 @@
       renderBoard();
       renderPed();
       renderInfluencers();
+      renderCreatorCalendar();
       scrollToToday();
     });
   </script>
