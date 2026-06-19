@@ -533,7 +533,6 @@
       opacity: .72;
       cursor: grabbing;
       box-shadow: 0 20px 36px rgba(20, 123, 209, .28);
-      transform: scale(1.015);
       z-index: 90;
     }
 
@@ -783,11 +782,11 @@
     .asset-preview {
       display: block;
       width: 100%;
-      max-height: 76px;
+      height: 112px;
       margin-top: 5px;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      object-fit: cover;
+      object-fit: contain;
       background: #f8fafc;
     }
 
@@ -4533,7 +4532,11 @@
       if (!dragState) return;
       const state = dragState;
       dragState = null;
+      if (state.pointerId !== undefined && state.element.releasePointerCapture) {
+        try { state.element.releasePointerCapture(state.pointerId); } catch (error) {}
+      }
       state.element.classList.remove("is-pressing", "is-dragging");
+      state.element.style.transform = "";
       if (!state.dragged) return;
       suppressNextClick = true;
       setTimeout(() => { suppressNextClick = false; }, 250);
@@ -4581,11 +4584,14 @@
 
     document.addEventListener("pointermove", (event) => {
       if (!dragState) return;
-      const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+      const deltaX = event.clientX - dragState.startX;
+      const deltaY = event.clientY - dragState.startY;
+      const distance = Math.hypot(deltaX, deltaY);
       if (distance < 7) return;
       dragState.dragged = true;
       dragState.element.classList.remove("is-pressing");
       dragState.element.classList.add("is-dragging");
+      dragState.element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.015)`;
       event.preventDefault();
     });
 
@@ -4626,10 +4632,14 @@
       if (!bar) return;
       event.preventDefault();
       bar.classList.add("is-pressing");
+      if (bar.setPointerCapture) {
+        try { bar.setPointerCapture(event.pointerId); } catch (error) {}
+      }
       dragState = {
         type: "gantt",
         id: bar.dataset.taskId,
         element: bar,
+        pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         dragged: false
@@ -4777,11 +4787,15 @@
       if (!post) return;
       event.preventDefault();
       post.classList.add("is-pressing");
+      if (post.setPointerCapture) {
+        try { post.setPointerCapture(event.pointerId); } catch (error) {}
+      }
       dragState = {
         type: "ped",
         taskId: post.dataset.taskId || "",
         postId: post.dataset.pedPostId || "",
         element: post,
+        pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
         dragged: false
@@ -4862,9 +4876,6 @@
     });
 
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
-    taskModal.addEventListener("click", (event) => {
-      if (event.target === taskModal) closeTaskEditor();
-    });
 
     document.getElementById("editTaskPedEnabled").addEventListener("change", (event) => {
       document.getElementById("editTaskPedFields").hidden = !event.target.checked;
@@ -4876,15 +4887,6 @@
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
     document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
-    pedPostModal.addEventListener("click", (event) => {
-      if (event.target === pedPostModal) closePedPostEditor();
-    });
-    pedToGanttModal.addEventListener("click", (event) => {
-      if (event.target === pedToGanttModal) closePedToGanttDialog();
-    });
-    creatorCalendarModal.addEventListener("click", (event) => {
-      if (event.target === creatorCalendarModal) closeCreatorCalendarEditor();
-    });
 
     document.getElementById("deletePedPostButton").addEventListener("click", () => {
       const postId = document.getElementById("editPedPostId").value;
