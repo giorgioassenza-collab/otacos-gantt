@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>O'Tacos Workflow</title>
+  <link rel="icon" type="image/jpeg" href="otacos-symbol.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="otacos-symbol.jpg">
   <style>
     :root {
       --bg: #f8f9fb;
@@ -670,6 +672,7 @@
       width: 52px;
       z-index: 3;
       pointer-events: none;
+      will-change: transform;
     }
 
     .ped-hour-label {
@@ -696,7 +699,7 @@
     .ped-post {
       position: absolute;
       min-height: 62px;
-      padding: 7px 9px;
+      padding: 9px 118px 9px 9px;
       border: 2px solid #111827;
       border-radius: 8px;
       background: #fff;
@@ -716,13 +719,29 @@
     }
 
     .ped-status-chip {
+      position: absolute;
+      top: 9px;
+      right: 10px;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      margin-top: 3px;
+      justify-content: flex-end;
+      gap: 6px;
+      max-width: 104px;
       color: #344054;
       font-size: 10px;
       font-weight: 900;
+      line-height: 1.1;
+      text-align: right;
+    }
+
+    .ped-status-swatch {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+      border-radius: 5px;
+      display: inline-block;
+      background: #d7dde5;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12);
     }
 
     .ped-subtask-preview {
@@ -3151,8 +3170,7 @@
       const assetPreview = drivePreviewUrl(item.asset);
       return `
         <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
-        <div class="ped-status-chip"><span class="status-swatch" style="background:${escapeHtml(statusColorValue)}"></span>${escapeHtml(status || "-")}</div>
-        <div class="ped-preview-line">Time: ${escapeHtml(normalizeHour(item.time))}</div>
+        <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
@@ -3255,11 +3273,20 @@
       });
       const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
       pedCalendar.style.height = `${height}px`;
+      updatePedHourLabels();
       updatePedHiddenIndicators();
+    }
+
+    function updatePedHourLabels() {
+      const pedView = document.getElementById("pedView");
+      const labels = pedCalendar.querySelector(".ped-hour-labels");
+      if (!labels) return;
+      labels.style.transform = `translateX(${pedView.scrollLeft + 8}px)`;
     }
 
     function updatePedHiddenIndicators() {
       if (!document.body.classList.contains("ped-mode")) return;
+      updatePedHourLabels();
       pedCalendar.querySelectorAll(".ped-hidden-indicator").forEach((indicator) => indicator.remove());
       const pedView = document.getElementById("pedView");
       const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
