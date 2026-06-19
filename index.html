@@ -482,6 +482,7 @@
       gap: 7px;
       cursor: pointer;
       user-select: none;
+      touch-action: none;
     }
 
     .bar.is-done {
@@ -509,6 +510,12 @@
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .bar.is-dragging,
+    .ped-post.is-dragging {
+      opacity: .72;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .18);
     }
 
     .bar-home {
@@ -707,6 +714,7 @@
       font-weight: 800;
       box-shadow: 0 4px 12px rgba(16, 24, 40, .06);
       cursor: pointer;
+      touch-action: none;
       overflow: visible;
     }
 
@@ -760,6 +768,16 @@
       border-radius: 6px;
       object-fit: cover;
       background: #f8fafc;
+    }
+
+    .asset-frame {
+      display: block;
+      width: 100%;
+      height: 120px;
+      margin-top: 5px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: #fff;
     }
 
     .ped-hidden-indicator {
@@ -927,7 +945,7 @@
 
     .influencer-shell {
       min-width: 1180px;
-      padding: 18px;
+      padding: 18px 18px 96px;
     }
 
     .influencer-controls {
@@ -1206,6 +1224,7 @@
       padding: 9px 10px;
       resize: vertical;
       line-height: 1.4;
+      font-family: Inter, "Segoe UI", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
     }
 
     .inline-check {
@@ -1259,7 +1278,7 @@
     .check-list {
       display: grid;
       gap: 6px;
-      max-height: 120px;
+      max-height: 220px;
       overflow: auto;
       padding: 8px;
       border: 1px solid #d3dae2;
@@ -1341,7 +1360,7 @@
       display: grid;
       gap: 6px;
       margin-top: 10px;
-      max-height: 110px;
+      max-height: 220px;
       overflow: auto;
     }
 
@@ -2918,6 +2937,19 @@
       data.statuses.push({ name, color: "#f59e0b" });
     }
 
+    function ganttStatusByName(name, fallbackColor = "#6b7280") {
+      const existing = data.statuses.find((status) => statusName(status).toLowerCase() === name.toLowerCase());
+      if (existing) return statusName(existing);
+      data.statuses.push({ name, color: fallbackColor });
+      return name;
+    }
+
+    function syncCreatorStatusToGantt(task) {
+      const value = String(task.creatorStatus || "").trim().toLowerCase();
+      if (value === "confirmed") task.status = ganttStatusByName("In progress", "#86efac");
+      if (value === "video shot") task.status = ganttStatusByName("DONE", "#d1d5db");
+    }
+
     function renderSettingsLists() {
       const previousFilter = memberFilter.value || "all";
       taskMembers.innerHTML = "";
@@ -3155,6 +3187,14 @@
       return id ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w320` : "";
     }
 
+    function assetEmbedUrl(value) {
+      const url = String(value || "").trim();
+      if (!/^https?:\/\//i.test(url)) return "";
+      if (url.includes("drive.google.com")) return url.replace("/view", "/preview");
+      if (/\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(url)) return url;
+      return "";
+    }
+
     function pedSubtaskPreview(subtasks = []) {
       if (!subtasks.length) return "-";
       return subtasks
@@ -3167,14 +3207,16 @@
       const status = item.status || "";
       const statusColorValue = pedStatusColor(status);
       const assetPreview = drivePreviewUrl(item.asset);
+      const assetEmbed = assetPreview ? "" : assetEmbedUrl(item.asset);
       return `
         <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
-        <div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>
+        ${assetPreview || assetEmbed ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
         ${assetPreview ? `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy">` : ""}
+        ${assetEmbed ? `<iframe class="asset-frame" src="${escapeHtml(assetEmbed)}" loading="lazy" referrerpolicy="no-referrer"></iframe>` : ""}
         <div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>
       `;
     }
@@ -3851,7 +3893,7 @@
             if (isDoneStatus(task.status)) {
               bar.classList.add("is-done");
             }
-            bar.title = `${task.name}\nChi: ${(task.members || []).join(", ") || "-"}`;
+            bar.title = `${task.nameEn || task.name}\nWho: ${(task.members || []).join(", ") || "-"}\nStatus: ${task.status || "-"}`;
             bar.style.left = `${left}px`;
             bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
             bar.style.width = `${width}px`;
@@ -4417,6 +4459,90 @@
       menu.classList.add("open");
     }
 
+    let dragState = null;
+    let suppressNextClick = false;
+
+    function dateFromTimelineClientX(clientX, scrollEl) {
+      const rect = scrollEl.getBoundingClientRect();
+      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const x = Math.max(0, clientX - rect.left + scrollEl.scrollLeft);
+      const dayIndex = Math.max(0, Math.round(x / dayWidth));
+      const date = new Date(timelineStart);
+      date.setDate(timelineStart.getDate() + dayIndex);
+      return dateKey(date);
+    }
+
+    function pedTimeFromClientY(clientY) {
+      const pedView = document.getElementById("pedView");
+      const rect = pedView.getBoundingClientRect();
+      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
+      const y = Math.max(0, clientY - rect.top + pedView.scrollTop - timelineHead - 10);
+      const hour = Math.min(20, Math.max(11, 11 + Math.round(y / 70)));
+      return `${String(hour).padStart(2, "0")}:00`;
+    }
+
+    function finishDrag(event) {
+      if (!dragState) return;
+      const state = dragState;
+      dragState = null;
+      state.element.classList.remove("is-dragging");
+      if (!state.dragged) return;
+      suppressNextClick = true;
+      setTimeout(() => { suppressNextClick = false; }, 250);
+      if (state.type === "gantt") {
+        const task = data.tasks.find((item) => item.id === state.id);
+        if (!task) return;
+        const oldStart = task.start;
+        const oldEnd = task.end || task.start;
+        const duration = Math.max(0, dateDiffDays(new Date(`${oldStart}T00:00:00`), new Date(`${oldEnd}T00:00:00`)));
+        const newStart = dateFromTimelineClientX(event.clientX, scroller);
+        task.start = newStart;
+        task.end = shiftDateString(newStart, duration);
+        saveData();
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        return;
+      }
+      if (state.type === "ped") {
+        const pedView = document.getElementById("pedView");
+        const date = dateFromTimelineClientX(event.clientX, pedView);
+        const time = pedTimeFromClientY(event.clientY);
+        if (state.taskId) {
+          const task = data.tasks.find((item) => item.id === state.taskId);
+          if (task) {
+            task.pedDate = date;
+            task.pedTime = time;
+          }
+          const post = (data.pedPosts || []).find((item) => item.sourceTaskId === state.taskId);
+          if (post) {
+            post.date = date;
+            post.time = time;
+          }
+        } else if (state.postId) {
+          const post = (data.pedPosts || []).find((item) => item.id === state.postId);
+          if (post) {
+            post.date = date;
+            post.time = time;
+          }
+        }
+        saveData();
+        renderPed();
+      }
+    }
+
+    document.addEventListener("pointermove", (event) => {
+      if (!dragState) return;
+      const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+      if (distance < 7) return;
+      dragState.dragged = true;
+      dragState.element.classList.add("is-dragging");
+      event.preventDefault();
+    });
+
+    document.addEventListener("pointerup", finishDrag);
+    document.addEventListener("pointercancel", finishDrag);
+
     function showStatusMenu(taskId, x, y) {
       statusMenu.innerHTML = "";
       statusMenu.dataset.taskId = taskId;
@@ -4436,9 +4562,24 @@
     }
 
     bars.addEventListener("click", (event) => {
+      if (suppressNextClick) return;
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
       showStatusMenu(bar.dataset.taskId, event.clientX, event.clientY);
+    });
+
+    bars.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      dragState = {
+        type: "gantt",
+        id: bar.dataset.taskId,
+        element: bar,
+        startX: event.clientX,
+        startY: event.clientY,
+        dragged: false
+      };
     });
 
     statusMenu.addEventListener("click", (event) => {
@@ -4574,6 +4715,21 @@
       if (post.dataset.taskId) pedContextMenu.dataset.taskId = post.dataset.taskId;
       if (post.dataset.pedPostId) pedContextMenu.dataset.pedPostId = post.dataset.pedPostId;
       placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 124);
+    });
+
+    pedCalendar.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const post = event.target.closest(".ped-post");
+      if (!post) return;
+      dragState = {
+        type: "ped",
+        taskId: post.dataset.taskId || "",
+        postId: post.dataset.pedPostId || "",
+        element: post,
+        startX: event.clientX,
+        startY: event.clientY,
+        dragged: false
+      };
     });
 
     pedContextMenu.addEventListener("click", (event) => {
@@ -4871,6 +5027,7 @@
       task.creatorStatus = creatorCalendarStatus.value;
       task.creatorStore = creatorCalendarStore.value;
       task.creatorTime = document.getElementById("creatorCalendarTime").value || "10:00";
+      syncCreatorStatusToGantt(task);
       if (publicationDate) {
         if (!publication) {
           publication = {
