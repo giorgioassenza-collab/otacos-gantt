@@ -1887,6 +1887,21 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="pedToGanttModal" aria-label="Add PED item to GANTT">
+    <div class="modal">
+      <h2>Add to GANTT</h2>
+      <form id="pedToGanttForm">
+        <input id="pedToGanttTaskId" type="hidden">
+        <input id="pedToGanttPostId" type="hidden">
+        <label class="field">GANTT date<input id="pedToGanttDate" type="date" required></label>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closePedToGanttModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
   <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
     <button type="button" data-context-action="modify">Modify</button>
@@ -1896,6 +1911,15 @@
   <div class="context-menu" id="influencerContextMenu" aria-label="Influencer actions">
     <button type="button" data-influencer-context-action="modify">Modify</button>
     <button type="button" data-influencer-context-action="delete">Delete</button>
+  </div>
+  <div class="context-menu" id="pedContextMenu" aria-label="PED actions">
+    <button type="button" data-ped-context-action="modify">Modify</button>
+    <button type="button" data-ped-context-action="add-gantt">Add to GANTT</button>
+    <button type="button" data-ped-context-action="delete">Delete</button>
+  </div>
+  <div class="context-menu" id="creatorContextMenu" aria-label="Creator Calendar actions">
+    <button type="button" data-creator-context-action="modify">Modify</button>
+    <button type="button" data-creator-context-action="delete">Delete</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1944,6 +1968,7 @@
     const editPedPostFormat = document.getElementById("editPedPostFormat");
     const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
+    const pedToGanttModal = document.getElementById("pedToGanttModal");
     const creatorCalendarModal = document.getElementById("creatorCalendarModal");
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
     const creatorCalendarStore = document.getElementById("creatorCalendarStore");
@@ -1971,6 +1996,8 @@
     const statusMenu = document.getElementById("statusMenu");
     const taskContextMenu = document.getElementById("taskContextMenu");
     const influencerContextMenu = document.getElementById("influencerContextMenu");
+    const pedContextMenu = document.getElementById("pedContextMenu");
+    const creatorContextMenu = document.getElementById("creatorContextMenu");
     const undoButton = document.getElementById("undoButton");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
@@ -4317,9 +4344,20 @@
       statusMenu.classList.remove("open");
       taskContextMenu.classList.remove("open");
       influencerContextMenu.classList.remove("open");
+      pedContextMenu.classList.remove("open");
+      creatorContextMenu.classList.remove("open");
       delete statusMenu.dataset.taskId;
       delete taskContextMenu.dataset.taskId;
       delete influencerContextMenu.dataset.influencerId;
+      delete pedContextMenu.dataset.taskId;
+      delete pedContextMenu.dataset.pedPostId;
+      delete creatorContextMenu.dataset.taskId;
+    }
+
+    function placeContextMenu(menu, x, y, width = 190, height = 140) {
+      menu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - width))}px`;
+      menu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - height))}px`;
+      menu.classList.add("open");
     }
 
     function showStatusMenu(taskId, x, y) {
@@ -4363,11 +4401,9 @@
       const bar = event.target.closest("[data-task-id]");
       if (!bar) return;
       event.preventDefault();
+      hideTaskMenus();
       taskContextMenu.dataset.taskId = bar.dataset.taskId;
-      taskContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 190)}px`;
-      taskContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 120)}px`;
-      taskContextMenu.classList.add("open");
-      statusMenu.classList.remove("open");
+      placeContextMenu(taskContextMenu, event.clientX, event.clientY, 190, 120);
     });
 
     taskContextMenu.addEventListener("click", (event) => {
@@ -4422,27 +4458,138 @@
       hideTaskMenus();
     });
 
+    function openPedToGanttDialog(taskId = "", postId = "") {
+      document.getElementById("pedToGanttTaskId").value = taskId;
+      document.getElementById("pedToGanttPostId").value = postId;
+      document.getElementById("pedToGanttDate").value = currentDateKey();
+      pedToGanttModal.classList.add("open");
+    }
+
+    function closePedToGanttDialog() {
+      pedToGanttModal.classList.remove("open");
+    }
+
+    function addPedItemToGantt(taskId, postId, selectedDate) {
+      if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
+      if (taskId) {
+        const task = data.tasks.find((item) => item.id === taskId);
+        if (!task) return;
+        task.start = selectedDate;
+        task.end = selectedDate;
+        saveData();
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        return;
+      }
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      const newTaskId = `t${Date.now()}-ped-gantt`;
+      const task = {
+        id: newTaskId,
+        projectId: (data.projects || [])[0]?.id || "",
+        name: post.title || "PED post",
+        nameEn: post.title || "PED post",
+        members: post.members || [],
+        status: data.statuses[0] ? statusName(data.statuses[0]) : "",
+        start: selectedDate,
+        end: selectedDate,
+        info: post.asset || post.copy || "",
+        label: "",
+        pedEnabled: true,
+        pedDate: post.date || selectedDate,
+        pedTime: post.time || "10:00",
+        subtasks: post.subtasks || []
+      };
+      data.tasks.push(task);
+      post.sourceTaskId = newTaskId;
+      saveData();
+      renderBoard();
+      renderPed();
+      renderCreatorCalendar();
+    }
+
+    pedCalendar.addEventListener("contextmenu", (event) => {
+      const post = event.target.closest(".ped-post");
+      if (!post) return;
+      event.preventDefault();
+      hideTaskMenus();
+      if (post.dataset.taskId) pedContextMenu.dataset.taskId = post.dataset.taskId;
+      if (post.dataset.pedPostId) pedContextMenu.dataset.pedPostId = post.dataset.pedPostId;
+      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 124);
+    });
+
+    pedContextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-ped-context-action]");
+      if (!button) return;
+      const action = button.dataset.pedContextAction;
+      const taskId = pedContextMenu.dataset.taskId;
+      const postId = pedContextMenu.dataset.pedPostId;
+      const postNode = taskId
+        ? pedCalendar.querySelector(`.ped-post[data-task-id="${CSS.escape(taskId)}"]`)
+        : pedCalendar.querySelector(`.ped-post[data-ped-post-id="${CSS.escape(postId || "")}"]`);
+      hideTaskMenus();
+      if (action === "modify") {
+        closePanels();
+        if (taskId) openLinkedPedTaskEditor(taskId);
+        else if (postId) openPedPostEditor(postId);
+        return;
+      }
+      if (action === "add-gantt") {
+        if (postNode) openPedToGanttDialog(taskId || "", postId || "");
+        return;
+      }
+      if (action === "delete") {
+        if (taskId) {
+          const post = (data.pedPosts || []).find((item) => item.sourceTaskId === taskId);
+          if (post) data.pedPosts = (data.pedPosts || []).filter((item) => item.id !== post.id);
+          const task = data.tasks.find((item) => item.id === taskId);
+          if (task) {
+            task.pedEnabled = false;
+            task.pedDate = "";
+          }
+        } else if (postId) {
+          data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
+        }
+        saveData();
+        renderBoard();
+        renderPed();
+      }
+    });
+
+    creatorCalendar.addEventListener("contextmenu", (event) => {
+      const card = event.target.closest(".creator-card");
+      if (!card) return;
+      event.preventDefault();
+      hideTaskMenus();
+      creatorContextMenu.dataset.taskId = card.dataset.taskId;
+      placeContextMenu(creatorContextMenu, event.clientX, event.clientY, 190, 92);
+    });
+
+    creatorContextMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-creator-context-action]");
+      if (!button) return;
+      const taskId = creatorContextMenu.dataset.taskId;
+      const task = (data.tasks || []).find((item) => item.id === taskId);
+      if (!task) return;
+      hideTaskMenus();
+      if (button.dataset.creatorContextAction === "modify") {
+        closePanels();
+        openCreatorCalendarEditor(taskId);
+        return;
+      }
+      if (button.dataset.creatorContextAction === "delete") {
+        const publication = findPublicationTaskFor(task);
+        data.tasks = (data.tasks || []).filter((item) => item.id !== taskId && item.id !== publication?.id);
+        saveData();
+        renderBoard();
+        renderCreatorCalendar();
+      }
+    });
+
     document.addEventListener("click", (event) => {
       if (event.target.closest(".bar") || event.target.closest(".status-menu") || event.target.closest(".context-menu")) return;
       hideTaskMenus();
-    });
-
-    pedCalendar.addEventListener("dblclick", (event) => {
-      const post = event.target.closest(".ped-post");
-      if (!post) return;
-      closePanels();
-      if (post.dataset.taskId) {
-        openLinkedPedTaskEditor(post.dataset.taskId);
-        return;
-      }
-      if (post.dataset.pedPostId) openPedPostEditor(post.dataset.pedPostId);
-    });
-
-    creatorCalendar.addEventListener("dblclick", (event) => {
-      const card = event.target.closest(".creator-card");
-      if (!card) return;
-      closePanels();
-      openCreatorCalendarEditor(card.dataset.taskId);
     });
 
     document.getElementById("closeTaskModal").addEventListener("click", closeTaskEditor);
@@ -4458,9 +4605,13 @@
     });
 
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
+    document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
     pedPostModal.addEventListener("click", (event) => {
       if (event.target === pedPostModal) closePedPostEditor();
+    });
+    pedToGanttModal.addEventListener("click", (event) => {
+      if (event.target === pedToGanttModal) closePedToGanttDialog();
     });
     creatorCalendarModal.addEventListener("click", (event) => {
       if (event.target === creatorCalendarModal) closeCreatorCalendarEditor();
@@ -4631,6 +4782,16 @@
       renderBoard();
       renderPed();
       closePedPostEditor();
+    });
+
+    document.getElementById("pedToGanttForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      addPedItemToGantt(
+        document.getElementById("pedToGanttTaskId").value,
+        document.getElementById("pedToGanttPostId").value,
+        document.getElementById("pedToGanttDate").value
+      );
+      closePedToGanttDialog();
     });
 
     document.getElementById("creatorCalendarForm").addEventListener("submit", (event) => {
