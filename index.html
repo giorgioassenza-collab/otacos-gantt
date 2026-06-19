@@ -665,10 +665,14 @@
     }
 
     .ped-months {
+      position: relative;
+      z-index: 20;
       display: flex;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #f9fafb;
+      box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
+      will-change: transform;
     }
 
     .ped-day {
@@ -738,6 +742,12 @@
       user-select: none;
       -webkit-user-select: none;
       overflow: visible;
+    }
+
+    .ped-post.is-compact-preview {
+      min-height: 86px;
+      max-height: 128px;
+      overflow: hidden;
     }
 
     .ped-post-title {
@@ -3548,6 +3558,7 @@
     }
 
     function growPedHourToFitPosts() {
+      if (zooms[zoomIndex]?.label !== "Compatta") return false;
       const posts = [...pedCalendar.querySelectorAll(".ped-post")];
       if (!posts.length) return false;
       const currentHourHeight = pedHourHeight();
@@ -3561,6 +3572,14 @@
       const [hourRaw, minuteRaw] = normalizeHour(value).split(":").map(Number);
       const hourHeight = pedHourHeight();
       return (hourRaw - 11) * hourHeight + Math.round((minuteRaw / 60) * hourHeight);
+    }
+
+    function positionPedHourLabels(container) {
+      const hourHeight = pedHourHeight();
+      [...container.querySelectorAll(".ped-hour-label")].forEach((label) => {
+        const hour = Number(label.dataset.hour || 11);
+        label.style.top = `${(hour - 11) * hourHeight + 8}px`;
+      });
     }
 
     function drivePreviewUrl(value) {
@@ -3591,6 +3610,16 @@
       const statusColorValue = pedStatusColor(status);
       const assetPreview = drivePreviewUrl(item.asset);
       const assetEmbed = assetPreview ? "" : assetEmbedUrl(item.asset);
+      const fullPreview = zooms[zoomIndex]?.label === "Compatta";
+      if (!fullPreview) {
+        return `
+          <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+          <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
+          <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
+          <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
+          <div class="ped-preview-line">Copy: ${escapeHtml(previewName(item.copy || "-"))}</div>
+        `;
+      }
       return `
         <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
@@ -3607,6 +3636,7 @@
     function renderPed() {
       pedCalendar.innerHTML = "";
       const items = pedItems();
+      const fullPreview = zooms[zoomIndex]?.label === "Compatta";
       const months = document.createElement("div");
       months.className = "ped-months";
       const weekends = document.createElement("div");
@@ -3615,14 +3645,15 @@
       grid.className = "ped-grid";
       const hourLabels = document.createElement("div");
       hourLabels.className = "ped-hour-labels";
-      const hourHeight = pedHourHeight();
+      root.style.setProperty("--ped-hour", "180px");
       for (let hour = 11; hour <= 20; hour += 1) {
         const label = document.createElement("div");
         label.className = "ped-hour-label";
-        label.style.top = `${(hour - 11) * hourHeight + 8}px`;
+        label.dataset.hour = String(hour);
         label.textContent = `${String(hour).padStart(2, "0")}:00`;
         hourLabels.appendChild(label);
       }
+      positionPedHourLabels(hourLabels);
       const layer = document.createElement("div");
       layer.className = "ped-layer";
       let dayOffset = 0;
@@ -3658,7 +3689,7 @@
           postsByDate[iso] = [];
           dayItems.forEach((item) => {
             const post = document.createElement("div");
-            post.className = "ped-post";
+            post.className = `ped-post ${fullPreview ? "is-full-preview" : "is-compact-preview"}`;
             post.dataset.pedDate = iso;
             post.dataset.timeTop = String(timeTop(item.time));
             post.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
@@ -3686,8 +3717,7 @@
       pedCalendar.appendChild(layer);
       const layoutPosts = () => {
         if (growPedHourToFitPosts()) {
-          renderPed();
-          return;
+          positionPedHourLabels(hourLabels);
         }
         let maxColumnHeight = pedHourHeight() * 10 + 80;
         Object.values(postsByDate).forEach((posts) => {
@@ -3710,6 +3740,14 @@
       pedCalendar.querySelectorAll(".ped-post img, .ped-post iframe").forEach((media) => {
         media.addEventListener("load", layoutPosts, { once: true });
       });
+      syncPedHeaderPosition();
+    }
+
+    function syncPedHeaderPosition() {
+      const pedView = document.getElementById("pedView");
+      const months = pedCalendar.querySelector(".ped-months");
+      if (!months) return;
+      months.style.transform = `translateY(${pedView.scrollTop}px)`;
     }
 
     function updatePedHourLabels() {
@@ -3721,6 +3759,7 @@
 
     function updatePedHiddenIndicators() {
       if (!document.body.classList.contains("ped-mode")) return;
+      syncPedHeaderPosition();
       updatePedHourLabels();
       pedCalendar.querySelectorAll(".ped-hidden-indicator").forEach((indicator) => indicator.remove());
       const pedView = document.getElementById("pedView");
