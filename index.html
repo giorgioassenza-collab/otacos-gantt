@@ -1524,6 +1524,48 @@
       background: #ffe8eb;
     }
 
+    .history-list {
+      display: grid;
+      gap: 8px;
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .history-row {
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .history-row strong {
+      color: #111827;
+      font-size: 12px;
+    }
+
+    .history-row small {
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .history-row button {
+      justify-self: start;
+      height: 28px;
+      border: 0;
+      border-radius: 7px;
+      padding: 0 10px;
+      background: #147bd1;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
     svg { display: block; }
 
     @media (max-width: 800px) {
@@ -1581,6 +1623,9 @@
       <select class="member-select" id="memberFilter" aria-label="Who"></select>
       <button class="icon-btn" id="settings" type="button" title="General settings" aria-label="General settings">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.07A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.04 14H3a2 2 0 1 1 0-4h.04A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.04a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.14.36.5.83 1.56 1H21a2 2 0 1 1 0 4h-.04A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+      </button>
+      <button class="icon-btn" id="historyButton" type="button" title="History" aria-label="History">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
       </button>
     </header>
 
@@ -1963,6 +2008,16 @@
   </div>
 
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
+  <div class="modal-backdrop" id="historyModal" aria-label="Document history">
+    <div class="modal">
+      <h2>Document history</h2>
+      <div class="history-list" id="historyList"></div>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="closeHistoryModal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
     <button type="button" data-context-action="modify">Modify</button>
     <button type="button" data-context-action="delete">Delete</button>
@@ -2061,11 +2116,16 @@
     const pedContextMenu = document.getElementById("pedContextMenu");
     const creatorContextMenu = document.getElementById("creatorContextMenu");
     const undoButton = document.getElementById("undoButton");
+    const historyButton = document.getElementById("historyButton");
+    const historyModal = document.getElementById("historyModal");
+    const historyList = document.getElementById("historyList");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
     const today = new Date(2026, 5, 16);
     const timelineStart = new Date(2026, 5, 1);
     const storageKey = "tacos-gantt-board-data-v5";
+    const historyStorageKey = "tacos-gantt-board-history-v1";
+    const maxHistoryEntries = 60;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const influencerColumns = [
       { key: "name", label: "NAME" },
@@ -2115,6 +2175,7 @@
     };
     let data = structuredClone(starterData);
     let committedData = structuredClone(starterData);
+    let historyEntries = [];
     let undoStack = [];
     let dataVersion = 0;
     let appStarted = false;
@@ -2188,6 +2249,7 @@
           if (!snapshot.exists()) {
             await setDoc(boardRef, {
               data: structuredClone(starterData),
+              history: [],
               updatedAt: serverTimestamp()
             });
           }
@@ -2197,6 +2259,7 @@
             const remote = remoteSnapshot.data().data;
             if (!remote || applyingRemoteUpdate) return;
             data = normalizeData(remote);
+            historyEntries = normalizeHistory(remoteSnapshot.data().history);
             committedData = structuredClone(data);
             renderBoard();
             renderPed();
@@ -2206,9 +2269,15 @@
             syncIndicator.textContent = "Sincronizzato live";
           });
           syncIndicator.textContent = "Connesso a Firestore";
-          return snapshot.exists() ? normalizeData(snapshot.data().data) : normalizeData(starterData);
+          if (snapshot.exists()) {
+            historyEntries = normalizeHistory(snapshot.data().history);
+            return normalizeData(snapshot.data().data);
+          }
+          historyEntries = [];
+          return normalizeData(starterData);
         }
         const saved = localStorage.getItem(storageKey);
+        historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
         syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
         return saved ? normalizeData(JSON.parse(saved)) : normalizeData(starterData);
       } catch {
@@ -2221,6 +2290,106 @@
       return JSON.stringify(left) === JSON.stringify(right);
     }
 
+    function normalizeHistory(list) {
+      return Array.isArray(list)
+        ? list
+          .filter((entry) => entry && entry.id && entry.savedAt && entry.data)
+          .sort((left, right) => String(right.savedAt).localeCompare(String(left.savedAt)))
+          .slice(0, maxHistoryEntries)
+        : [];
+    }
+
+    function historySummary(snapshot) {
+      const item = snapshot || {};
+      return `${(item.tasks || []).length} tasks, ${(item.pedPosts || []).length} PED, ${(item.influencers || []).length} influencers`;
+    }
+
+    function createHistoryEntry(snapshot, label = "Before change") {
+      const savedAt = new Date().toISOString();
+      return {
+        id: `h${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        savedAt,
+        label,
+        summary: historySummary(snapshot),
+        data: structuredClone(snapshot)
+      };
+    }
+
+    function withHistoryEntry(list, snapshot, label) {
+      if (!snapshot) return normalizeHistory(list);
+      const entry = createHistoryEntry(snapshot, label);
+      return normalizeHistory([entry, ...(list || [])]);
+    }
+
+    function formatHistoryDate(value) {
+      try {
+        return new Intl.DateTimeFormat("it-IT", {
+          dateStyle: "short",
+          timeStyle: "medium"
+        }).format(new Date(value));
+      } catch {
+        return value || "-";
+      }
+    }
+
+    function renderHistoryList() {
+      if (!historyList) return;
+      historyList.innerHTML = "";
+      if (!historyEntries.length) {
+        const empty = document.createElement("div");
+        empty.className = "history-row";
+        empty.innerHTML = "<strong>No saved history yet</strong><small>History starts from the next saved change.</small>";
+        historyList.appendChild(empty);
+        return;
+      }
+      historyEntries.forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = "history-row";
+        row.innerHTML = `
+          <strong>${escapeHtml(formatHistoryDate(entry.savedAt))}</strong>
+          <small>${escapeHtml(entry.label || "Saved version")} · ${escapeHtml(entry.summary || historySummary(entry.data))}</small>
+          <button type="button" data-restore-history="${escapeHtml(entry.id)}">Restore</button>
+        `;
+        historyList.appendChild(row);
+      });
+    }
+
+    async function restoreHistoryEntry(id) {
+      const entry = historyEntries.find((item) => item.id === id);
+      if (!entry) return;
+      if (!window.confirm(`Restore the version from ${formatHistoryDate(entry.savedAt)}?`)) return;
+      historyEntries = withHistoryEntry(historyEntries, data, "Before restore");
+      data = normalizeData(entry.data);
+      undoStack.push(structuredClone(committedData));
+      if (undoStack.length > 30) undoStack.shift();
+      updateUndoButton();
+      try {
+        if (boardRef) {
+          applyingRemoteUpdate = true;
+          await setDoc(boardRef, {
+            data,
+            history: historyEntries,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          applyingRemoteUpdate = false;
+        } else {
+          localStorage.setItem(storageKey, JSON.stringify(data));
+          localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
+        }
+        committedData = structuredClone(data);
+        renderBoard();
+        renderPed();
+        renderInfluencers();
+        renderCreatorCalendar();
+        renderHistoryList();
+        historyModal.classList.remove("open");
+        syncIndicator.textContent = "Version restored";
+      } catch {
+        applyingRemoteUpdate = false;
+        syncIndicator.textContent = "Restore failed";
+      }
+    }
+
     function updateUndoButton() {
       undoButton.disabled = undoStack.length === 0;
     }
@@ -2228,15 +2397,18 @@
     async function saveData(skipUndo = false) {
       try {
         syncIndicator.textContent = "Salvataggio...";
-        if (!skipUndo && committedData && !sameData(committedData, data)) {
+        const shouldRecordHistory = !skipUndo && committedData && !sameData(committedData, data);
+        if (shouldRecordHistory) {
           undoStack.push(structuredClone(committedData));
           if (undoStack.length > 30) undoStack.shift();
+          historyEntries = withHistoryEntry(historyEntries, committedData);
           updateUndoButton();
         }
         if (boardRef) {
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data,
+            history: historyEntries,
             updatedAt: serverTimestamp()
           }, { merge: true });
           applyingRemoteUpdate = false;
@@ -2246,12 +2418,14 @@
           return;
         }
         localStorage.setItem(storageKey, JSON.stringify(data));
+        localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Firebase non configurato: salvato locale";
       } catch {
         applyingRemoteUpdate = false;
         localStorage.setItem(storageKey, JSON.stringify(data));
+        localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Offline: salvato locale";
@@ -4096,6 +4270,21 @@
       hideTaskMenus();
     });
 
+    historyButton.addEventListener("click", () => {
+      renderHistoryList();
+      historyModal.classList.add("open");
+    });
+
+    document.getElementById("closeHistoryModal").addEventListener("click", () => {
+      historyModal.classList.remove("open");
+    });
+
+    historyList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-restore-history]");
+      if (!button) return;
+      restoreHistoryEntry(button.dataset.restoreHistory);
+    });
+
     document.getElementById("zoomOut").addEventListener("click", () => {
       zoomIndex = Math.max(0, zoomIndex - 1);
       updateZoom();
@@ -4507,6 +4696,10 @@
       menu.classList.add("open");
     }
 
+    function confirmDelete(message) {
+      return window.confirm(message || "Delete this item?");
+    }
+
     let dragState = null;
     let suppressNextClick = false;
 
@@ -4682,6 +4875,10 @@
         return;
       }
       if (button.dataset.contextAction === "delete") {
+        if (!confirmDelete("Delete this task?")) {
+          hideTaskMenus();
+          return;
+        }
         data.tasks = data.tasks.filter((item) => item.id !== taskId);
       }
       if (button.dataset.contextAction === "move-next") {
@@ -4709,6 +4906,10 @@
         return;
       }
       if (button.dataset.influencerContextAction === "delete") {
+        if (!confirmDelete("Delete this influencer?")) {
+          hideTaskMenus();
+          return;
+        }
         const row = (data.influencers || []).find((item) => item.id === id);
         if (row?.contactTaskId) {
           data.tasks = data.tasks.filter((task) => task.id !== row.contactTaskId);
@@ -4824,6 +5025,7 @@
         return;
       }
       if (action === "delete") {
+        if (!confirmDelete("Delete this PED post?")) return;
         if (taskId) {
           const post = (data.pedPosts || []).find((item) => item.sourceTaskId === taskId);
           if (post) data.pedPosts = (data.pedPosts || []).filter((item) => item.id !== post.id);
@@ -4863,6 +5065,7 @@
         return;
       }
       if (button.dataset.creatorContextAction === "delete") {
+        if (!confirmDelete("Delete this Creator Calendar item and its linked publication task?")) return;
         const publication = findPublicationTaskFor(task);
         data.tasks = (data.tasks || []).filter((item) => item.id !== taskId && item.id !== publication?.id);
         saveData();
@@ -4892,6 +5095,7 @@
     document.getElementById("deletePedPostButton").addEventListener("click", () => {
       const postId = document.getElementById("editPedPostId").value;
       if (!postId) return;
+      if (!confirmDelete("Delete this PED post?")) return;
       data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
       saveData();
       renderPed();
@@ -4901,6 +5105,7 @@
     document.getElementById("deleteTaskButton").addEventListener("click", () => {
       const taskId = document.getElementById("editTaskId").value;
       if (!taskId) return;
+      if (!confirmDelete("Delete this task?")) return;
       data.tasks = data.tasks.filter((task) => task.id !== taskId);
       saveData();
       renderBoard();
