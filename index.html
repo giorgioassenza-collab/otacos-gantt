@@ -3827,25 +3827,36 @@
       });
     }
 
-    function scrollToToday() {
+    function scrollToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-      scroller.scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+      scroller.scrollTo({ left: Math.max(0, offset - 300), behavior });
     }
 
-    function scrollPedToToday() {
+    function scrollPedToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-      document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+      document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior });
     }
 
-    function scrollCreatorCalendarToToday() {
+    function scrollCreatorCalendarToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-      document.getElementById("creatorCalendarView").scrollTo({ left: Math.max(0, offset - 300), behavior: "smooth" });
+      document.getElementById("creatorCalendarView").scrollTo({ left: Math.max(0, offset - 300), behavior });
+    }
+
+    function snapActiveTimelineToToday() {
+      const run = () => {
+        if (document.body.classList.contains("ped-mode")) scrollPedToToday("auto");
+        else if (document.body.classList.contains("creator-calendar-mode")) scrollCreatorCalendarToToday("auto");
+        else if (!document.body.classList.contains("influencer-mode")) scrollToToday("auto");
+      };
+      run();
+      requestAnimationFrame(run);
+      setTimeout(run, 80);
     }
 
     async function startApp() {
@@ -3869,7 +3880,7 @@
       viewCreatorCalendar.classList.remove("is-active");
       document.querySelector(".brand-title").textContent = "Workflow";
       document.getElementById("currentMonth").textContent = "O'TACOS";
-      requestAnimationFrame(scrollToToday);
+      requestAnimationFrame(snapActiveTimelineToToday);
       setInterval(refreshSharedData, 1800);
     }
 
@@ -3985,11 +3996,7 @@
       if (pedMode) renderPed();
       if (influencerMode) renderInfluencers();
       if (creatorCalendarMode) renderCreatorCalendar();
-      requestAnimationFrame(() => {
-        if (pedMode) scrollPedToToday();
-        else if (creatorCalendarMode) scrollCreatorCalendarToToday();
-        else if (!influencerMode) scrollToToday();
-      });
+      requestAnimationFrame(snapActiveTimelineToToday);
     }
 
     viewGantt.addEventListener("click", () => setView("gantt"));
