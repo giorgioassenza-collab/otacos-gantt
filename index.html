@@ -23,6 +23,7 @@
       --day: 380px;
       --sidebar: 180px;
       --timeline-head: 72px;
+      --ped-hour: 108px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -685,7 +686,7 @@
       inset: var(--timeline-head) 0 0;
       background:
         repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), var(--line-soft) calc(var(--day) - 1px), var(--line-soft) var(--day)),
-        repeating-linear-gradient(to bottom, transparent 0, transparent 69px, var(--line-soft) 69px, var(--line-soft) 70px),
+        repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--ped-hour) - 1px), var(--line-soft) calc(var(--ped-hour) - 1px), var(--line-soft) var(--ped-hour)),
         var(--bg);
       z-index: 1;
     }
@@ -693,7 +694,7 @@
     .ped-hour-labels {
       position: absolute;
       inset: var(--timeline-head) auto 0 0;
-      width: 52px;
+      width: 72px;
       z-index: 3;
       pointer-events: none;
       will-change: transform;
@@ -702,15 +703,15 @@
     .ped-hour-label {
       position: absolute;
       left: 0;
-      width: 46px;
-      padding: 2px 6px;
+      width: 62px;
+      padding: 4px 8px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, .9);
-      color: #667085;
-      font-size: 10px;
+      background: rgba(255, 255, 255, .96);
+      color: #475467;
+      font-size: 12px;
       font-weight: 900;
       text-align: center;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, .08);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
     }
 
     .ped-weekends {
@@ -781,7 +782,8 @@
 
     .asset-preview {
       display: block;
-      width: 100%;
+      width: 50%;
+      max-width: 360px;
       height: auto;
       max-height: none;
       margin-top: 5px;
@@ -1566,6 +1568,45 @@
       cursor: pointer;
     }
 
+    .history-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .history-actions .secondary-history-btn {
+      background: #e8eef6;
+      color: #22405a;
+    }
+
+    .history-preview {
+      display: grid;
+      gap: 8px;
+      padding-top: 6px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .history-preview[hidden] {
+      display: none;
+    }
+
+    .history-preview h3 {
+      margin: 0;
+      color: #303943;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .history-preview ul {
+      margin: 0;
+      padding-left: 16px;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
     svg { display: block; }
 
     @media (max-width: 800px) {
@@ -2332,6 +2373,40 @@
       }
     }
 
+    function historyProjectName(snapshot, projectId) {
+      return (snapshot.projects || []).find((project) => project.id === projectId)?.name || "-";
+    }
+
+    function historyListItems(items, formatter, limit = 12) {
+      if (!items.length) return "<li>-</li>";
+      const visible = items.slice(0, limit).map((item) => `<li>${escapeHtml(formatter(item))}</li>`).join("");
+      const more = items.length > limit ? `<li>+${items.length - limit} more</li>` : "";
+      return visible + more;
+    }
+
+    function historyPreviewMarkup(entry) {
+      const snapshot = entry.data || {};
+      const creatorTasks = (snapshot.tasks || []).filter((task) => isVideoInStoreLabel(task.label));
+      return `
+        <section>
+          <h3>GANTT</h3>
+          <ul>${historyListItems(snapshot.tasks || [], (task) => `${task.nameEn || task.name || "Task"} · ${historyProjectName(snapshot, task.projectId)} · ${task.start || "-"} · ${task.status || "-"}`)}</ul>
+        </section>
+        <section>
+          <h3>PED</h3>
+          <ul>${historyListItems(snapshot.pedPosts || [], (post) => `${post.title || "Post"} · ${historyProjectName(snapshot, post.projectId)} · ${post.date || "-"} ${post.time || ""} · ${post.status || "-"}`)}</ul>
+        </section>
+        <section>
+          <h3>Creator Calendar</h3>
+          <ul>${historyListItems(creatorTasks, (task) => `${task.nameEn || task.name || "Creator"} · ${historyProjectName(snapshot, task.projectId)} · ${task.start || "-"} · ${task.creatorStatus || "-"}`)}</ul>
+        </section>
+        <section>
+          <h3>Influencer</h3>
+          <ul>${historyListItems(snapshot.influencers || [], (row) => `${row.name || "Influencer"} · ${row.status || "-"} · ${row.city || "-"}`)}</ul>
+        </section>
+      `;
+    }
+
     function renderHistoryList() {
       if (!historyList) return;
       historyList.innerHTML = "";
@@ -2348,7 +2423,11 @@
         row.innerHTML = `
           <strong>${escapeHtml(formatHistoryDate(entry.savedAt))}</strong>
           <small>${escapeHtml(entry.label || "Saved version")} · ${escapeHtml(entry.summary || historySummary(entry.data))}</small>
-          <button type="button" data-restore-history="${escapeHtml(entry.id)}">Restore</button>
+          <div class="history-actions">
+            <button class="secondary-history-btn" type="button" data-preview-history="${escapeHtml(entry.id)}">Preview</button>
+            <button type="button" data-restore-history="${escapeHtml(entry.id)}">Restore</button>
+          </div>
+          <div class="history-preview" data-history-preview="${escapeHtml(entry.id)}" hidden>${historyPreviewMarkup(entry)}</div>
         `;
         historyList.appendChild(row);
       });
@@ -3394,9 +3473,14 @@
       return `${String(hour).padStart(2, "0")}:${minute}`;
     }
 
+    function pedHourHeight() {
+      return parseFloat(getComputedStyle(root).getPropertyValue("--ped-hour")) || 108;
+    }
+
     function timeTop(value) {
       const [hourRaw, minuteRaw] = normalizeHour(value).split(":").map(Number);
-      return (hourRaw - 11) * 70 + Math.round((minuteRaw / 60) * 70);
+      const hourHeight = pedHourHeight();
+      return (hourRaw - 11) * hourHeight + Math.round((minuteRaw / 60) * hourHeight);
     }
 
     function drivePreviewUrl(value) {
@@ -3451,10 +3535,11 @@
       grid.className = "ped-grid";
       const hourLabels = document.createElement("div");
       hourLabels.className = "ped-hour-labels";
+      const hourHeight = pedHourHeight();
       for (let hour = 11; hour <= 20; hour += 1) {
         const label = document.createElement("div");
         label.className = "ped-hour-label";
-        label.style.top = `${(hour - 11) * 70 + 4}px`;
+        label.style.top = `${(hour - 11) * hourHeight + 8}px`;
         label.textContent = `${String(hour).padStart(2, "0")}:00`;
         hourLabels.appendChild(label);
       }
@@ -3519,7 +3604,7 @@
       pedCalendar.appendChild(grid);
       pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
-      let maxColumnHeight = 70 * 10 + 80;
+      let maxColumnHeight = pedHourHeight() * 10 + 80;
       Object.values(postsByDate).forEach((posts) => {
         let nextTop = 10;
         posts
@@ -4280,6 +4365,12 @@
     });
 
     historyList.addEventListener("click", (event) => {
+      const previewButton = event.target.closest("[data-preview-history]");
+      if (previewButton) {
+        const preview = historyList.querySelector(`[data-history-preview="${CSS.escape(previewButton.dataset.previewHistory)}"]`);
+        if (preview) preview.hidden = !preview.hidden;
+        return;
+      }
       const button = event.target.closest("[data-restore-history]");
       if (!button) return;
       restoreHistoryEntry(button.dataset.restoreHistory);
@@ -4718,7 +4809,7 @@
       const rect = pedView.getBoundingClientRect();
       const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
       const y = Math.max(0, clientY - rect.top + pedView.scrollTop - timelineHead - 10);
-      const hour = Math.min(20, Math.max(11, 11 + Math.round(y / 70)));
+      const hour = Math.min(20, Math.max(11, 11 + Math.round(y / pedHourHeight())));
       return `${String(hour).padStart(2, "0")}:00`;
     }
 
