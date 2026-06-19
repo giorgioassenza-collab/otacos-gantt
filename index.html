@@ -23,7 +23,7 @@
       --day: 380px;
       --sidebar: 180px;
       --timeline-head: 72px;
-      --ped-hour: 108px;
+      --ped-hour: 180px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -3544,7 +3544,17 @@
     }
 
     function pedHourHeight() {
-      return parseFloat(getComputedStyle(root).getPropertyValue("--ped-hour")) || 108;
+      return parseFloat(getComputedStyle(root).getPropertyValue("--ped-hour")) || 180;
+    }
+
+    function growPedHourToFitPosts() {
+      const posts = [...pedCalendar.querySelectorAll(".ped-post")];
+      if (!posts.length) return false;
+      const currentHourHeight = pedHourHeight();
+      const requiredHourHeight = Math.max(180, ...posts.map((post) => post.scrollHeight + 30));
+      if (requiredHourHeight <= currentHourHeight + 4) return false;
+      root.style.setProperty("--ped-hour", `${Math.ceil(requiredHourHeight)}px`);
+      return true;
     }
 
     function timeTop(value) {
@@ -3675,6 +3685,10 @@
       pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
       const layoutPosts = () => {
+        if (growPedHourToFitPosts()) {
+          renderPed();
+          return;
+        }
         let maxColumnHeight = pedHourHeight() * 10 + 80;
         Object.values(postsByDate).forEach((posts) => {
           let nextTop = 10;
@@ -4883,7 +4897,7 @@
       const rect = scrollEl.getBoundingClientRect();
       const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       const x = Math.max(0, clientX - rect.left + scrollEl.scrollLeft);
-      const dayIndex = Math.max(0, Math.round(x / dayWidth));
+      const dayIndex = Math.max(0, Math.floor(x / dayWidth));
       const date = new Date(timelineStart);
       date.setDate(timelineStart.getDate() + dayIndex);
       return dateKey(date);
@@ -4894,7 +4908,7 @@
       const rect = pedView.getBoundingClientRect();
       const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
       const y = Math.max(0, clientY - rect.top + pedView.scrollTop - timelineHead - 10);
-      const hour = Math.min(20, Math.max(11, 11 + Math.round(y / pedHourHeight())));
+      const hour = Math.min(20, Math.max(11, 11 + Math.floor(y / pedHourHeight())));
       return `${String(hour).padStart(2, "0")}:00`;
     }
 
