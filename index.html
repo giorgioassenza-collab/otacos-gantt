@@ -1628,8 +1628,9 @@
     <h2>New post</h2>
     <form id="pedPostForm">
       <label class="field">Name<input id="pedPostTitle" value="New post" required></label>
+      <label class="field">Project<select id="pedPostProject" required></select></label>
       <label class="field">Date<input id="pedPostDate" type="date" value="2026-06-16" required></label>
-      <label class="field">Time<input id="pedPostTime" type="time" value="10:00" required></label>
+      <label class="field">Time<input id="pedPostTime" type="time" value="11:00" required></label>
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
       <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
@@ -1844,6 +1845,7 @@
       <form id="editPedPostForm">
         <input id="editPedPostId" type="hidden">
         <label class="field">Name<input id="editPedPostTitle" required></label>
+        <label class="field">Project<select id="editPedPostProject" required></select></label>
         <label class="field">Date<input id="editPedPostDate" type="date" required></label>
         <label class="field">Time<input id="editPedPostTime" type="time" required></label>
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
@@ -1960,11 +1962,13 @@
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
+    const pedPostProject = document.getElementById("pedPostProject");
     const pedPostFormat = document.getElementById("pedPostFormat");
     const pedPostTime = document.getElementById("pedPostTime");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
     const editPedPostSocials = document.getElementById("editPedPostSocials");
+    const editPedPostProject = document.getElementById("editPedPostProject");
     const editPedPostFormat = document.getElementById("editPedPostFormat");
     const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
@@ -2511,8 +2515,9 @@
         id: post.id || `ped${Date.now()}${Math.random()}`,
         sourceTaskId: post.sourceTaskId || "",
         title: post.title || "Post",
+        projectId: post.projectId || normalized.projects.find((project) => project.name === post.project)?.id || normalized.projects[0]?.id || "",
         date: post.date || "2026-06-16",
-        time: post.time || "10:00",
+        time: normalizeHour(post.time),
         status: post.status || (normalized.pedStatuses[0] ? statusName(normalized.pedStatuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
         format: post.format || normalized.formats[0] || "",
@@ -3049,6 +3054,17 @@
       });
     }
 
+    function renderPedProjectOptions() {
+      pedPostProject.innerHTML = "";
+      editPedPostProject.innerHTML = "";
+      data.projects.forEach((project) => {
+        pedPostProject.appendChild(option(project.id, project.name));
+        editPedPostProject.appendChild(option(project.id, project.name));
+      });
+      pedPostProject.disabled = data.projects.length === 0;
+      editPedPostProject.disabled = data.projects.length === 0;
+    }
+
     function renderSubtasks(task) {
       renderSubtasksFor(subtaskList, task, "data-subtask-done", "data-delete-subtask");
     }
@@ -3067,7 +3083,7 @@
             id: `task-${task.id}`,
             title: linkedPost?.title || task.nameEn || task.name,
             date: task.pedDate,
-            time: linkedPost?.time || task.pedTime || "10:00",
+            time: normalizeHour(linkedPost?.time || task.pedTime),
             status: linkedPost?.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status),
             members: linkedPost?.members || task.members || [],
             social: linkedPost?.social || [],
@@ -3080,14 +3096,17 @@
             source: "Gantt"
           };
         });
-      const manualPosts = (data.pedPosts || []).map((post) => ({
-        ...post,
-        time: post.time || "10:00",
-        project: post.project || "",
-        subtasks: post.subtasks || [],
-        color: pedStatusColor(post.status),
-        source: "PED"
-      })).filter((post) => !post.sourceTaskId);
+      const manualPosts = (data.pedPosts || []).map((post) => {
+        const project = data.projects.find((item) => item.id === post.projectId);
+        return {
+          ...post,
+          time: normalizeHour(post.time),
+          project: project?.name || post.project || "",
+          subtasks: post.subtasks || [],
+          color: project?.color || pedStatusColor(post.status),
+          source: "PED"
+        };
+      }).filter((post) => !post.sourceTaskId);
       return [...linkedTasks, ...manualPosts];
     }
 
@@ -3100,15 +3119,15 @@
 
     function normalizeHour(value) {
       const match = String(value || "").match(/^(\d{1,2})(?::(\d{2}))?/);
-      if (!match) return "10:00";
-      const hour = Math.min(20, Math.max(10, Number(match[1])));
+      if (!match) return "11:00";
+      const hour = Math.min(20, Math.max(11, Number(match[1])));
       const minute = match[2] || "00";
       return `${String(hour).padStart(2, "0")}:${minute}`;
     }
 
     function timeTop(value) {
       const [hourRaw, minuteRaw] = normalizeHour(value).split(":").map(Number);
-      return (hourRaw - 10) * 70 + Math.round((minuteRaw / 60) * 70);
+      return (hourRaw - 11) * 70 + Math.round((minuteRaw / 60) * 70);
     }
 
     function drivePreviewUrl(value) {
@@ -3133,6 +3152,7 @@
       return `
         <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
         <div class="ped-status-chip"><span class="status-swatch" style="background:${escapeHtml(statusColorValue)}"></span>${escapeHtml(status || "-")}</div>
+        <div class="ped-preview-line">Time: ${escapeHtml(normalizeHour(item.time))}</div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
@@ -3153,10 +3173,10 @@
       grid.className = "ped-grid";
       const hourLabels = document.createElement("div");
       hourLabels.className = "ped-hour-labels";
-      for (let hour = 10; hour <= 20; hour += 1) {
+      for (let hour = 11; hour <= 20; hour += 1) {
         const label = document.createElement("div");
         label.className = "ped-hour-label";
-        label.style.top = `${(hour - 10) * 70 + 4}px`;
+        label.style.top = `${(hour - 11) * 70 + 4}px`;
         label.textContent = `${String(hour).padStart(2, "0")}:00`;
         hourLabels.appendChild(label);
       }
@@ -3221,7 +3241,7 @@
       pedCalendar.appendChild(grid);
       pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
-      let maxColumnHeight = 70 * 11 + 80;
+      let maxColumnHeight = 70 * 10 + 80;
       Object.values(postsByDate).forEach((posts) => {
         let nextTop = 10;
         posts
@@ -3696,12 +3716,14 @@
 
     function openPedPostEditor(postId) {
       renderSettingsLists();
+      renderPedProjectOptions();
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
       document.getElementById("editPedPostId").value = post.id;
       document.getElementById("editPedPostTitle").value = post.title || "";
+      editPedPostProject.value = post.projectId || data.projects[0]?.id || "";
       document.getElementById("editPedPostDate").value = post.date || "";
-      editPedPostTime.value = post.time || "10:00";
+      editPedPostTime.value = normalizeHour(post.time);
       document.getElementById("editPedPostDate").closest(".field").hidden = false;
       editPedPostStatus.value = post.status || "";
       editPedPostFormat.value = post.format || data.formats[0] || "";
@@ -3729,8 +3751,9 @@
           id: `ped${Date.now()}`,
           sourceTaskId: task.id,
           title: task.nameEn || task.name,
+          projectId: task.projectId || data.projects[0]?.id || "",
           date: task.pedDate || task.start,
-          time: task.pedTime || "10:00",
+          time: normalizeHour(task.pedTime),
           status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
           members: task.members || [],
           social: [],
@@ -3740,6 +3763,11 @@
           subtasks: []
         };
         data.pedPosts.push(post);
+        saveData();
+      } else {
+        post.date = task.pedDate || task.start;
+        post.time = normalizeHour(task.pedTime || post.time);
+        post.projectId = task.projectId || post.projectId || data.projects[0]?.id || "";
         saveData();
       }
       openPedPostEditor(post.id);
@@ -3756,6 +3784,7 @@
       editTaskProject.innerHTML = "";
       projectList.innerHTML = "";
       renderSettingsLists();
+      renderPedProjectOptions();
       const selectedMember = memberFilter.value;
       data.projects.forEach((project, index) => {
         const item = option(project.id, project.name);
@@ -4317,23 +4346,25 @@
     document.getElementById("pedPostForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const title = document.getElementById("pedPostTitle").value.trim();
+      const projectId = pedPostProject.value;
       const date = document.getElementById("pedPostDate").value;
-      const time = pedPostTime.value || "10:00";
+      const time = normalizeHour(pedPostTime.value);
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
       const format = pedPostFormat.value;
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
-      if (!title || !date || !status || !format) return;
+      if (!title || !projectId || !date || !status || !format) return;
       data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({ id: `ped${Date.now()}`, title, date, time, status, members, social, format, asset, copy, subtasks: [] });
+      data.pedPosts.push({ id: `ped${Date.now()}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [] });
       saveData();
       renderPed();
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
+      pedPostProject.value = data.projects[0]?.id || "";
       document.getElementById("pedPostDate").value = "2026-06-16";
-      pedPostTime.value = "10:00";
+      pedPostTime.value = "11:00";
       document.getElementById("pedPostAsset").value = "";
       document.getElementById("pedPostCopy").value = "";
       pedPostSocials.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
@@ -4487,7 +4518,7 @@
       const newTaskId = `t${Date.now()}-ped-gantt`;
       const task = {
         id: newTaskId,
-        projectId: (data.projects || [])[0]?.id || "",
+        projectId: post.projectId || (data.projects || [])[0]?.id || "",
         name: post.title || "PED post",
         nameEn: post.title || "PED post",
         members: post.members || [],
@@ -4498,7 +4529,7 @@
         label: "",
         pedEnabled: true,
         pedDate: post.date || selectedDate,
-        pedTime: post.time || "10:00",
+        pedTime: normalizeHour(post.time),
         subtasks: post.subtasks || []
       };
       data.tasks.push(task);
@@ -4755,19 +4786,22 @@
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
       const title = document.getElementById("editPedPostTitle").value.trim();
+      const projectId = editPedPostProject.value;
       const date = document.getElementById("editPedPostDate").value;
-      const time = editPedPostTime.value || "10:00";
+      const time = normalizeHour(editPedPostTime.value);
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
       const social = selectedValues(editPedPostSocials);
       const format = editPedPostFormat.value;
-      if (!title || !date || !status || !format) return;
+      if (!title || !projectId || !date || !status || !format) return;
       post.title = title;
+      post.projectId = projectId;
       post.date = date;
       post.time = time;
       if (post.sourceTaskId) {
         const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
         if (sourceTask) {
+          sourceTask.projectId = projectId;
           sourceTask.pedDate = date;
           sourceTask.pedTime = time;
         }
@@ -4900,8 +4934,11 @@
       const id = button.dataset.deleteProject;
       data.projects = data.projects.filter((project) => project.id !== id);
       data.tasks = data.tasks.filter((task) => task.projectId !== id);
+      const fallbackProjectId = data.projects[0]?.id || "";
+      data.pedPosts = (data.pedPosts || []).map((post) => post.projectId === id ? { ...post, projectId: fallbackProjectId } : post);
       saveData();
       renderBoard();
+      renderPed();
       renderCreatorCalendar();
       renderInfluencerSettings();
       renderInfluencers();
