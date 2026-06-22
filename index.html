@@ -351,14 +351,45 @@
     }
 
     .timeline-scroll {
-      overflow-x: auto;
+      overflow-x: scroll;
       overflow-y: visible;
       background: var(--bg);
-      scrollbar-width: none;
+      scrollbar-width: auto;
+      scrollbar-color: #8b96a3 #e8edf3;
       min-height: 100%;
     }
 
-    .timeline-scroll::-webkit-scrollbar { display: none; }
+    .timeline-scroll::-webkit-scrollbar,
+    .ped-view::-webkit-scrollbar,
+    .creator-calendar-view::-webkit-scrollbar,
+    .influencer-view::-webkit-scrollbar {
+      width: 14px;
+      height: 14px;
+    }
+
+    .timeline-scroll::-webkit-scrollbar-track,
+    .ped-view::-webkit-scrollbar-track,
+    .creator-calendar-view::-webkit-scrollbar-track,
+    .influencer-view::-webkit-scrollbar-track {
+      background: #e8edf3;
+      border-radius: 999px;
+    }
+
+    .timeline-scroll::-webkit-scrollbar-thumb,
+    .ped-view::-webkit-scrollbar-thumb,
+    .creator-calendar-view::-webkit-scrollbar-thumb,
+    .influencer-view::-webkit-scrollbar-thumb {
+      border: 3px solid #e8edf3;
+      border-radius: 999px;
+      background: #8b96a3;
+    }
+
+    .timeline-scroll::-webkit-scrollbar-thumb:hover,
+    .ped-view::-webkit-scrollbar-thumb:hover,
+    .creator-calendar-view::-webkit-scrollbar-thumb:hover,
+    .influencer-view::-webkit-scrollbar-thumb:hover {
+      background: #687382;
+    }
 
     .timeline {
       position: relative;
@@ -655,6 +686,8 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
+      scrollbar-width: auto;
+      scrollbar-color: #8b96a3 #e8edf3;
       background: var(--bg);
     }
 
@@ -867,6 +900,8 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
+      scrollbar-width: auto;
+      scrollbar-color: #8b96a3 #e8edf3;
       background: var(--bg);
     }
 
@@ -981,6 +1016,8 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
+      scrollbar-width: auto;
+      scrollbar-color: #8b96a3 #e8edf3;
       background: #f6f8fb;
     }
 
@@ -1154,7 +1191,7 @@
       bottom: 118px;
       width: 340px;
       box-sizing: border-box;
-      padding: 16px;
+      padding: 16px 16px 22px;
       border: 1px solid var(--line);
       border-radius: 12px;
       background: #fff;
@@ -1369,16 +1406,12 @@
     }
 
     .panel-footer {
-      position: sticky;
-      bottom: 0;
       display: flex;
       justify-content: flex-end;
-      margin: 16px -16px 0;
+      margin: 16px -16px -4px;
       padding: 12px 16px 12px;
       border-top: 1px solid #e6ebf1;
       background: #fff;
-      box-shadow: 0 -10px 18px rgba(255, 255, 255, .94);
-      z-index: 2;
     }
 
     .primary-btn,
@@ -2362,15 +2395,13 @@
             const remote = remoteDoc.data;
             const remoteRevision = Number(remoteDoc.revision || 0);
             if (!remote) return;
-            if (remoteRevision < dataVersion) return;
             const normalizedRemote = applyMovementLog(remote);
-            if (pendingLocalData && remoteRevision <= pendingLocalRevision && !sameData(normalizedRemote, pendingLocalData)) return;
-            if (pendingLocalData && remoteRevision >= pendingLocalRevision && sameData(normalizedRemote, pendingLocalData)) {
+            if (pendingLocalData && sameData(normalizedRemote, pendingLocalData)) {
               pendingLocalData = null;
               pendingLocalRevision = 0;
             }
-            if (remoteRevision <= dataVersion && Date.now() < suppressRemoteUntil && !sameData(normalizedRemote, data)) return;
-            if (remoteRevision <= dataVersion && applyingRemoteUpdate && Date.now() < suppressRemoteUntil) return;
+            if (applyingRemoteUpdate && Date.now() < suppressRemoteUntil && sameData(normalizedRemote, data)) return;
+            if (sameData(normalizedRemote, data)) return;
             dataVersion = Math.max(dataVersion, remoteRevision);
             data = normalizedRemote;
             historyEntries = normalizeHistory(remoteDoc.history);
@@ -2381,19 +2412,13 @@
             renderCreatorCalendar();
             updateUndoButton();
             syncIndicator.textContent = "Sincronizzato live";
+          }, () => {
+            syncIndicator.textContent = "Errore sincronizzazione Firestore";
           });
           syncIndicator.textContent = "Connesso a Firestore";
           if (snapshot.exists()) {
             const snapshotData = snapshot.data();
             const remoteRevision = Number(snapshotData.revision || 0);
-            const localSnapshot = readLocalSnapshot();
-            if (localSnapshot && localSnapshot.revision > remoteRevision) {
-              dataVersion = localSnapshot.revision;
-              historyEntries = localSnapshot.history;
-              needsRemoteResync = true;
-              syncIndicator.textContent = "Ripristinata versione locale recente";
-              return applyMovementLog(localSnapshot.data);
-            }
             dataVersion = remoteRevision;
             historyEntries = normalizeHistory(snapshotData.history);
             return applyMovementLog(snapshotData.data);
