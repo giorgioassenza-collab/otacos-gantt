@@ -69,6 +69,19 @@
 
     body.is-authenticated .login-page { display: none; }
 
+    body.is-authenticated::after {
+      content: "";
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 112px;
+      z-index: 18;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(248, 249, 251, .92), #f8f9fb 22px, #f8f9fb);
+      box-shadow: 0 -14px 34px rgba(15, 23, 42, .08);
+    }
+
     .login-box {
       width: min(560px, 100%);
       display: grid;
@@ -947,8 +960,8 @@
     .view-switch {
       position: fixed;
       right: 18px;
-      bottom: 18px;
-      z-index: 20;
+      bottom: 54px;
+      z-index: 24;
       display: flex;
       gap: 6px;
       padding: 5px;
@@ -982,8 +995,8 @@
       position: fixed;
       left: calc(var(--sidebar) + 18px);
       right: 18px;
-      bottom: 76px;
-      z-index: 19;
+      bottom: 10px;
+      z-index: 23;
       height: 34px;
       display: flex;
       align-items: center;
@@ -2404,6 +2417,7 @@
             const remoteRevision = Number(remoteDoc.revision || 0);
             if (!remote) return;
             const normalizedRemote = applyMovementLog(remote);
+            if (pendingLocalData && pendingLocalRevision && remoteRevision < pendingLocalRevision) return;
             if (pendingLocalData && sameData(normalizedRemote, pendingLocalData)) {
               pendingLocalData = null;
               pendingLocalRevision = 0;
@@ -5873,7 +5887,7 @@
       }
       rememberGanttMove(task);
       if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
-      saveData();
+      await saveData();
       renderBoard();
       renderPed();
       renderCreatorCalendar();
