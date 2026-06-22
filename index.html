@@ -2184,6 +2184,7 @@
     const timelineStart = new Date(2026, 5, 1);
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
+    const revisionStorageKey = "tacos-gantt-board-revision-v1";
     const maxHistoryEntries = 60;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const influencerColumns = [
@@ -2244,6 +2245,7 @@
     let suppressRemoteUntil = 0;
     let pendingLocalRevision = 0;
     let pendingLocalData = null;
+    let needsRemoteResync = false;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
     const legacyInfluencerOptionColors = {
@@ -2350,17 +2352,26 @@
           syncIndicator.textContent = "Connesso a Firestore";
           if (snapshot.exists()) {
             const snapshotData = snapshot.data();
-            dataVersion = Number(snapshotData.revision || 0);
+            const remoteRevision = Number(snapshotData.revision || 0);
+            const localSnapshot = readLocalSnapshot();
+            if (localSnapshot && localSnapshot.revision > remoteRevision) {
+              dataVersion = localSnapshot.revision;
+              historyEntries = localSnapshot.history;
+              needsRemoteResync = true;
+              syncIndicator.textContent = "Ripristinata versione locale recente";
+              return localSnapshot.data;
+            }
+            dataVersion = remoteRevision;
             historyEntries = normalizeHistory(snapshotData.history);
             return normalizeData(snapshotData.data);
           }
           historyEntries = [];
           return normalizeData(starterData);
         }
-        const saved = localStorage.getItem(storageKey);
-        historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
+        const localSnapshot = readLocalSnapshot();
+        historyEntries = localSnapshot?.history || [];
         syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
-        return saved ? normalizeData(JSON.parse(saved)) : normalizeData(starterData);
+        return localSnapshot ? localSnapshot.data : normalizeData(starterData);
       } catch {
         syncIndicator.textContent = "Offline: salvataggio locale";
         return normalizeData(starterData);
@@ -2373,6 +2384,26 @@
 
     function cleanForFirestore(value) {
       return JSON.parse(JSON.stringify(value));
+    }
+
+    function saveLocalSnapshot(snapshotData = data, history = historyEntries, revision = dataVersion) {
+      localStorage.setItem(storageKey, JSON.stringify(cleanForFirestore(snapshotData)));
+      localStorage.setItem(historyStorageKey, JSON.stringify(cleanForFirestore(history)));
+      localStorage.setItem(revisionStorageKey, String(revision || 0));
+    }
+
+    function readLocalSnapshot() {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (!saved) return null;
+        return {
+          data: normalizeData(JSON.parse(saved)),
+          history: normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]")),
+          revision: Number(localStorage.getItem(revisionStorageKey) || 0)
+        };
+      } catch {
+        return null;
+      }
     }
 
     function normalizeHistory(list) {
@@ -2525,6 +2556,7 @@
           pendingLocalRevision = nextRevision;
           pendingLocalData = cleanForFirestore(data);
           const pendingHistory = cleanForFirestore(historyEntries);
+          saveLocalSnapshot(pendingLocalData, pendingHistory, nextRevision);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data: pendingLocalData,
@@ -2536,8 +2568,7 @@
             applyingRemoteUpdate = false;
           }, 250);
         } else {
-          localStorage.setItem(storageKey, JSON.stringify(data));
-          localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
+          saveLocalSnapshot(data, historyEntries, dataVersion);
         }
         committedData = structuredClone(data);
         renderBoard();
@@ -2576,6 +2607,7 @@
           pendingLocalRevision = nextRevision;
           pendingLocalData = cleanForFirestore(data);
           const pendingHistory = cleanForFirestore(historyEntries);
+          saveLocalSnapshot(pendingLocalData, pendingHistory, nextRevision);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data: pendingLocalData,
@@ -2591,8 +2623,7 @@
           syncIndicator.textContent = "Sincronizzato live";
           return;
         }
-        localStorage.setItem(storageKey, JSON.stringify(data));
-        localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
+        saveLocalSnapshot(data, historyEntries, dataVersion);
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Firebase non configurato: salvato locale";
@@ -2600,8 +2631,7 @@
         applyingRemoteUpdate = false;
         pendingLocalData = null;
         pendingLocalRevision = 0;
-        localStorage.setItem(storageKey, JSON.stringify(data));
-        localStorage.setItem(historyStorageKey, JSON.stringify(historyEntries));
+        saveLocalSnapshot(data, historyEntries, dataVersion);
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Offline: salvato locale";
@@ -4499,6 +4529,10 @@
       document.querySelector(".brand-title").textContent = "Workflow";
       document.getElementById("currentMonth").textContent = "O'TACOS";
       requestAnimationFrame(snapActiveTimelineToToday);
+      if (needsRemoteResync) {
+        needsRemoteResync = false;
+        saveData(true);
+      }
       setInterval(refreshSharedData, 1800);
     }
 
