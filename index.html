@@ -1151,7 +1151,7 @@
       position: fixed;
       top: 64px;
       right: 16px;
-      bottom: 86px;
+      bottom: 118px;
       width: 340px;
       box-sizing: border-box;
       padding: 16px;
@@ -1164,9 +1164,10 @@
       pointer-events: none;
       transition: opacity .16s ease, transform .16s ease;
       z-index: 10;
-      max-height: calc(100vh - 150px);
+      max-height: calc(100dvh - 182px);
       overflow: auto;
-      scroll-padding-bottom: 96px;
+      overscroll-behavior: contain;
+      scroll-padding-bottom: 120px;
       scrollbar-gutter: stable;
     }
 
@@ -1372,10 +1373,12 @@
       bottom: 0;
       display: flex;
       justify-content: flex-end;
-      margin: 16px -16px -16px;
-      padding: 12px 16px 16px;
+      margin: 16px -16px 0;
+      padding: 12px 16px 12px;
       border-top: 1px solid #e6ebf1;
       background: #fff;
+      box-shadow: 0 -10px 18px rgba(255, 255, 255, .94);
+      z-index: 2;
     }
 
     .primary-btn,
@@ -2871,6 +2874,12 @@
       document.getElementById("creatorPublishDate").value = todayKey;
     }
 
+    function resetNewTaskPedFields() {
+      document.getElementById("taskPedEnabled").checked = false;
+      document.getElementById("taskPedFields").hidden = true;
+      document.getElementById("taskPedDate").value = document.getElementById("taskStart").value || currentDateKey();
+    }
+
     function shiftDateString(value, days) {
       const date = new Date(`${value}T00:00:00`);
       date.setDate(date.getDate() + days);
@@ -3436,7 +3445,9 @@
           end: baseTask.start,
           status: item.status || baseTask.status,
           info: "",
-          label: item.label
+          label: item.label,
+          pedEnabled: false,
+          pedDate: ""
         }));
 
       const datedTasks = [];
@@ -3450,7 +3461,9 @@
           start: videoDate,
           end: videoDate,
           info: "",
-          label: "Video in store"
+          label: "Video in store",
+          pedEnabled: false,
+          pedDate: ""
         });
       }
       if (controls.sendVideoAlice.checked) {
@@ -3463,7 +3476,9 @@
           start: sendVideoAliceDate,
           end: sendVideoAliceDate,
           info: "",
-          label: "Mandare video ad Alice"
+          label: "Mandare video ad Alice",
+          pedEnabled: false,
+          pedDate: ""
         });
       }
       if (controls.publish.checked) {
@@ -3476,7 +3491,9 @@
           start: publishDate,
           end: publishDate,
           info: "",
-          label: "Pubblicazione"
+          label: "Pubblicazione",
+          pedEnabled: false,
+          pedDate: ""
         });
       }
       return [...sameDayTasks, ...datedTasks];
@@ -4835,7 +4852,11 @@
       }
     });
 
-    document.getElementById("openTaskPanel").addEventListener("click", () => openPanel("taskPanel"));
+    document.getElementById("openTaskPanel").addEventListener("click", () => {
+      setNewTaskDefaultDates();
+      resetNewTaskPedFields();
+      openPanel("taskPanel");
+    });
     document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
     document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
     document.getElementById("settings").addEventListener("click", () => {
@@ -5204,9 +5225,8 @@
       syncCreatorOptionsVisibility();
       resetCreatorOptions();
       document.getElementById("taskInfo").value = "";
-      document.getElementById("taskPedEnabled").checked = false;
-      document.getElementById("taskPedFields").hidden = true;
       setNewTaskDefaultDates();
+      resetNewTaskPedFields();
     });
 
     document.getElementById("pedPostForm").addEventListener("submit", (event) => {
