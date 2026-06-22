@@ -690,9 +690,16 @@
       inset: var(--timeline-head) 0 0;
       background:
         repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), var(--line-soft) calc(var(--day) - 1px), var(--line-soft) var(--day)),
-        repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--ped-hour) - 1px), var(--line-soft) calc(var(--ped-hour) - 1px), var(--line-soft) var(--ped-hour)),
         var(--bg);
       z-index: 1;
+    }
+
+    .ped-hour-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--line-soft);
     }
 
     .ped-hour-labels {
@@ -2289,6 +2296,10 @@
       { label: "420", width: 420 },
       { label: "460", width: 460 }
     ];
+    const pedStartHour = 11;
+    const pedEndHour = 20;
+    const pedDefaultHourHeight = 96;
+    let pedHourSlots = Array.from({ length: pedEndHour - pedStartHour + 1 }, () => pedDefaultHourHeight);
     let zoomIndex = 4;
 
     async function loadData() {
@@ -2358,6 +2369,10 @@
 
     function sameData(left, right) {
       return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    function cleanForFirestore(value) {
+      return JSON.parse(JSON.stringify(value));
     }
 
     function normalizeHistory(list) {
@@ -2508,11 +2523,12 @@
           dataVersion = nextRevision;
           suppressRemoteUntil = Date.now() + 1500;
           pendingLocalRevision = nextRevision;
-          pendingLocalData = structuredClone(data);
+          pendingLocalData = cleanForFirestore(data);
+          const pendingHistory = cleanForFirestore(historyEntries);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data: pendingLocalData,
-            history: structuredClone(historyEntries),
+            history: pendingHistory,
             revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -2558,11 +2574,12 @@
           dataVersion = nextRevision;
           suppressRemoteUntil = Date.now() + 1500;
           pendingLocalRevision = nextRevision;
-          pendingLocalData = structuredClone(data);
+          pendingLocalData = cleanForFirestore(data);
+          const pendingHistory = cleanForFirestore(historyEntries);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data: pendingLocalData,
-            history: structuredClone(historyEntries),
+            history: pendingHistory,
             revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -3548,38 +3565,61 @@
     function normalizeHour(value) {
       const match = String(value || "").match(/^(\d{1,2})(?::(\d{2}))?/);
       if (!match) return "11:00";
-      const hour = Math.min(20, Math.max(11, Number(match[1])));
+      const hour = Math.min(pedEndHour, Math.max(pedStartHour, Number(match[1])));
       const minute = match[2] || "00";
       return `${String(hour).padStart(2, "0")}:${minute}`;
     }
 
-    function pedHourHeight() {
-      return parseFloat(getComputedStyle(root).getPropertyValue("--ped-hour")) || 180;
+    function pedHourIndex(hour) {
+      return Math.min(pedHourSlots.length - 1, Math.max(0, Number(hour) - pedStartHour));
     }
 
-    function growPedHourToFitPosts() {
-      if (zooms[zoomIndex]?.label !== "Compatta") return false;
-      const posts = [...pedCalendar.querySelectorAll(".ped-post")];
-      if (!posts.length) return false;
-      const currentHourHeight = pedHourHeight();
-      const requiredHourHeight = Math.max(180, ...posts.map((post) => post.scrollHeight + 30));
-      if (requiredHourHeight <= currentHourHeight + 4) return false;
-      root.style.setProperty("--ped-hour", `${Math.ceil(requiredHourHeight)}px`);
-      return true;
+    function pedHourHeight(hour) {
+      if (hour === undefined) return pedDefaultHourHeight;
+      return pedHourSlots[pedHourIndex(hour)] || pedDefaultHourHeight;
+    }
+
+    function pedHourTop(hour) {
+      const index = pedHourIndex(hour);
+      return pedHourSlots.slice(0, index).reduce((sum, height) => sum + height, 0);
+    }
+
+    function pedTotalHourHeight() {
+      return pedHourSlots.reduce((sum, height) => sum + height, 0);
+    }
+
+    function pedHourFromY(y) {
+      let cursor = 0;
+      for (let index = 0; index < pedHourSlots.length; index += 1) {
+        const next = cursor + pedHourSlots[index];
+        if (y < next) return pedStartHour + index;
+        cursor = next;
+      }
+      return pedEndHour;
     }
 
     function timeTop(value) {
       const [hourRaw, minuteRaw] = normalizeHour(value).split(":").map(Number);
-      const hourHeight = pedHourHeight();
-      return (hourRaw - 11) * hourHeight + Math.round((minuteRaw / 60) * hourHeight);
+      return pedHourTop(hourRaw) + Math.round((minuteRaw / 60) * pedHourHeight(hourRaw));
     }
 
     function positionPedHourLabels(container) {
-      const hourHeight = pedHourHeight();
       [...container.querySelectorAll(".ped-hour-label")].forEach((label) => {
-        const hour = Number(label.dataset.hour || 11);
-        label.style.top = `${(hour - 11) * hourHeight + 8}px`;
+        const hour = Number(label.dataset.hour || pedStartHour);
+        label.style.top = `${pedHourTop(hour) + 8}px`;
       });
+    }
+
+    function renderPedHourLines(grid) {
+      grid.querySelectorAll(".ped-hour-line").forEach((line) => line.remove());
+      let top = 0;
+      for (let index = 0; index <= pedHourSlots.length; index += 1) {
+        const line = document.createElement("div");
+        line.className = "ped-hour-line";
+        line.style.top = `${top}px`;
+        grid.appendChild(line);
+        top += pedHourSlots[index] || 0;
+      }
     }
 
     function drivePreviewUrl(value) {
@@ -3610,7 +3650,7 @@
       const statusColorValue = pedStatusColor(status);
       const assetPreview = drivePreviewUrl(item.asset);
       const assetEmbed = assetPreview ? "" : assetEmbedUrl(item.asset);
-      const fullPreview = zooms[zoomIndex]?.label === "Compatta";
+      const fullPreview = zoomIndex > 3;
       if (!fullPreview) {
         return `
           <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
@@ -3636,7 +3676,7 @@
     function renderPed() {
       pedCalendar.innerHTML = "";
       const items = pedItems();
-      const fullPreview = zooms[zoomIndex]?.label === "Compatta";
+      const fullPreview = zoomIndex > 3;
       const months = document.createElement("div");
       months.className = "ped-months";
       const weekends = document.createElement("div");
@@ -3645,8 +3685,8 @@
       grid.className = "ped-grid";
       const hourLabels = document.createElement("div");
       hourLabels.className = "ped-hour-labels";
-      root.style.setProperty("--ped-hour", "180px");
-      for (let hour = 11; hour <= 20; hour += 1) {
+      pedHourSlots = Array.from({ length: pedEndHour - pedStartHour + 1 }, () => pedDefaultHourHeight);
+      for (let hour = pedStartHour; hour <= pedEndHour; hour += 1) {
         const label = document.createElement("div");
         label.className = "ped-hour-label";
         label.dataset.hour = String(hour);
@@ -3658,6 +3698,7 @@
       layer.className = "ped-layer";
       let dayOffset = 0;
       const postsByDate = {};
+      const postsByDateHour = {};
       for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
         const date = new Date(2026, 5 + monthOffset, 1);
         const year = date.getFullYear();
@@ -3691,7 +3732,7 @@
             const post = document.createElement("div");
             post.className = `ped-post ${fullPreview ? "is-full-preview" : "is-compact-preview"}`;
             post.dataset.pedDate = iso;
-            post.dataset.timeTop = String(timeTop(item.time));
+            post.dataset.pedHour = normalizeHour(item.time).split(":")[0];
             post.style.left = `calc(var(--day) * ${dayOffset} + 6px)`;
             post.style.top = "10px";
             post.style.width = "calc(var(--day) - 12px)";
@@ -3704,6 +3745,9 @@
             post.innerHTML = pedPreviewMarkup(item);
             layer.appendChild(post);
             postsByDate[iso].push(post);
+            const hourKey = `${iso}::${post.dataset.pedHour}`;
+            postsByDateHour[hourKey] = postsByDateHour[hourKey] || [];
+            postsByDateHour[hourKey].push(post);
           });
           dayOffset += 1;
         }
@@ -3716,22 +3760,27 @@
       pedCalendar.appendChild(hourLabels);
       pedCalendar.appendChild(layer);
       const layoutPosts = () => {
-        if (growPedHourToFitPosts()) {
-          positionPedHourLabels(hourLabels);
-        }
-        let maxColumnHeight = pedHourHeight() * 10 + 80;
-        Object.values(postsByDate).forEach((posts) => {
-          let nextTop = 10;
-          posts
-            .sort((left, right) => Number(left.dataset.timeTop) - Number(right.dataset.timeTop))
-            .forEach((post) => {
-              const top = Math.max(Number(post.dataset.timeTop) + 10, nextTop);
-              post.style.top = `${top}px`;
-              nextTop = top + post.scrollHeight + 10;
-            });
-          maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
+        pedHourSlots = Array.from({ length: pedEndHour - pedStartHour + 1 }, () => pedDefaultHourHeight);
+        Object.values(postsByDateHour).forEach((posts) => {
+          if (!posts.length) return;
+          const hour = Number(posts[0].dataset.pedHour || pedStartHour);
+          const requiredHeight = posts.reduce((sum, post) => sum + post.scrollHeight + 10, 10);
+          const index = pedHourIndex(hour);
+          pedHourSlots[index] = Math.max(pedHourSlots[index], requiredHeight);
         });
-        const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
+        positionPedHourLabels(hourLabels);
+        renderPedHourLines(grid);
+        Object.values(postsByDateHour).forEach((posts) => {
+          if (!posts.length) return;
+          const hour = Number(posts[0].dataset.pedHour || pedStartHour);
+          let nextTop = pedHourTop(hour) + 10;
+          posts
+            .forEach((post) => {
+              post.style.top = `${nextTop}px`;
+              nextTop += post.scrollHeight + 10;
+            });
+        });
+        const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + pedTotalHourHeight() + 80;
         pedCalendar.style.height = `${height}px`;
         updatePedHourLabels();
         updatePedHiddenIndicators();
@@ -4947,7 +4996,7 @@
       const rect = pedView.getBoundingClientRect();
       const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
       const y = Math.max(0, clientY - rect.top + pedView.scrollTop - timelineHead - 10);
-      const hour = Math.min(20, Math.max(11, 11 + Math.floor(y / pedHourHeight())));
+      const hour = pedHourFromY(y);
       return `${String(hour).padStart(2, "0")}:00`;
     }
 
