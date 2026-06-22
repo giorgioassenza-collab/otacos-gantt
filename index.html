@@ -2185,6 +2185,7 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
+    const movementStorageKey = "tacos-gantt-board-movements-v1";
     const maxHistoryEntries = 60;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const influencerColumns = [
@@ -2330,7 +2331,7 @@
             const remoteRevision = Number(remoteDoc.revision || 0);
             if (!remote) return;
             if (remoteRevision < dataVersion) return;
-            const normalizedRemote = normalizeData(remote);
+            const normalizedRemote = applyMovementLog(remote);
             if (pendingLocalData && remoteRevision <= pendingLocalRevision && !sameData(normalizedRemote, pendingLocalData)) return;
             if (pendingLocalData && remoteRevision >= pendingLocalRevision && sameData(normalizedRemote, pendingLocalData)) {
               pendingLocalData = null;
@@ -2359,11 +2360,11 @@
               historyEntries = localSnapshot.history;
               needsRemoteResync = true;
               syncIndicator.textContent = "Ripristinata versione locale recente";
-              return localSnapshot.data;
+              return applyMovementLog(localSnapshot.data);
             }
             dataVersion = remoteRevision;
             historyEntries = normalizeHistory(snapshotData.history);
-            return normalizeData(snapshotData.data);
+            return applyMovementLog(snapshotData.data);
           }
           historyEntries = [];
           return normalizeData(starterData);
@@ -2371,10 +2372,10 @@
         const localSnapshot = readLocalSnapshot();
         historyEntries = localSnapshot?.history || [];
         syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
-        return localSnapshot ? localSnapshot.data : normalizeData(starterData);
+        return localSnapshot ? applyMovementLog(localSnapshot.data) : applyMovementLog(starterData);
       } catch {
         syncIndicator.textContent = "Offline: salvataggio locale";
-        return normalizeData(starterData);
+        return applyMovementLog(starterData);
       }
     }
 
@@ -2404,6 +2405,74 @@
       } catch {
         return null;
       }
+    }
+
+    function readMovementLog() {
+      try {
+        const raw = localStorage.getItem(movementStorageKey);
+        if (!raw) return { tasks: {}, pedTasks: {}, pedPosts: {} };
+        const parsed = JSON.parse(raw);
+        return {
+          tasks: parsed.tasks || {},
+          pedTasks: parsed.pedTasks || {},
+          pedPosts: parsed.pedPosts || {}
+        };
+      } catch {
+        return { tasks: {}, pedTasks: {}, pedPosts: {} };
+      }
+    }
+
+    function writeMovementLog(log) {
+      localStorage.setItem(movementStorageKey, JSON.stringify(cleanForFirestore(log)));
+    }
+
+    function rememberGanttMove(task) {
+      const log = readMovementLog();
+      log.tasks[task.id] = {
+        start: task.start,
+        end: task.end || task.start,
+        savedAt: Date.now()
+      };
+      writeMovementLog(log);
+    }
+
+    function rememberPedTaskMove(task) {
+      const log = readMovementLog();
+      log.pedTasks[task.id] = {
+        pedDate: task.pedDate || "",
+        pedTime: task.pedTime || "11:00",
+        savedAt: Date.now()
+      };
+      writeMovementLog(log);
+    }
+
+    function rememberPedPostMove(post) {
+      const log = readMovementLog();
+      log.pedPosts[post.id] = {
+        date: post.date || "",
+        time: post.time || "11:00",
+        savedAt: Date.now()
+      };
+      writeMovementLog(log);
+    }
+
+    function applyMovementLog(snapshot) {
+      const next = normalizeData(snapshot);
+      const log = readMovementLog();
+      next.tasks = (next.tasks || []).map((task) => {
+        const ganttMove = log.tasks[task.id];
+        const pedMove = log.pedTasks[task.id];
+        return {
+          ...task,
+          ...(ganttMove ? { start: ganttMove.start, end: ganttMove.end || ganttMove.start } : {}),
+          ...(pedMove ? { pedDate: pedMove.pedDate, pedTime: pedMove.pedTime || "11:00" } : {})
+        };
+      });
+      next.pedPosts = (next.pedPosts || []).map((post) => {
+        const move = log.pedPosts[post.id];
+        return move ? { ...post, date: move.date, time: move.time || "11:00" } : post;
+      });
+      return next;
     }
 
     function normalizeHistory(list) {
@@ -5055,6 +5124,7 @@
         const newStart = dateFromTimelineClientX(event.clientX, scroller);
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
+        rememberGanttMove(task);
         renderBoard();
         renderPed();
         renderCreatorCalendar();
@@ -5070,17 +5140,20 @@
           if (task) {
             task.pedDate = date;
             task.pedTime = time;
+            rememberPedTaskMove(task);
           }
           const post = (data.pedPosts || []).find((item) => item.sourceTaskId === state.taskId);
           if (post) {
             post.date = date;
             post.time = time;
+            rememberPedPostMove(post);
           }
         } else if (state.postId) {
           const post = (data.pedPosts || []).find((item) => item.id === state.postId);
           if (post) {
             post.date = date;
             post.time = time;
+            rememberPedPostMove(post);
           }
         }
         renderPed();
@@ -5199,6 +5272,8 @@
         task.start = shiftDateString(originalStart, 1);
         task.end = shiftDateString(originalEnd, 1);
         task.pedDate = task.pedEnabled && task.pedDate ? shiftDateString(task.pedDate, 1) : task.pedDate;
+        rememberGanttMove(task);
+        if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       }
       saveData();
       renderBoard();
@@ -5252,6 +5327,7 @@
         if (!task) return;
         task.start = selectedDate;
         task.end = selectedDate;
+        rememberGanttMove(task);
         saveData();
         renderBoard();
         renderPed();
@@ -5531,6 +5607,8 @@
       task.info = info;
       task.pedEnabled = pedEnabled;
       task.pedDate = pedDate;
+      rememberGanttMove(task);
+      if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       saveData();
       renderBoard();
       renderPed();
@@ -5556,12 +5634,14 @@
       post.projectId = projectId;
       post.date = date;
       post.time = time;
+      rememberPedPostMove(post);
       if (post.sourceTaskId) {
         const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
         if (sourceTask) {
           sourceTask.projectId = projectId;
           sourceTask.pedDate = date;
           sourceTask.pedTime = time;
+          rememberPedTaskMove(sourceTask);
         }
       }
       post.status = status;
