@@ -2320,6 +2320,7 @@
     let pendingLocalRevision = 0;
     let pendingLocalData = null;
     let needsRemoteResync = false;
+    let saveQueue = Promise.resolve();
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
     const legacyInfluencerOptionColors = {
@@ -2409,6 +2410,7 @@
               pendingLocalRevision = 0;
             }
             if (pendingLocalData && pendingLocalRevision && remoteRevision <= pendingLocalRevision) return;
+            if (remoteRevision <= dataVersion) return;
             if (applyingRemoteUpdate && Date.now() < suppressRemoteUntil && sameData(normalizedRemote, data)) return;
             if (sameData(normalizedRemote, data)) return;
             dataVersion = Math.max(dataVersion, remoteRevision);
@@ -2719,6 +2721,11 @@
     }
 
     async function saveData(skipUndo = false) {
+      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(skipUndo));
+      return saveQueue;
+    }
+
+    async function performSaveData(skipUndo = false) {
       try {
         syncIndicator.textContent = "Salvataggio...";
         const shouldRecordHistory = !skipUndo && committedData && !sameData(committedData, data);
@@ -2757,9 +2764,12 @@
         syncIndicator.textContent = "Firebase non configurato: salvato locale";
       } catch {
         applyingRemoteUpdate = false;
-        pendingLocalData = null;
-        pendingLocalRevision = 0;
-        saveLocalSnapshot(data, historyEntries, dataVersion);
+        const fallbackRevision = Math.max(dataVersion + 1, Date.now());
+        dataVersion = fallbackRevision;
+        pendingLocalData = cleanForFirestore(data);
+        pendingLocalRevision = fallbackRevision;
+        suppressRemoteUntil = Date.now() + 30000;
+        saveLocalSnapshot(pendingLocalData, historyEntries, pendingLocalRevision);
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Offline: salvato locale";
