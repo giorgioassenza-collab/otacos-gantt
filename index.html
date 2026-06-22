@@ -1098,11 +1098,19 @@
       display: inline-flex;
       align-items: center;
       min-height: 22px;
+      border: 0;
       padding: 3px 8px;
       border-radius: 999px;
       background: #eef2f7;
       font-size: 11px;
       font-weight: 900;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+
+    .influencer-chip:hover {
+      filter: brightness(.96);
+      box-shadow: 0 0 0 2px rgba(20, 123, 209, .12);
     }
 
     .profile-link {
@@ -1143,7 +1151,9 @@
       position: fixed;
       top: 64px;
       right: 16px;
+      bottom: 86px;
       width: 340px;
+      box-sizing: border-box;
       padding: 16px;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -1156,8 +1166,8 @@
       z-index: 10;
       max-height: calc(100vh - 150px);
       overflow: auto;
-      margin-bottom: 74px;
       scroll-padding-bottom: 96px;
+      scrollbar-gutter: stable;
     }
 
     .modal-backdrop {
@@ -1359,7 +1369,7 @@
 
     .panel-footer {
       position: sticky;
-      bottom: -16px;
+      bottom: 0;
       display: flex;
       justify-content: flex-end;
       margin: 16px -16px -16px;
@@ -1980,6 +1990,18 @@
         <label class="inline-check"><input id="editTaskAddEndDate" type="checkbox"> Add end date</label>
         <label class="field end-date-wrap" id="editTaskEndWrap" hidden>End<input id="editTaskEnd" type="date"></label>
         <label class="field">Label<select id="editTaskLabel"></select></label>
+        <div class="creator-block" id="editCreatorOptions" hidden>
+          <div class="creator-block-title">Creator duplicates</div>
+          <label class="inline-check"><input id="editCreatorContact" type="checkbox"> Contattare</label>
+          <label class="inline-check"><input id="editCreatorAskOk" type="checkbox"> Ask Ok Alice</label>
+          <label class="inline-check"><input id="editCreatorContract" type="checkbox"> Mandare contratto</label>
+          <label class="inline-check"><input id="editCreatorBrief" type="checkbox"> Brief</label>
+          <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+          <label class="inline-check"><input id="editCreatorVideo" type="checkbox"> Video in store</label>
+          <label class="field">Video in store date<input id="editCreatorVideoDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Pubblicazione</label>
+          <label class="field">Pubblicazione date<input id="editCreatorPublishDate" type="date"></label>
+        </div>
         <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
         <div class="ped-fields" id="editTaskPedFields" hidden>
@@ -2067,6 +2089,7 @@
   </div>
 
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
+  <div class="status-menu" id="influencerInlineMenu" aria-label="Change influencer value"></div>
   <div class="modal-backdrop" id="historyModal" aria-label="Document history">
     <div class="modal">
       <h2>Document history</h2>
@@ -2149,6 +2172,7 @@
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
     const creatorCalendarStore = document.getElementById("creatorCalendarStore");
     const creatorOptions = document.getElementById("creatorOptions");
+    const editCreatorOptions = document.getElementById("editCreatorOptions");
     const editTaskProject = document.getElementById("editTaskProject");
     const editTaskMembers = document.getElementById("editTaskMembers");
     const editTaskStatus = document.getElementById("editTaskStatus");
@@ -2170,6 +2194,7 @@
     const panels = [...document.querySelectorAll(".settings-panel")];
     const taskModal = document.getElementById("taskModal");
     const statusMenu = document.getElementById("statusMenu");
+    const influencerInlineMenu = document.getElementById("influencerInlineMenu");
     const taskContextMenu = document.getElementById("taskContextMenu");
     const influencerContextMenu = document.getElementById("influencerContextMenu");
     const pedContextMenu = document.getElementById("pedContextMenu");
@@ -3368,20 +3393,31 @@
       creatorOptions.hidden = !isCreatorLabel(taskLabel.value);
     }
 
+    function syncEditCreatorOptionsVisibility() {
+      editCreatorOptions.hidden = !isCreatorLabel(editTaskLabel.value);
+    }
+
     function resetCreatorOptions() {
       creatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
       document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
     }
 
-    function creatorDuplicateTasks(baseTask, createdAt) {
+    function resetEditCreatorOptions() {
+      editCreatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      const start = document.getElementById("editTaskStart").value || currentDateKey();
+      document.getElementById("editCreatorVideoDate").value = start;
+      document.getElementById("editCreatorPublishDate").value = start;
+    }
+
+    function creatorDuplicateTasksFromControls(baseTask, createdAt, controls) {
       if (!isCreatorLabel(baseTask.label)) return [];
       const sameDayTasks = [
-        { checked: document.getElementById("creatorContact").checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
-        { checked: document.getElementById("creatorAskOk").checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
-        { checked: document.getElementById("creatorContract").checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
-        { checked: document.getElementById("creatorBrief").checked, name: `Brief ${baseTask.name}`, label: "Brief" },
-        { checked: document.getElementById("creatorGiorgia").checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
+        { checked: controls.contact.checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
+        { checked: controls.askOk.checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
+        { checked: controls.contract.checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
+        { checked: controls.brief.checked, name: `Brief ${baseTask.name}`, label: "Brief" },
+        { checked: controls.giorgia.checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
       ]
         .filter((item) => item.checked)
         .map((item, index) => ({
@@ -3397,8 +3433,8 @@
         }));
 
       const datedTasks = [];
-      if (document.getElementById("creatorVideo").checked) {
-        const videoDate = document.getElementById("creatorVideoDate").value || baseTask.start;
+      if (controls.video.checked) {
+        const videoDate = controls.videoDate.value || baseTask.start;
         datedTasks.push({
           ...baseTask,
           id: `t${createdAt}-creator-video`,
@@ -3410,8 +3446,8 @@
           label: "Video in store"
         });
       }
-      if (document.getElementById("creatorPublish").checked) {
-        const publishDate = document.getElementById("creatorPublishDate").value || baseTask.start;
+      if (controls.publish.checked) {
+        const publishDate = controls.publishDate.value || baseTask.start;
         datedTasks.push({
           ...baseTask,
           id: `t${createdAt}-creator-publish`,
@@ -3424,6 +3460,34 @@
         });
       }
       return [...sameDayTasks, ...datedTasks];
+    }
+
+    function creatorDuplicateTasks(baseTask, createdAt) {
+      return creatorDuplicateTasksFromControls(baseTask, createdAt, {
+        contact: document.getElementById("creatorContact"),
+        askOk: document.getElementById("creatorAskOk"),
+        contract: document.getElementById("creatorContract"),
+        brief: document.getElementById("creatorBrief"),
+        giorgia: document.getElementById("creatorGiorgia"),
+        video: document.getElementById("creatorVideo"),
+        videoDate: document.getElementById("creatorVideoDate"),
+        publish: document.getElementById("creatorPublish"),
+        publishDate: document.getElementById("creatorPublishDate")
+      });
+    }
+
+    function editCreatorDuplicateTasks(baseTask, createdAt) {
+      return creatorDuplicateTasksFromControls(baseTask, createdAt, {
+        contact: document.getElementById("editCreatorContact"),
+        askOk: document.getElementById("editCreatorAskOk"),
+        contract: document.getElementById("editCreatorContract"),
+        brief: document.getElementById("editCreatorBrief"),
+        giorgia: document.getElementById("editCreatorGiorgia"),
+        video: document.getElementById("editCreatorVideo"),
+        videoDate: document.getElementById("editCreatorVideoDate"),
+        publish: document.getElementById("editCreatorPublish"),
+        publishDate: document.getElementById("editCreatorPublishDate")
+      });
     }
 
     function ensureStatusExists(name) {
@@ -4131,7 +4195,7 @@
     function influencerCellMarkup(row, column) {
       const value = row[column.key] || "";
       if (["city", "target", "type", "status", "where", "when"].includes(column.key) && value) {
-        return `<span class="influencer-chip" style="background:${escapeHtml(influencerOptionColor(column.key, value))}; color:${escapeHtml(influencerOptionTextColor(column.key, value))}">${escapeHtml(value)}</span>`;
+        return `<button class="influencer-chip" type="button" data-influencer-inline-id="${escapeHtml(row.id)}" data-influencer-inline-key="${escapeHtml(column.key)}" style="background:${escapeHtml(influencerOptionColor(column.key, value))}; color:${escapeHtml(influencerOptionTextColor(column.key, value))}">${escapeHtml(value)}</button>`;
       }
       if (column.key === "ttProfile" || column.key === "igProfile") {
         const platform = column.key === "ttProfile" ? "tt" : "ig";
@@ -4200,6 +4264,52 @@
         select.appendChild(option(selectedValue));
       }
       select.value = selectedValue || "";
+    }
+
+    function influencerInlineOptions(key, currentValue = "") {
+      const options = (data.influencerOptions?.[key] || []).map((item) => item.name).filter(Boolean);
+      if (currentValue && !options.includes(currentValue)) options.unshift(currentValue);
+      return options;
+    }
+
+    function openInfluencerInlineMenu(trigger) {
+      const rowId = trigger.dataset.influencerInlineId;
+      const key = trigger.dataset.influencerInlineKey;
+      const row = (data.influencers || []).find((item) => item.id === rowId);
+      if (!row || !key) return;
+      const currentValue = row[key] || "";
+      const values = influencerInlineOptions(key, currentValue);
+      if (!values.length) return;
+      influencerInlineMenu.dataset.influencerId = rowId;
+      influencerInlineMenu.dataset.influencerKey = key;
+      influencerInlineMenu.innerHTML = values.map((value) => `
+        <button type="button" data-influencer-inline-value="${escapeHtml(value)}">
+          <span class="status-swatch" style="background:${escapeHtml(influencerOptionColor(key, value))}"></span>
+          ${escapeHtml(value)}
+        </button>
+      `).join("");
+      const rect = trigger.getBoundingClientRect();
+      placeContextMenu(influencerInlineMenu, rect.left, rect.bottom + 6, 190, Math.min(360, 44 + values.length * 34));
+    }
+
+    function updateInfluencerInlineValue(rowId, key, value) {
+      const row = (data.influencers || []).find((item) => item.id === rowId);
+      if (!row || !key) return;
+      const previousStatus = String(row.status || "").trim().toUpperCase();
+      row[key] = value;
+      if (key === "status") {
+        const nextStatus = String(value || "").trim().toUpperCase();
+        row.influencerUpdatedAt = currentDateKey();
+        if (nextStatus === "CONTACTED" && previousStatus !== "CONTACTED") row.contactedAt = currentDateKey();
+        if (nextStatus !== "CONTACTED") row.contactedAt = "";
+        if (!isContactInfluencerStatus(value) && row.contactTaskEnabled) {
+          row.contactTaskEnabled = false;
+          syncInfluencerContactTask(row);
+        }
+      }
+      saveData();
+      renderBoard();
+      renderInfluencers();
     }
 
     function isContactInfluencerStatus(status) {
@@ -4341,11 +4451,15 @@
       document.getElementById("editTaskName").value = task.name;
       editTaskStatus.value = task.status;
       editTaskLabel.value = task.label || "";
+      syncEditCreatorOptionsVisibility();
+      resetEditCreatorOptions();
       [...editTaskMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = task.members.includes(item.value);
       });
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end || task.start;
+      document.getElementById("editCreatorVideoDate").value = task.start;
+      document.getElementById("editCreatorPublishDate").value = task.start;
       const hasEndDate = Boolean(task.end && task.end !== task.start);
       document.getElementById("editTaskAddEndDate").checked = hasEndDate;
       document.getElementById("editTaskEndWrap").hidden = !hasEndDate;
@@ -4770,6 +4884,7 @@
     });
 
     taskLabel.addEventListener("change", syncCreatorOptionsVisibility);
+    editTaskLabel.addEventListener("change", syncEditCreatorOptionsVisibility);
     document.getElementById("taskStart").addEventListener("change", () => {
       if (!document.getElementById("taskAddEndDate").checked) {
         document.getElementById("taskEnd").value = document.getElementById("taskStart").value;
@@ -4782,6 +4897,21 @@
       }
       if (!document.getElementById("creatorPublishDate").value) {
         document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
+      }
+    });
+
+    document.getElementById("editTaskStart").addEventListener("change", () => {
+      if (!document.getElementById("editTaskAddEndDate").checked) {
+        document.getElementById("editTaskEnd").value = document.getElementById("editTaskStart").value;
+      }
+      if (document.getElementById("editTaskPedEnabled").checked) {
+        document.getElementById("editTaskPedDate").value = document.getElementById("editTaskStart").value;
+      }
+      if (!document.getElementById("editCreatorVideoDate").value) {
+        document.getElementById("editCreatorVideoDate").value = document.getElementById("editTaskStart").value;
+      }
+      if (!document.getElementById("editCreatorPublishDate").value) {
+        document.getElementById("editCreatorPublishDate").value = document.getElementById("editTaskStart").value;
       }
     });
 
@@ -4807,6 +4937,14 @@
       document.getElementById(id).addEventListener("change", renderInfluencers);
     });
 
+    document.getElementById("influencerBody").addEventListener("click", (event) => {
+      const chip = event.target.closest("[data-influencer-inline-id]");
+      if (!chip) return;
+      event.stopPropagation();
+      hideTaskMenus();
+      openInfluencerInlineMenu(chip);
+    });
+
     document.getElementById("influencerBody").addEventListener("contextmenu", (event) => {
       const row = event.target.closest("[data-influencer-id]");
       if (!row) return;
@@ -4816,6 +4954,17 @@
       influencerContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 180)}px`;
       influencerContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
       influencerContextMenu.classList.add("open");
+    });
+
+    influencerInlineMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-influencer-inline-value]");
+      if (!button) return;
+      updateInfluencerInlineValue(
+        influencerInlineMenu.dataset.influencerId,
+        influencerInlineMenu.dataset.influencerKey,
+        button.dataset.influencerInlineValue
+      );
+      hideTaskMenus();
     });
 
     document.getElementById("influencerForm").addEventListener("submit", (event) => {
@@ -5059,11 +5208,14 @@
 
     function hideTaskMenus() {
       statusMenu.classList.remove("open");
+      influencerInlineMenu.classList.remove("open");
       taskContextMenu.classList.remove("open");
       influencerContextMenu.classList.remove("open");
       pedContextMenu.classList.remove("open");
       creatorContextMenu.classList.remove("open");
       delete statusMenu.dataset.taskId;
+      delete influencerInlineMenu.dataset.influencerId;
+      delete influencerInlineMenu.dataset.influencerKey;
       delete taskContextMenu.dataset.taskId;
       delete influencerContextMenu.dataset.influencerId;
       delete pedContextMenu.dataset.taskId;
@@ -5607,6 +5759,11 @@
       task.info = info;
       task.pedEnabled = pedEnabled;
       task.pedDate = pedDate;
+      if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
+      const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
+      if (isCreatorLabel(label) && generatedTasks.length > 0) {
+        data.tasks.push(...generatedTasks);
+      }
       rememberGanttMove(task);
       if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       saveData();
