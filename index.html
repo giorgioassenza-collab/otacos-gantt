@@ -52,6 +52,7 @@
 
     body:not(.is-authenticated) .app,
     body:not(.is-authenticated) .ped-fab,
+    body:not(.is-authenticated) .horizontal-scrollbar,
     body:not(.is-authenticated) .sync,
     body:not(.is-authenticated) .settings-panel,
     body:not(.is-authenticated) .modal-backdrop {
@@ -351,45 +352,14 @@
     }
 
     .timeline-scroll {
-      overflow-x: scroll;
+      overflow-x: auto;
       overflow-y: visible;
       background: var(--bg);
-      scrollbar-width: auto;
-      scrollbar-color: #8b96a3 #e8edf3;
+      scrollbar-width: none;
       min-height: 100%;
     }
 
-    .timeline-scroll::-webkit-scrollbar,
-    .ped-view::-webkit-scrollbar,
-    .creator-calendar-view::-webkit-scrollbar,
-    .influencer-view::-webkit-scrollbar {
-      width: 14px;
-      height: 14px;
-    }
-
-    .timeline-scroll::-webkit-scrollbar-track,
-    .ped-view::-webkit-scrollbar-track,
-    .creator-calendar-view::-webkit-scrollbar-track,
-    .influencer-view::-webkit-scrollbar-track {
-      background: #e8edf3;
-      border-radius: 999px;
-    }
-
-    .timeline-scroll::-webkit-scrollbar-thumb,
-    .ped-view::-webkit-scrollbar-thumb,
-    .creator-calendar-view::-webkit-scrollbar-thumb,
-    .influencer-view::-webkit-scrollbar-thumb {
-      border: 3px solid #e8edf3;
-      border-radius: 999px;
-      background: #8b96a3;
-    }
-
-    .timeline-scroll::-webkit-scrollbar-thumb:hover,
-    .ped-view::-webkit-scrollbar-thumb:hover,
-    .creator-calendar-view::-webkit-scrollbar-thumb:hover,
-    .influencer-view::-webkit-scrollbar-thumb:hover {
-      background: #687382;
-    }
+    .timeline-scroll::-webkit-scrollbar { display: none; }
 
     .timeline {
       position: relative;
@@ -686,8 +656,6 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
-      scrollbar-width: auto;
-      scrollbar-color: #8b96a3 #e8edf3;
       background: var(--bg);
     }
 
@@ -900,8 +868,6 @@
       flex: 1;
       min-height: 0;
       overflow: auto;
-      scrollbar-width: auto;
-      scrollbar-color: #8b96a3 #e8edf3;
       background: var(--bg);
     }
 
@@ -1012,12 +978,46 @@
       background: #111827;
     }
 
+    .horizontal-scrollbar {
+      position: fixed;
+      left: calc(var(--sidebar) + 18px);
+      right: 18px;
+      bottom: 76px;
+      z-index: 19;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border: 1px solid #d9e0e8;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 10px 26px rgba(17, 24, 39, .14);
+    }
+
+    body.ped-mode .horizontal-scrollbar,
+    body.creator-calendar-mode .horizontal-scrollbar,
+    body.influencer-mode .horizontal-scrollbar {
+      left: 18px;
+    }
+
+    .horizontal-scrollbar[hidden] {
+      display: none;
+    }
+
+    .horizontal-scrollbar input {
+      width: 100%;
+      accent-color: #147bd1;
+      cursor: grab;
+    }
+
+    .horizontal-scrollbar input:active {
+      cursor: grabbing;
+    }
+
     .influencer-view {
       flex: 1;
       min-height: 0;
       overflow: auto;
-      scrollbar-width: auto;
-      scrollbar-color: #8b96a3 #e8edf3;
       background: #f6f8fb;
     }
 
@@ -1783,6 +1783,9 @@
     <button id="viewInfluencer" type="button">INFLUENCER</button>
     <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
   </div>
+  <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
+    <input id="horizontalScrollRange" type="range" min="0" max="0" value="0" aria-label="Horizontal scroll">
+  </div>
   <div class="sync">Sincronizzazione...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="Project">
     <h2>Project</h2>
@@ -2188,6 +2191,9 @@
     const taskMembers = document.getElementById("taskMembers");
     const taskStatus = document.getElementById("taskStatus");
     const taskLabel = document.getElementById("taskLabel");
+    const pedView = document.getElementById("pedView");
+    const influencerView = document.getElementById("influencerView");
+    const creatorCalendarView = document.getElementById("creatorCalendarView");
     const pedCalendar = document.getElementById("pedCalendar");
     const creatorCalendar = document.getElementById("creatorCalendar");
     const viewGantt = document.getElementById("viewGantt");
@@ -2243,6 +2249,8 @@
     const historyButton = document.getElementById("historyButton");
     const historyModal = document.getElementById("historyModal");
     const historyList = document.getElementById("historyList");
+    const horizontalScrollbar = document.getElementById("horizontalScrollbar");
+    const horizontalScrollRange = document.getElementById("horizontalScrollRange");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
     const today = new Date(2026, 5, 16);
@@ -2819,6 +2827,23 @@
       document.getElementById("zoomOut").disabled = zoomIndex === 0;
       document.getElementById("zoomIn").disabled = zoomIndex === zooms.length - 1;
       document.body.classList.toggle("compact-bars", zoomIndex <= 1);
+      requestAnimationFrame(syncHorizontalScrollbar);
+    }
+
+    function activeHorizontalScrollElement() {
+      if (document.body.classList.contains("ped-mode")) return pedView;
+      if (document.body.classList.contains("creator-calendar-mode")) return creatorCalendarView;
+      if (document.body.classList.contains("influencer-mode")) return influencerView;
+      return scroller;
+    }
+
+    function syncHorizontalScrollbar() {
+      const scrollEl = activeHorizontalScrollElement();
+      if (!scrollEl || !horizontalScrollbar || !horizontalScrollRange) return;
+      const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+      horizontalScrollRange.max = String(Math.round(maxScroll));
+      horizontalScrollRange.value = String(Math.round(Math.min(scrollEl.scrollLeft, maxScroll)));
+      horizontalScrollbar.hidden = maxScroll <= 4;
     }
 
     function initials(rawValue) {
@@ -4019,6 +4044,7 @@
         media.addEventListener("load", layoutPosts, { once: true });
       });
       syncPedHeaderPosition();
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function syncPedHeaderPosition() {
@@ -4179,6 +4205,7 @@
       });
       const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
       creatorCalendar.style.height = `${height}px`;
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function findPublicationTaskFor(videoTask) {
@@ -4319,6 +4346,7 @@
         </tr>
       `).join("");
       empty.hidden = rows.length > 0;
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function fillInfluencerSelect(selectId, key, selectedValue = "") {
@@ -4688,6 +4716,7 @@
       taskProject.disabled = data.projects.length === 0;
       syncGanttHeaderPosition();
       updateHiddenTaskIndicators();
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function syncGanttHeaderPosition() {
@@ -4730,20 +4759,23 @@
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       scroller.scrollTo({ left: Math.max(0, offset - 300), behavior });
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function scrollPedToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-      document.getElementById("pedView").scrollTo({ left: Math.max(0, offset - 300), behavior });
+      pedView.scrollTo({ left: Math.max(0, offset - 300), behavior });
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function scrollCreatorCalendarToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
       const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-      document.getElementById("creatorCalendarView").scrollTo({ left: Math.max(0, offset - 300), behavior });
+      creatorCalendarView.scrollTo({ left: Math.max(0, offset - 300), behavior });
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     function snapActiveTimelineToToday() {
@@ -4755,6 +4787,7 @@
       run();
       requestAnimationFrame(run);
       setTimeout(run, 80);
+      setTimeout(syncHorizontalScrollbar, 120);
     }
 
     async function startApp() {
@@ -4779,6 +4812,7 @@
       document.querySelector(".brand-title").textContent = "Workflow";
       document.getElementById("currentMonth").textContent = "O'TACOS";
       requestAnimationFrame(snapActiveTimelineToToday);
+      requestAnimationFrame(syncHorizontalScrollbar);
       if (needsRemoteResync) {
         needsRemoteResync = false;
         saveData(true);
@@ -4924,6 +4958,7 @@
       if (influencerMode) renderInfluencers();
       if (creatorCalendarMode) renderCreatorCalendar();
       requestAnimationFrame(snapActiveTimelineToToday);
+      requestAnimationFrame(syncHorizontalScrollbar);
     }
 
     viewGantt.addEventListener("click", () => setView("gantt"));
@@ -5237,11 +5272,7 @@
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate };
       if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
-      if (isCreatorLabel(label) && generatedTasks.length > 0) {
-        data.tasks.push(...generatedTasks);
-      } else {
-        data.tasks.push(baseTask);
-      }
+      data.tasks.push(baseTask, ...generatedTasks);
       saveData();
       renderBoard();
       renderCreatorCalendar();
@@ -6443,8 +6474,23 @@
     boardEl.addEventListener("scroll", () => {
       syncGanttHeaderPosition();
       updateHiddenTaskIndicators();
+      syncHorizontalScrollbar();
     });
-    document.getElementById("pedView").addEventListener("scroll", updatePedHiddenIndicators);
+    scroller.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
+    pedView.addEventListener("scroll", () => {
+      updatePedHiddenIndicators();
+      syncPedHeaderPosition();
+      updatePedHourLabels();
+      syncHorizontalScrollbar();
+    }, { passive: true });
+    creatorCalendarView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
+    influencerView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
+    horizontalScrollRange.addEventListener("input", () => {
+      const scrollEl = activeHorizontalScrollElement();
+      if (!scrollEl) return;
+      scrollEl.scrollLeft = Number(horizontalScrollRange.value || 0);
+    });
+    window.addEventListener("resize", syncHorizontalScrollbar);
     setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
