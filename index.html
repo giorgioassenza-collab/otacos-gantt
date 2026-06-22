@@ -1783,6 +1783,8 @@
         <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
         <label class="inline-check"><input id="creatorVideo" type="checkbox"> Video in store</label>
         <label class="field">Video in store date<input id="creatorVideoDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
+        <label class="field">Mandare video ad Alice date<input id="creatorSendVideoAliceDate" type="date" value="2026-06-16"></label>
         <label class="inline-check"><input id="creatorPublish" type="checkbox"> Pubblicazione</label>
         <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
       </div>
@@ -1999,6 +2001,8 @@
           <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
           <label class="inline-check"><input id="editCreatorVideo" type="checkbox"> Video in store</label>
           <label class="field">Video in store date<input id="editCreatorVideoDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
+          <label class="field">Mandare video ad Alice date<input id="editCreatorSendVideoAliceDate" type="date"></label>
           <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Pubblicazione</label>
           <label class="field">Pubblicazione date<input id="editCreatorPublishDate" type="date"></label>
         </div>
@@ -2863,6 +2867,7 @@
       document.getElementById("taskEnd").value = todayKey;
       document.getElementById("taskPedDate").value = todayKey;
       document.getElementById("creatorVideoDate").value = todayKey;
+      document.getElementById("creatorSendVideoAliceDate").value = todayKey;
       document.getElementById("creatorPublishDate").value = todayKey;
     }
 
@@ -3400,6 +3405,7 @@
     function resetCreatorOptions() {
       creatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
+      document.getElementById("creatorSendVideoAliceDate").value = document.getElementById("taskStart").value;
       document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
     }
 
@@ -3407,6 +3413,7 @@
       editCreatorOptions.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       const start = document.getElementById("editTaskStart").value || currentDateKey();
       document.getElementById("editCreatorVideoDate").value = start;
+      document.getElementById("editCreatorSendVideoAliceDate").value = start;
       document.getElementById("editCreatorPublishDate").value = start;
     }
 
@@ -3446,6 +3453,19 @@
           label: "Video in store"
         });
       }
+      if (controls.sendVideoAlice.checked) {
+        const sendVideoAliceDate = controls.sendVideoAliceDate.value || baseTask.start;
+        datedTasks.push({
+          ...baseTask,
+          id: `t${createdAt}-creator-send-video-alice`,
+          name: `Mandare video ad Alice ${baseTask.name}`,
+          nameEn: `Send video to Alice ${baseTask.nameEn || baseTask.name}`,
+          start: sendVideoAliceDate,
+          end: sendVideoAliceDate,
+          info: "",
+          label: "Mandare video ad Alice"
+        });
+      }
       if (controls.publish.checked) {
         const publishDate = controls.publishDate.value || baseTask.start;
         datedTasks.push({
@@ -3471,6 +3491,8 @@
         giorgia: document.getElementById("creatorGiorgia"),
         video: document.getElementById("creatorVideo"),
         videoDate: document.getElementById("creatorVideoDate"),
+        sendVideoAlice: document.getElementById("creatorSendVideoAlice"),
+        sendVideoAliceDate: document.getElementById("creatorSendVideoAliceDate"),
         publish: document.getElementById("creatorPublish"),
         publishDate: document.getElementById("creatorPublishDate")
       });
@@ -3485,6 +3507,8 @@
         giorgia: document.getElementById("editCreatorGiorgia"),
         video: document.getElementById("editCreatorVideo"),
         videoDate: document.getElementById("editCreatorVideoDate"),
+        sendVideoAlice: document.getElementById("editCreatorSendVideoAlice"),
+        sendVideoAliceDate: document.getElementById("editCreatorSendVideoAliceDate"),
         publish: document.getElementById("editCreatorPublish"),
         publishDate: document.getElementById("editCreatorPublishDate")
       });
@@ -4459,6 +4483,7 @@
       document.getElementById("editTaskStart").value = task.start;
       document.getElementById("editTaskEnd").value = task.end || task.start;
       document.getElementById("editCreatorVideoDate").value = task.start;
+      document.getElementById("editCreatorSendVideoAliceDate").value = task.start;
       document.getElementById("editCreatorPublishDate").value = task.start;
       const hasEndDate = Boolean(task.end && task.end !== task.start);
       document.getElementById("editTaskAddEndDate").checked = hasEndDate;
@@ -4895,6 +4920,9 @@
       if (!document.getElementById("creatorVideoDate").value) {
         document.getElementById("creatorVideoDate").value = document.getElementById("taskStart").value;
       }
+      if (!document.getElementById("creatorSendVideoAliceDate").value) {
+        document.getElementById("creatorSendVideoAliceDate").value = document.getElementById("taskStart").value;
+      }
       if (!document.getElementById("creatorPublishDate").value) {
         document.getElementById("creatorPublishDate").value = document.getElementById("taskStart").value;
       }
@@ -4909,6 +4937,9 @@
       }
       if (!document.getElementById("editCreatorVideoDate").value) {
         document.getElementById("editCreatorVideoDate").value = document.getElementById("editTaskStart").value;
+      }
+      if (!document.getElementById("editCreatorSendVideoAliceDate").value) {
+        document.getElementById("editCreatorSendVideoAliceDate").value = document.getElementById("editTaskStart").value;
       }
       if (!document.getElementById("editCreatorPublishDate").value) {
         document.getElementById("editCreatorPublishDate").value = document.getElementById("editTaskStart").value;
