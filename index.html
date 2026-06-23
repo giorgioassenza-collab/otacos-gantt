@@ -4382,6 +4382,54 @@
       editPedPostProject.disabled = data.projects.length === 0;
     }
 
+    function linkedPedPostForTask(taskId) {
+      return (data.pedPosts || []).find((post) => post.sourceTaskId === taskId) || null;
+    }
+
+    function ensurePedPostForTask(task, { syncFromTask = false } = {}) {
+      if (!task) return null;
+      data.pedPosts = data.pedPosts || [];
+      let post = linkedPedPostForTask(task.id);
+      const pedDate = task.pedDate || task.start;
+      const pedTime = normalizeHour(task.pedTime || "11:00");
+      if (!post) {
+        const createdAt = Date.now();
+        post = {
+          id: `ped${createdAt}`,
+          sourceTaskId: task.id,
+          title: task.nameEn || task.name,
+          projectId: task.projectId || data.projects[0]?.id || "",
+          date: pedDate,
+          time: pedTime,
+          status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
+          members: task.members || [],
+          social: [],
+          format: data.formats[0] || "",
+          asset: "",
+          copy: "",
+          subtasks: [],
+          createdAt,
+          updatedAt: createdAt
+        };
+        data.pedPosts.push(post);
+        return post;
+      }
+      if (syncFromTask) {
+        post.title = post.title || task.nameEn || task.name;
+        post.projectId = task.projectId || post.projectId || data.projects[0]?.id || "";
+        post.date = pedDate;
+        post.time = pedTime;
+        if (!(post.members || []).length) post.members = task.members || [];
+        touchItem(post);
+      }
+      return post;
+    }
+
+    function removeLinkedPedPostForTask(taskId) {
+      const post = linkedPedPostForTask(taskId);
+      if (post) deletePedPostById(post.id);
+    }
+
     function renderSubtasks(task) {
       renderSubtasksFor(subtaskList, task, "data-subtask-done", "data-delete-subtask");
     }
@@ -5200,8 +5248,11 @@
       renderPedProjectOptions();
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
+      const sourceTask = post.sourceTaskId ? data.tasks.find((task) => task.id === post.sourceTaskId) : null;
       const resolvedProjectId = validProjectId(data.projects, post.projectId)
         ? post.projectId
+        : validProjectId(data.projects, sourceTask?.projectId)
+          ? sourceTask.projectId
         : projectIdFromValue(data.projects, post.project || post.projectName);
       document.getElementById("editPedPostId").value = post.id;
       document.getElementById("editPedPostTitle").value = post.title || "";
@@ -5228,36 +5279,8 @@
     function openLinkedPedTaskEditor(taskId) {
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
-      data.pedPosts = data.pedPosts || [];
-      let post = data.pedPosts.find((item) => item.sourceTaskId === task.id);
-      if (!post) {
-        const createdAt = Date.now();
-        post = {
-          id: `ped${createdAt}`,
-          sourceTaskId: task.id,
-          title: task.nameEn || task.name,
-          projectId: task.projectId || data.projects[0]?.id || "",
-          date: task.pedDate || task.start,
-          time: normalizeHour(task.pedTime),
-          status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
-          members: task.members || [],
-          social: [],
-          format: data.formats[0] || "",
-          asset: "",
-          copy: "",
-          subtasks: [],
-          createdAt,
-          updatedAt: createdAt
-        };
-        data.pedPosts.push(post);
-        saveData();
-      } else {
-        post.date = task.pedDate || task.start;
-        post.time = normalizeHour(task.pedTime || post.time);
-        post.projectId = task.projectId || post.projectId || data.projects[0]?.id || "";
-        touchItem(post);
-        saveData();
-      }
+      const post = ensurePedPostForTask(task);
+      if (!linkedPedPostForTask(task.id)) return;
       openPedPostEditor(post.id);
     }
 
@@ -5913,7 +5936,7 @@
       const info = document.getElementById("taskInfo").value.trim();
       const pedEnabled = document.getElementById("taskPedEnabled").checked;
       const pedDate = document.getElementById("taskPedDate").value || start;
-      if (!projectId || !name || !members.length || !status || !start || !end) return;
+      if (!projectId || !name || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
@@ -5921,7 +5944,9 @@
       if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
       data.tasks.push(baseTask, ...generatedTasks);
+      if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
       await saveData();
+      renderPed();
       renderBoard();
       renderCreatorCalendar();
       document.getElementById("taskName").value = "New task";
@@ -6639,7 +6664,7 @@
       const info = document.getElementById("editTaskInfo").value.trim();
       const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
       const pedDate = document.getElementById("editTaskPedDate").value || start;
-      if (!projectId || !name || !status || !members.length || !start || !end) return;
+      if (!projectId || !name || !status || !start || !end) return;
       const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
       task.name = name;
       task.nameEn = nameEn;
@@ -6652,7 +6677,10 @@
       task.info = info;
       task.pedEnabled = pedEnabled;
       task.pedDate = pedDate;
+      task.pedTime = task.pedTime || "11:00";
       touchItem(task);
+      if (task.pedEnabled) ensurePedPostForTask(task, { syncFromTask: true });
+      else removeLinkedPedPostForTask(task.id);
       if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
@@ -6689,6 +6717,7 @@
         const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
         if (sourceTask) {
           sourceTask.projectId = projectId;
+          sourceTask.pedEnabled = true;
           sourceTask.pedDate = date;
           sourceTask.pedTime = time;
           touchItem(sourceTask);
