@@ -2617,11 +2617,81 @@
       return order.map((id) => merged.get(id)).filter(Boolean);
     }
 
+    function uniqueStrings(...lists) {
+      const seen = new Set();
+      const result = [];
+      lists.flat().forEach((value) => {
+        const text = String(value || "").trim();
+        if (!text || seen.has(text.toLowerCase())) return;
+        seen.add(text.toLowerCase());
+        result.push(text);
+      });
+      return result;
+    }
+
+    function mergeStatusSettings(localList = [], remoteList = []) {
+      const merged = new Map();
+      remoteList.forEach((status) => {
+        const item = typeof status === "string" ? { name: status, color: "#6b7280" } : status;
+        const name = statusName(item);
+        if (name) merged.set(name.toLowerCase(), { ...item, name });
+      });
+      localList.forEach((status) => {
+        const item = typeof status === "string" ? { name: status, color: "#6b7280" } : status;
+        const name = statusName(item);
+        if (name) merged.set(name.toLowerCase(), { ...merged.get(name.toLowerCase()), ...item, name });
+      });
+      return [...merged.values()];
+    }
+
+    function mergeProjects(localProjects = [], remoteProjects = []) {
+      const merged = new Map();
+      remoteProjects.forEach((project) => {
+        if (project?.id) merged.set(project.id, project);
+      });
+      localProjects.forEach((project) => {
+        if (project?.id) merged.set(project.id, { ...merged.get(project.id), ...project });
+      });
+      return [...merged.values()];
+    }
+
+    function mergeSocials(localSocials = [], remoteSocials = []) {
+      const merged = new Map();
+      remoteSocials.forEach((social) => {
+        const id = social?.id || slugify(social?.label || social?.name || social);
+        if (id) merged.set(id, typeof social === "string" ? { id, label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" } : { ...social, id });
+      });
+      localSocials.forEach((social) => {
+        const id = social?.id || slugify(social?.label || social?.name || social);
+        if (id) merged.set(id, { ...merged.get(id), ...(typeof social === "string" ? { id, label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" } : social), id });
+      });
+      return [...merged.values()];
+    }
+
+    function mergeInfluencerOptions(localOptions = {}, remoteOptions = {}) {
+      const keys = [...new Set([...Object.keys(remoteOptions || {}), ...Object.keys(localOptions || {})])];
+      return keys.reduce((result, key) => {
+        result[key] = mergeStatusSettings(localOptions[key] || [], remoteOptions[key] || []);
+        return result;
+      }, {});
+    }
+
     function mergeBoardData(localData, remoteData) {
       const local = normalizeData(localData);
       const remote = normalizeData(remoteData);
       return normalizeData({
         ...remote,
+        members: uniqueStrings(remote.members || [], local.members || []),
+        statuses: mergeStatusSettings(local.statuses || [], remote.statuses || []),
+        pedStatuses: mergeStatusSettings(local.pedStatuses || [], remote.pedStatuses || []),
+        creatorStatuses: mergeStatusSettings(local.creatorStatuses || [], remote.creatorStatuses || []),
+        labels: uniqueStrings(remote.labels || [], local.labels || []),
+        formats: uniqueStrings(remote.formats || [], local.formats || []),
+        creatorStores: uniqueStrings(remote.creatorStores || [], local.creatorStores || []),
+        projects: mergeProjects(local.projects || [], remote.projects || []),
+        socials: mergeSocials(local.socials || [], remote.socials || []),
+        influencerOptions: mergeInfluencerOptions(local.influencerOptions || {}, remote.influencerOptions || {}),
+        influencerColumnLabels: { ...(remote.influencerColumnLabels || {}), ...(local.influencerColumnLabels || {}) },
         tasks: mergeById(local.tasks, remote.tasks),
         pedPosts: mergeById(local.pedPosts || [], remote.pedPosts || []),
         influencers: mergeById(local.influencers || [], remote.influencers || [])
@@ -2830,6 +2900,11 @@
     }
 
     async function saveData(skipUndo = false) {
+      const localRevision = Math.max(dataVersion + 1, Date.now());
+      dataVersion = localRevision;
+      pendingLocalData = cleanForFirestore(data);
+      pendingLocalRevision = localRevision;
+      saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
       saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(skipUndo));
       return saveQueue;
     }
