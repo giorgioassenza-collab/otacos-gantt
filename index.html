@@ -1188,7 +1188,7 @@
       position: fixed;
       top: 64px;
       right: 16px;
-      bottom: 118px;
+      bottom: 88px;
       width: 340px;
       box-sizing: border-box;
       padding: 16px 16px 22px;
@@ -1199,6 +1199,9 @@
       transform: translateY(-8px);
       opacity: 0;
       pointer-events: none;
+      overflow: auto;
+      overscroll-behavior: contain;
+      z-index: 80;
       transition: opacity .16s ease, transform .16s ease;
       z-index: 10;
       max-height: calc(100dvh - 182px);
@@ -1214,9 +1217,11 @@
       display: none;
       align-items: flex-start;
       justify-content: center;
-      padding-top: 92px;
+      padding: 72px 16px 96px;
       background: rgba(15, 23, 42, .18);
-      z-index: 20;
+      overflow: auto;
+      overscroll-behavior: contain;
+      z-index: 90;
     }
 
     .modal-backdrop.open { display: flex; }
@@ -1224,9 +1229,9 @@
     .modal {
       width: 360px;
       max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 190px);
+      max-height: calc(100vh - 168px);
       overflow: auto;
-      margin-bottom: 74px;
+      margin-bottom: 0;
       scroll-padding-bottom: 96px;
       padding: 16px;
       border: 1px solid var(--line);
@@ -1251,6 +1256,13 @@
       background: #ffffff;
       border-top: 1px solid #e6ebf1;
       z-index: 2;
+    }
+
+    .primary-btn[disabled],
+    .secondary-btn[disabled],
+    .danger-btn[disabled] {
+      cursor: wait;
+      opacity: .64;
     }
 
     .danger-btn {
@@ -1412,6 +1424,9 @@
       padding: 12px 16px 12px;
       border-top: 1px solid #e6ebf1;
       background: #fff;
+      position: sticky;
+      bottom: -22px;
+      z-index: 3;
     }
 
     .primary-btn,
@@ -2413,8 +2428,10 @@
             if (remoteRevision <= dataVersion) return;
             if (applyingRemoteUpdate && Date.now() < suppressRemoteUntil && sameData(normalizedRemote, data)) return;
             if (sameData(normalizedRemote, data)) return;
+            const mergedRemote = mergeBoardData(data, normalizedRemote);
+            const shouldRepairRemote = !sameData(mergedRemote, normalizedRemote);
             dataVersion = Math.max(dataVersion, remoteRevision);
-            data = normalizedRemote;
+            data = mergedRemote;
             historyEntries = normalizeHistory(remoteDoc.history);
             committedData = structuredClone(data);
             renderBoard();
@@ -2423,6 +2440,7 @@
             renderCreatorCalendar();
             updateUndoButton();
             syncIndicator.textContent = "Sincronizzato live";
+            if (shouldRepairRemote) saveData(true);
           }, () => {
             syncIndicator.textContent = "Errore sincronizzazione Firestore";
           });
@@ -2533,7 +2551,98 @@
     }
 
     function applyMovementLog(snapshot) {
-      return normalizeData(snapshot);
+      const normalized = normalizeData(snapshot);
+      const log = readMovementLog();
+      const keepAfter = Date.now() - (1000 * 60 * 60 * 24 * 14);
+      let changed = false;
+      normalized.tasks = (normalized.tasks || []).map((task) => {
+        const taskMove = log.tasks?.[task.id];
+        const pedMove = log.pedTasks?.[task.id];
+        const next = { ...task };
+        if (taskMove?.savedAt > keepAfter && taskMove.savedAt > itemUpdatedAt(next)) {
+          next.start = taskMove.start || next.start;
+          next.end = taskMove.end || next.start;
+          next.updatedAt = taskMove.savedAt;
+          changed = true;
+        }
+        if (pedMove?.savedAt > keepAfter && pedMove.savedAt > itemUpdatedAt(next)) {
+          next.pedDate = pedMove.pedDate || next.pedDate;
+          next.pedTime = pedMove.pedTime || next.pedTime || "11:00";
+          next.updatedAt = pedMove.savedAt;
+          changed = true;
+        }
+        return next;
+      });
+      normalized.pedPosts = (normalized.pedPosts || []).map((post) => {
+        const pedMove = log.pedPosts?.[post.id];
+        if (!(pedMove?.savedAt > keepAfter) || pedMove.savedAt <= itemUpdatedAt(post)) return post;
+        changed = true;
+        return {
+          ...post,
+          date: pedMove.date || post.date,
+          time: pedMove.time || post.time || "11:00",
+          updatedAt: pedMove.savedAt
+        };
+      });
+      if (changed) saveLocalSnapshot(normalized, historyEntries, Math.max(dataVersion, Date.now()));
+      return normalized;
+    }
+
+    function itemUpdatedAt(item) {
+      return Number(item?.updatedAt || item?.createdAt || 0);
+    }
+
+    function touchItem(item) {
+      if (item) item.updatedAt = Date.now();
+      return item;
+    }
+
+    function mergeById(localItems = [], remoteItems = []) {
+      const merged = new Map();
+      remoteItems.forEach((item) => {
+        if (item?.id) merged.set(item.id, item);
+      });
+      localItems.forEach((localItem) => {
+        if (!localItem?.id) return;
+        const remoteItem = merged.get(localItem.id);
+        if (!remoteItem || itemUpdatedAt(localItem) >= itemUpdatedAt(remoteItem)) {
+          merged.set(localItem.id, localItem);
+        }
+      });
+      const remoteOrder = remoteItems.map((item) => item?.id).filter(Boolean);
+      const localOnly = localItems
+        .filter((item) => item?.id && !remoteOrder.includes(item.id))
+        .map((item) => item.id);
+      const order = [...remoteOrder, ...localOnly];
+      return order.map((id) => merged.get(id)).filter(Boolean);
+    }
+
+    function mergeBoardData(localData, remoteData) {
+      const local = normalizeData(localData);
+      const remote = normalizeData(remoteData);
+      return normalizeData({
+        ...remote,
+        tasks: mergeById(local.tasks, remote.tasks),
+        pedPosts: mergeById(local.pedPosts || [], remote.pedPosts || []),
+        influencers: mergeById(local.influencers || [], remote.influencers || [])
+      });
+    }
+
+    async function runWithSavingButton(event, action) {
+      const button = event?.submitter || event?.currentTarget?.querySelector?.("[type='submit']");
+      const originalText = button?.textContent;
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Saving...";
+      }
+      try {
+        await action();
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalText;
+        }
+      }
     }
 
     function normalizeHistory(list) {
@@ -2736,6 +2845,20 @@
           updateUndoButton();
         }
         if (boardRef) {
+          let remoteHistory = historyEntries;
+          try {
+            const latestSnapshot = await getDoc(boardRef);
+            if (latestSnapshot.exists()) {
+              const latestDoc = latestSnapshot.data();
+              if (latestDoc.data) {
+                data = mergeBoardData(data, applyMovementLog(latestDoc.data));
+                remoteHistory = normalizeHistory(latestDoc.history || historyEntries);
+              }
+            }
+          } catch {
+            remoteHistory = historyEntries;
+          }
+          historyEntries = normalizeHistory([...historyEntries, ...remoteHistory]);
           const nextRevision = Math.max(dataVersion + 1, Date.now());
           dataVersion = nextRevision;
           suppressRemoteUntil = Date.now() + 1500;
@@ -3114,6 +3237,7 @@
       normalized.tasks = (normalized.tasks || []).map((task) => ({
         ...task,
         nameEn: task.nameEn || "",
+        updatedAt: Number(task.updatedAt || task.createdAt || 0),
         end: task.end || task.start || "2026-06-16",
         info: task.info || "",
         label: task.label || (task.hasHomeLabel ? "Video in store" : ""),
@@ -3136,6 +3260,7 @@
       normalized.pedPosts = (normalized.pedPosts || []).map((post) => ({
         id: post.id || `ped${Date.now()}${Math.random()}`,
         sourceTaskId: post.sourceTaskId || "",
+        updatedAt: Number(post.updatedAt || post.createdAt || 0),
         title: post.title || "Post",
         projectId: validProjectId(normalized.projects, post.projectId)
           ? post.projectId
@@ -3167,6 +3292,7 @@
       const rawStatus = source.status || source.STATUS || "";
       return {
         id: source.id || `inf${Date.now()}${Math.random()}`,
+        updatedAt: Number(source.updatedAt || 0),
         name: source.name || source.NAME || "",
         city: source.city || source.CITY || "",
         target: source.target || source.TARGET || "",
@@ -3501,7 +3627,8 @@
           info: "",
           label: item.label,
           pedEnabled: false,
-          pedDate: ""
+          pedDate: "",
+          updatedAt: createdAt
         }));
 
       const datedTasks = [];
@@ -3517,7 +3644,8 @@
           info: "",
           label: "Video in store",
           pedEnabled: false,
-          pedDate: ""
+          pedDate: "",
+          updatedAt: createdAt
         });
       }
       if (controls.sendVideoAlice.checked) {
@@ -3532,7 +3660,8 @@
           info: "",
           label: "Mandare video ad Alice",
           pedEnabled: false,
-          pedDate: ""
+          pedDate: "",
+          updatedAt: createdAt
         });
       }
       if (controls.publish.checked) {
@@ -3547,7 +3676,8 @@
           info: "",
           label: "Pubblicazione",
           pedEnabled: false,
-          pedDate: ""
+          pedDate: "",
+          updatedAt: createdAt
         });
       }
       return [...sameDayTasks, ...datedTasks];
@@ -4478,15 +4608,19 @@
         label: "",
         pedEnabled: false,
         pedDate: "",
-        subtasks: []
+        subtasks: [],
+        updatedAt: Date.now()
       };
       if (existingTask) {
         Object.assign(existingTask, payload);
+        touchItem(existingTask);
       } else {
-        const task = { id: `t${Date.now()}-influencer-contact`, ...payload };
+        const createdAt = Date.now();
+        const task = { id: `t${createdAt}-influencer-contact`, ...payload, createdAt, updatedAt: createdAt };
         data.tasks.push(task);
         row.contactTaskId = task.id;
       }
+      touchItem(row);
     }
 
     function renderInfluencerSettings() {
@@ -4613,8 +4747,9 @@
       data.pedPosts = data.pedPosts || [];
       let post = data.pedPosts.find((item) => item.sourceTaskId === task.id);
       if (!post) {
+        const createdAt = Date.now();
         post = {
-          id: `ped${Date.now()}`,
+          id: `ped${createdAt}`,
           sourceTaskId: task.id,
           title: task.nameEn || task.name,
           projectId: task.projectId || data.projects[0]?.id || "",
@@ -4626,7 +4761,9 @@
           format: data.formats[0] || "",
           asset: "",
           copy: "",
-          subtasks: []
+          subtasks: [],
+          createdAt,
+          updatedAt: createdAt
         };
         data.pedPosts.push(post);
         saveData();
@@ -4634,6 +4771,7 @@
         post.date = task.pedDate || task.start;
         post.time = normalizeHour(task.pedTime || post.time);
         post.projectId = task.projectId || post.projectId || data.projects[0]?.id || "";
+        touchItem(post);
         saveData();
       }
       openPedPostEditor(post.id);
@@ -4941,6 +5079,12 @@
       button.addEventListener("click", closePanels);
     });
 
+    document.querySelectorAll(".modal, .settings-panel").forEach((surface) => {
+      ["click", "pointerdown", "contextmenu"].forEach((eventName) => {
+        surface.addEventListener(eventName, (event) => event.stopPropagation());
+      });
+    });
+
     function setView(view) {
       const pedMode = view === "ped";
       const influencerMode = view === "influencer";
@@ -5111,7 +5255,8 @@
         contactMember: document.getElementById("influencerContactMember").value,
         contactProjectId: document.getElementById("influencerContactProject").value,
         contactedAt: previousRow?.contactedAt || "",
-        influencerUpdatedAt: currentDateKey()
+        influencerUpdatedAt: currentDateKey(),
+        updatedAt: Date.now()
       });
       if (String(statusValue).trim().toUpperCase() === "CONTACTED" && String(previousRow?.status || "").trim().toUpperCase() !== "CONTACTED") {
         row.contactedAt = currentDateKey();
@@ -5261,6 +5406,7 @@
 
     document.getElementById("taskForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      await runWithSavingButton(event, async () => {
       const projectId = taskProject.value;
       const name = document.getElementById("taskName").value.trim();
       const members = selectedMembers(taskMembers);
@@ -5275,7 +5421,7 @@
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
-      const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate };
+      const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate, createdAt, updatedAt: createdAt };
       if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
       data.tasks.push(baseTask, ...generatedTasks);
@@ -5289,10 +5435,12 @@
       document.getElementById("taskInfo").value = "";
       setNewTaskDefaultDates();
       resetNewTaskPedFields();
+      });
     });
 
-    document.getElementById("pedPostForm").addEventListener("submit", (event) => {
+    document.getElementById("pedPostForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      await runWithSavingButton(event, async () => {
       const title = document.getElementById("pedPostTitle").value.trim();
       const projectId = pedPostProject.value;
       const date = document.getElementById("pedPostDate").value;
@@ -5305,8 +5453,9 @@
       const copy = document.getElementById("pedPostCopy").value.trim();
       if (!title || !projectId || !date || !status || !format) return;
       data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({ id: `ped${Date.now()}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [] });
-      saveData();
+      const createdAt = Date.now();
+      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
+      await saveData();
       renderPed();
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
@@ -5317,6 +5466,7 @@
       document.getElementById("pedPostCopy").value = "";
       pedPostSocials.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       pedPostMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
+      });
     });
 
     function hideTaskMenus() {
@@ -5389,6 +5539,7 @@
         const newStart = dateFromTimelineClientX(event.clientX, scroller);
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
+        touchItem(task);
         rememberGanttMove(task);
         renderBoard();
         renderPed();
@@ -5405,12 +5556,14 @@
           if (task) {
             task.pedDate = date;
             task.pedTime = time;
+            touchItem(task);
             rememberPedTaskMove(task);
           }
           const post = (data.pedPosts || []).find((item) => item.sourceTaskId === state.taskId);
           if (post) {
             post.date = date;
             post.time = time;
+            touchItem(post);
             rememberPedPostMove(post);
           }
         } else if (state.postId) {
@@ -5418,6 +5571,7 @@
           if (post) {
             post.date = date;
             post.time = time;
+            touchItem(post);
             rememberPedPostMove(post);
           }
         }
@@ -5496,6 +5650,7 @@
       const task = data.tasks.find((item) => item.id === statusMenu.dataset.taskId);
       if (!task) return;
       task.status = button.dataset.statusValue;
+      touchItem(task);
       saveData();
       renderBoard();
       renderPed();
@@ -5537,6 +5692,7 @@
         task.start = shiftDateString(originalStart, 1);
         task.end = shiftDateString(originalEnd, 1);
         task.pedDate = task.pedEnabled && task.pedDate ? shiftDateString(task.pedDate, 1) : task.pedDate;
+        touchItem(task);
         rememberGanttMove(task);
         if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       }
@@ -5585,15 +5741,16 @@
       pedToGanttModal.classList.remove("open");
     }
 
-    function addPedItemToGantt(taskId, postId, selectedDate) {
+    async function addPedItemToGantt(taskId, postId, selectedDate) {
       if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
       if (taskId) {
         const task = data.tasks.find((item) => item.id === taskId);
         if (!task) return;
         task.start = selectedDate;
         task.end = selectedDate;
+        touchItem(task);
         rememberGanttMove(task);
-        saveData();
+        await saveData();
         renderBoard();
         renderPed();
         renderCreatorCalendar();
@@ -5602,6 +5759,7 @@
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
       const newTaskId = `t${Date.now()}-ped-gantt`;
+      const createdAt = Date.now();
       const task = {
         id: newTaskId,
         projectId: post.projectId || (data.projects || [])[0]?.id || "",
@@ -5616,11 +5774,14 @@
         pedEnabled: true,
         pedDate: post.date || selectedDate,
         pedTime: normalizeHour(post.time),
-        subtasks: post.subtasks || []
+        subtasks: post.subtasks || [],
+        createdAt,
+        updatedAt: createdAt
       };
       data.tasks.push(task);
       post.sourceTaskId = newTaskId;
-      saveData();
+      touchItem(post);
+      await saveData();
       renderBoard();
       renderPed();
       renderCreatorCalendar();
@@ -5745,22 +5906,22 @@
     document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
 
-    document.getElementById("deletePedPostButton").addEventListener("click", () => {
+    document.getElementById("deletePedPostButton").addEventListener("click", async () => {
       const postId = document.getElementById("editPedPostId").value;
       if (!postId) return;
       if (!confirmDelete("Delete this PED post?")) return;
       data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
-      saveData();
+      await saveData();
       renderPed();
       closePedPostEditor();
     });
 
-    document.getElementById("deleteTaskButton").addEventListener("click", () => {
+    document.getElementById("deleteTaskButton").addEventListener("click", async () => {
       const taskId = document.getElementById("editTaskId").value;
       if (!taskId) return;
       if (!confirmDelete("Delete this task?")) return;
       data.tasks = data.tasks.filter((task) => task.id !== taskId);
-      saveData();
+      await saveData();
       renderBoard();
       renderCreatorCalendar();
       closeTaskEditor();
@@ -5775,6 +5936,7 @@
       if (!title || !members.length) return;
       task.subtasks = task.subtasks || [];
       task.subtasks.push({ id: `s${Date.now()}`, title, members, done: false });
+      touchItem(task);
       document.getElementById("newSubtaskTitle").value = "";
       newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       saveData();
@@ -5790,6 +5952,7 @@
       const subtask = (task.subtasks || []).find((item) => item.id === checkbox.dataset.subtaskDone);
       if (!subtask) return;
       subtask.done = checkbox.checked;
+      touchItem(task);
       saveData();
       renderSubtasks(task);
     });
@@ -5801,6 +5964,7 @@
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
       task.subtasks = (task.subtasks || []).filter((item) => item.id !== button.dataset.deleteSubtask);
+      touchItem(task);
       saveData();
       renderSubtasks(task);
     });
@@ -5814,6 +5978,7 @@
       if (!title || !members.length) return;
       post.subtasks = post.subtasks || [];
       post.subtasks.push({ id: `ps${Date.now()}`, title, members, done: false });
+      touchItem(post);
       document.getElementById("newPedSubtaskTitle").value = "";
       newPedSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       saveData();
@@ -5829,6 +5994,7 @@
       const subtask = (post.subtasks || []).find((item) => item.id === checkbox.dataset.pedSubtaskDone);
       if (!subtask) return;
       subtask.done = checkbox.checked;
+      touchItem(post);
       saveData();
       renderPedSubtasks(post);
     });
@@ -5840,12 +6006,14 @@
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
       post.subtasks = (post.subtasks || []).filter((item) => item.id !== button.dataset.deletePedSubtask);
+      touchItem(post);
       saveData();
       renderPedSubtasks(post);
     });
 
     document.getElementById("editTaskForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      await runWithSavingButton(event, async () => {
       const taskId = document.getElementById("editTaskId").value;
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
@@ -5872,6 +6040,7 @@
       task.info = info;
       task.pedEnabled = pedEnabled;
       task.pedDate = pedDate;
+      touchItem(task);
       if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
@@ -5884,10 +6053,12 @@
       renderPed();
       renderCreatorCalendar();
       closeTaskEditor();
+      });
     });
 
-    document.getElementById("editPedPostForm").addEventListener("submit", (event) => {
+    document.getElementById("editPedPostForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      await runWithSavingButton(event, async () => {
       const postId = document.getElementById("editPedPostId").value;
       const post = (data.pedPosts || []).find((item) => item.id === postId);
       if (!post) return;
@@ -5911,6 +6082,7 @@
           sourceTask.projectId = projectId;
           sourceTask.pedDate = date;
           sourceTask.pedTime = time;
+          touchItem(sourceTask);
           rememberPedTaskMove(sourceTask);
         }
       }
@@ -5920,24 +6092,27 @@
       post.format = format;
       post.asset = document.getElementById("editPedPostAsset").value.trim();
       post.copy = document.getElementById("editPedPostCopy").value.trim();
-      saveData();
+      touchItem(post);
+      await saveData();
       renderBoard();
       renderPed();
       closePedPostEditor();
+      });
     });
 
-    document.getElementById("pedToGanttForm").addEventListener("submit", (event) => {
+    document.getElementById("pedToGanttForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-      addPedItemToGantt(
+      await runWithSavingButton(event, async () => addPedItemToGantt(
         document.getElementById("pedToGanttTaskId").value,
         document.getElementById("pedToGanttPostId").value,
         document.getElementById("pedToGanttDate").value
-      );
+      ));
       closePedToGanttDialog();
     });
 
-    document.getElementById("creatorCalendarForm").addEventListener("submit", (event) => {
+    document.getElementById("creatorCalendarForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      await runWithSavingButton(event, async () => {
       const taskId = document.getElementById("creatorCalendarTaskId").value;
       const task = (data.tasks || []).find((item) => item.id === taskId);
       if (!task) return;
@@ -5954,6 +6129,7 @@
       task.creatorStore = creatorCalendarStore.value;
       task.creatorTime = document.getElementById("creatorCalendarTime").value || "10:00";
       syncCreatorStatusToGantt(task);
+      touchItem(task);
       if (publicationDate) {
         if (!publication) {
           publication = {
@@ -5973,11 +6149,13 @@
         publication.start = publicationDate;
         publication.end = publicationDate;
         publication.label = "Pubblicazione";
+        touchItem(publication);
       }
-      saveData();
+      await saveData();
       renderBoard();
       renderCreatorCalendar();
       closeCreatorCalendarEditor();
+      });
     });
 
     document.getElementById("memberForm").addEventListener("submit", (event) => {
