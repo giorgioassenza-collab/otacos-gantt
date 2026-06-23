@@ -641,19 +641,21 @@
       background: var(--orange-soft);
     }
 
-    .hidden-task-indicator {
+    .hidden-task-indicator,
+    .ped-hidden-indicator {
       position: absolute;
       width: 26px;
       height: 26px;
       display: grid;
       place-items: center;
-      border: 1px solid #d0d7e2;
+      border: 1px solid #cfd8e3;
       border-radius: 999px;
-      background: rgba(255, 255, 255, .94);
-      color: #111827;
-      font-size: 15px;
+      background: #fff;
+      color: #0f172a;
+      font-size: 16px;
       font-weight: 900;
-      box-shadow: 0 8px 20px rgba(24, 19, 15, .16);
+      line-height: 1;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, .12);
       pointer-events: none;
       z-index: 26;
     }
@@ -826,6 +828,8 @@
       font-weight: 900;
       line-height: 1.1;
       text-align: right;
+      cursor: pointer;
+      pointer-events: auto;
     }
 
     .ped-status-swatch {
@@ -867,23 +871,6 @@
       border: 1px solid #e2e8f0;
       border-radius: 6px;
       background: #fff;
-    }
-
-    .ped-hidden-indicator {
-      position: absolute;
-      z-index: 26;
-      width: 26px;
-      height: 26px;
-      display: grid;
-      place-items: center;
-      border: 1px solid #d0d7e2;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .94);
-      color: #111827;
-      font-size: 15px;
-      font-weight: 900;
-      box-shadow: 0 8px 20px rgba(24, 19, 15, .16);
-      pointer-events: none;
     }
 
     .ped-post small {
@@ -6033,6 +6020,8 @@
       pedContextMenu.classList.remove("open");
       creatorContextMenu.classList.remove("open");
       delete statusMenu.dataset.taskId;
+      delete statusMenu.dataset.pedTaskId;
+      delete statusMenu.dataset.pedPostId;
       delete influencerInlineMenu.dataset.influencerId;
       delete influencerInlineMenu.dataset.influencerKey;
       delete taskContextMenu.dataset.taskId;
@@ -6246,6 +6235,8 @@
     function showStatusMenu(taskId, x, y) {
       statusMenu.innerHTML = "";
       statusMenu.dataset.taskId = taskId;
+      delete statusMenu.dataset.pedTaskId;
+      delete statusMenu.dataset.pedPostId;
       data.statuses.forEach((status) => {
         const name = statusName(status);
         const button = document.createElement("button");
@@ -6259,6 +6250,29 @@
       statusMenu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - 210))}px`;
       statusMenu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - menuHeight - 12))}px`;
       taskContextMenu.classList.remove("open");
+    }
+
+    function showPedStatusMenu(postNode, x, y) {
+      statusMenu.innerHTML = "";
+      delete statusMenu.dataset.taskId;
+      if (postNode.dataset.taskId) statusMenu.dataset.pedTaskId = postNode.dataset.taskId;
+      else delete statusMenu.dataset.pedTaskId;
+      if (postNode.dataset.pedPostId) statusMenu.dataset.pedPostId = postNode.dataset.pedPostId;
+      else delete statusMenu.dataset.pedPostId;
+      data.pedStatuses.forEach((status) => {
+        const name = statusName(status);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.statusValue = name;
+        button.innerHTML = `<span class="status-swatch" style="background:${escapeHtml(pedStatusColor(name))}"></span>${escapeHtml(name)}`;
+        statusMenu.appendChild(button);
+      });
+      statusMenu.classList.add("open");
+      const menuHeight = Math.min(statusMenu.scrollHeight, window.innerHeight - 24);
+      statusMenu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - 210))}px`;
+      statusMenu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - menuHeight - 12))}px`;
+      taskContextMenu.classList.remove("open");
+      pedContextMenu.classList.remove("open");
     }
 
     bars.addEventListener("click", (event) => {
@@ -6307,6 +6321,22 @@
     statusMenu.addEventListener("click", (event) => {
       const button = event.target.closest("[data-status-value]");
       if (!button) return;
+      if (statusMenu.dataset.pedTaskId || statusMenu.dataset.pedPostId) {
+        let post = null;
+        if (statusMenu.dataset.pedTaskId) {
+          const task = data.tasks.find((item) => item.id === statusMenu.dataset.pedTaskId);
+          post = ensurePedPostForTask(task);
+        } else {
+          post = (data.pedPosts || []).find((item) => item.id === statusMenu.dataset.pedPostId);
+        }
+        if (!post) return;
+        post.status = button.dataset.statusValue;
+        touchItem(post);
+        saveData();
+        renderPed();
+        hideTaskMenus();
+        return;
+      }
       const task = data.tasks.find((item) => item.id === statusMenu.dataset.taskId);
       if (!task) return;
       task.status = button.dataset.statusValue;
@@ -6450,8 +6480,19 @@
       placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 124);
     });
 
+    pedCalendar.addEventListener("click", (event) => {
+      const statusChip = event.target.closest(".ped-status-chip");
+      if (!statusChip || suppressNextClick) return;
+      const post = statusChip.closest(".ped-post");
+      if (!post) return;
+      event.preventDefault();
+      event.stopPropagation();
+      showPedStatusMenu(post, event.clientX, event.clientY);
+    });
+
     pedCalendar.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
+      if (event.target.closest(".ped-status-chip")) return;
       const post = event.target.closest(".ped-post");
       if (!post) return;
       event.preventDefault();
@@ -6472,6 +6513,7 @@
 
     pedCalendar.addEventListener("touchstart", (event) => {
       if (dragState || event.touches.length !== 1) return;
+      if (event.target.closest(".ped-status-chip")) return;
       const post = event.target.closest(".ped-post");
       if (!post) return;
       const touch = event.touches[0];
