@@ -46,7 +46,7 @@
       flex-direction: column;
       height: 100vh;
       min-height: 0;
-      min-width: 980px;
+      min-width: 0;
       background: var(--bg);
     }
 
@@ -1201,9 +1201,8 @@
       pointer-events: none;
       overflow: auto;
       overscroll-behavior: contain;
-      z-index: 80;
       transition: opacity .16s ease, transform .16s ease;
-      z-index: 10;
+      z-index: 80;
       max-height: calc(100dvh - 182px);
       overflow: auto;
       overscroll-behavior: contain;
@@ -1689,12 +1688,48 @@
     svg { display: block; }
 
     @media (max-width: 800px) {
-      .app { min-width: 760px; }
-      :root { --sidebar: 128px; --day: 320px; }
-      .toolbar { gap: 8px; padding-inline: 10px; }
+      :root { --sidebar: 112px; --day: 260px; --timeline-head: 66px; --ped-hour: 150px; }
+      .app { min-width: 0; }
+      .toolbar {
+        height: auto;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 10px;
+      }
+      .toolbar-btn { height: 36px; padding-inline: 10px; }
       .brand-title { display: none; }
       .month-chip { display: none; }
       .member-select { width: 116px; }
+      .settings-panel {
+        inset: 8px 8px 78px;
+        width: auto;
+        max-height: none;
+        border-radius: 10px;
+      }
+      .modal-backdrop { padding: 10px 8px 86px; align-items: stretch; }
+      .modal {
+        width: 100%;
+        max-width: none;
+        max-height: calc(100dvh - 96px);
+      }
+      .view-switch {
+        left: 8px;
+        right: 8px;
+        transform: none;
+        overflow-x: auto;
+        justify-content: flex-start;
+      }
+      .horizontal-scrollbar {
+        left: 8px !important;
+        right: 8px;
+        bottom: 8px;
+      }
+      .influencer-shell { padding: 12px 8px 100px; }
+      .influencer-controls {
+        grid-template-columns: minmax(160px, 1fr) minmax(120px, 140px);
+        overflow-x: auto;
+      }
     }
   </style>
 </head>
@@ -2181,7 +2216,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { doc, getDoc, getFirestore, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     window.FIREBASE_CONFIG = {
       apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
@@ -2268,7 +2303,8 @@
     const horizontalScrollRange = document.getElementById("horizontalScrollRange");
     const syncIndicator = document.querySelector(".sync");
     const root = document.documentElement;
-    const today = new Date(2026, 5, 16);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const timelineStart = new Date(2026, 5, 1);
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
@@ -2328,6 +2364,7 @@
     let undoStack = [];
     let dataVersion = 0;
     let appStarted = false;
+    let boardDb = null;
     let boardRef = null;
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
@@ -2402,6 +2439,7 @@
           const auth = getAuth(app);
           await signInAnonymously(auth);
           const db = getFirestore(app);
+          boardDb = db;
           boardRef = doc(db, "boards", "default");
           const snapshot = await getDoc(boardRef);
           if (!snapshot.exists()) {
@@ -2597,6 +2635,67 @@
       return item;
     }
 
+    const settingMergeKeys = [
+      "members",
+      "statuses",
+      "pedStatuses",
+      "creatorStatuses",
+      "labels",
+      "formats",
+      "creatorStores",
+      "projects",
+      "socials",
+      "influencerOptions",
+      "influencerColumnLabels"
+    ];
+
+    function withoutVolatileFields(value) {
+      if (Array.isArray(value)) return value.map(withoutVolatileFields);
+      if (!value || typeof value !== "object") return value;
+      return Object.keys(value).sort().reduce((result, key) => {
+        if (key === "updatedAt") return result;
+        result[key] = withoutVolatileFields(value[key]);
+        return result;
+      }, {});
+    }
+
+    function stableDataString(value) {
+      return JSON.stringify(withoutVolatileFields(value || null));
+    }
+
+    function collectionById(items = []) {
+      return new Map((items || []).filter((item) => item?.id).map((item) => [item.id, item]));
+    }
+
+    function stampChangedItems(items = [], previousItems = []) {
+      const previous = collectionById(previousItems);
+      (items || []).forEach((item) => {
+        if (!item?.id) return;
+        const previousItem = previous.get(item.id);
+        if (!previousItem) {
+          if (!item.updatedAt) item.updatedAt = item.createdAt || Date.now();
+          return;
+        }
+        if (stableDataString(item) !== stableDataString(previousItem)) {
+          touchItem(item);
+        }
+      });
+    }
+
+    function stampChangedData(currentData, previousData) {
+      if (!currentData || !previousData) return;
+      const now = Date.now();
+      currentData.settingsUpdatedAt = currentData.settingsUpdatedAt || {};
+      settingMergeKeys.forEach((key) => {
+        if (stableDataString(currentData[key]) !== stableDataString(previousData[key])) {
+          currentData.settingsUpdatedAt[key] = now;
+        }
+      });
+      stampChangedItems(currentData.tasks, previousData.tasks);
+      stampChangedItems(currentData.pedPosts, previousData.pedPosts);
+      stampChangedItems(currentData.influencers, previousData.influencers);
+    }
+
     function mergeById(localItems = [], remoteItems = []) {
       const merged = new Map();
       remoteItems.forEach((item) => {
@@ -2605,7 +2704,9 @@
       localItems.forEach((localItem) => {
         if (!localItem?.id) return;
         const remoteItem = merged.get(localItem.id);
-        if (!remoteItem || itemUpdatedAt(localItem) >= itemUpdatedAt(remoteItem)) {
+        const localTime = itemUpdatedAt(localItem);
+        const remoteTime = itemUpdatedAt(remoteItem);
+        if (!remoteItem || localTime > remoteTime || (localTime > 0 && localTime === remoteTime)) {
           merged.set(localItem.id, localItem);
         }
       });
@@ -2615,6 +2716,63 @@
         .map((item) => item.id);
       const order = [...remoteOrder, ...localOnly];
       return order.map((id) => merged.get(id)).filter(Boolean);
+    }
+
+    function deletedMap(rawData, kind) {
+      const source = rawData?.deletedIds?.[kind] || rawData?.deleted?.[kind] || {};
+      if (Array.isArray(source)) {
+        return source.reduce((result, id) => {
+          if (id) result[id] = Date.now();
+          return result;
+        }, {});
+      }
+      return source && typeof source === "object" ? source : {};
+    }
+
+    function deletedSet(rawData, kind) {
+      return new Set(Object.keys(deletedMap(rawData, kind)));
+    }
+
+    function mergeDeletedIds(localData, remoteData) {
+      return ["tasks", "pedPosts", "influencers"].reduce((result, kind) => {
+        result[kind] = { ...deletedMap(remoteData, kind), ...deletedMap(localData, kind) };
+        return result;
+      }, {});
+    }
+
+    function filterDeleted(items = [], deletedIds) {
+      return (items || []).filter((item) => item?.id && !deletedIds.has(item.id));
+    }
+
+    function markDeleted(kind, id) {
+      if (!id) return;
+      data.deletedIds = data.deletedIds || { tasks: {}, pedPosts: {}, influencers: {} };
+      data.deletedIds[kind] = data.deletedIds[kind] || {};
+      data.deletedIds[kind][id] = Date.now();
+    }
+
+    function deleteTaskById(id) {
+      if (!id) return;
+      markDeleted("tasks", id);
+      (data.pedPosts || [])
+        .filter((post) => post.sourceTaskId === id)
+        .forEach((post) => markDeleted("pedPosts", post.id));
+      data.tasks = (data.tasks || []).filter((task) => task.id !== id);
+      data.pedPosts = (data.pedPosts || []).filter((post) => post.sourceTaskId !== id);
+    }
+
+    function deletePedPostById(id) {
+      if (!id) return;
+      markDeleted("pedPosts", id);
+      data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== id);
+    }
+
+    function deleteInfluencerById(id) {
+      if (!id) return;
+      const row = (data.influencers || []).find((item) => item.id === id);
+      if (row?.contactTaskId) deleteTaskById(row.contactTaskId);
+      markDeleted("influencers", id);
+      data.influencers = (data.influencers || []).filter((row) => row.id !== id);
     }
 
     function uniqueStrings(...lists) {
@@ -2629,49 +2787,98 @@
       return result;
     }
 
-    function mergeStatusSettings(localList = [], remoteList = []) {
+    function settingUpdatedAt(source, key) {
+      return Number(source?.settingsUpdatedAt?.[key] || 0);
+    }
+
+    function mergeSettingsUpdatedAt(localData = {}, remoteData = {}) {
+      return settingMergeKeys.reduce((result, key) => {
+        result[key] = Math.max(settingUpdatedAt(localData, key), settingUpdatedAt(remoteData, key));
+        return result;
+      }, {});
+    }
+
+    function mergeStringSettings(localList = [], remoteList = [], localTime = 0, remoteTime = 0) {
+      return localTime >= remoteTime
+        ? uniqueStrings(localList || [], remoteList || [])
+        : uniqueStrings(remoteList || [], localList || []);
+    }
+
+    function mergeStatusSettings(localList = [], remoteList = [], localTime = 0, remoteTime = 0) {
+      const primaryList = localTime >= remoteTime ? localList : remoteList;
+      const secondaryList = localTime >= remoteTime ? remoteList : localList;
       const merged = new Map();
-      remoteList.forEach((status) => {
+      secondaryList.forEach((status) => {
         const item = typeof status === "string" ? { name: status, color: "#6b7280" } : status;
         const name = statusName(item);
         if (name) merged.set(name.toLowerCase(), { ...item, name });
       });
-      localList.forEach((status) => {
+      primaryList.forEach((status) => {
         const item = typeof status === "string" ? { name: status, color: "#6b7280" } : status;
         const name = statusName(item);
         if (name) merged.set(name.toLowerCase(), { ...merged.get(name.toLowerCase()), ...item, name });
       });
-      return [...merged.values()];
+      const orderedKeys = [];
+      primaryList.forEach((status) => {
+        const name = statusName(status);
+        if (name) orderedKeys.push(name.toLowerCase());
+      });
+      secondaryList.forEach((status) => {
+        const name = statusName(status);
+        const key = name.toLowerCase();
+        if (name && !orderedKeys.includes(key)) orderedKeys.push(key);
+      });
+      return orderedKeys.map((key) => merged.get(key)).filter(Boolean);
     }
 
-    function mergeProjects(localProjects = [], remoteProjects = []) {
+    function mergeProjects(localProjects = [], remoteProjects = [], localTime = 0, remoteTime = 0) {
+      const primaryProjects = localTime >= remoteTime ? localProjects : remoteProjects;
+      const secondaryProjects = localTime >= remoteTime ? remoteProjects : localProjects;
       const merged = new Map();
-      remoteProjects.forEach((project) => {
+      secondaryProjects.forEach((project) => {
         if (project?.id) merged.set(project.id, project);
       });
-      localProjects.forEach((project) => {
+      primaryProjects.forEach((project) => {
         if (project?.id) merged.set(project.id, { ...merged.get(project.id), ...project });
       });
-      return [...merged.values()];
+      const order = [
+        ...primaryProjects.map((project) => project?.id).filter(Boolean),
+        ...secondaryProjects.map((project) => project?.id).filter((id) => id && !primaryProjects.some((project) => project?.id === id))
+      ];
+      return order.map((id) => merged.get(id)).filter(Boolean);
     }
 
-    function mergeSocials(localSocials = [], remoteSocials = []) {
+    function mergeSocials(localSocials = [], remoteSocials = [], localTime = 0, remoteTime = 0) {
+      const primarySocials = localTime >= remoteTime ? localSocials : remoteSocials;
+      const secondarySocials = localTime >= remoteTime ? remoteSocials : localSocials;
       const merged = new Map();
-      remoteSocials.forEach((social) => {
+      secondarySocials.forEach((social) => {
         const id = social?.id || slugify(social?.label || social?.name || social);
         if (id) merged.set(id, typeof social === "string" ? { id, label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" } : { ...social, id });
       });
-      localSocials.forEach((social) => {
+      primarySocials.forEach((social) => {
         const id = social?.id || slugify(social?.label || social?.name || social);
         if (id) merged.set(id, { ...merged.get(id), ...(typeof social === "string" ? { id, label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" } : social), id });
       });
-      return [...merged.values()];
+      const order = [
+        ...primarySocials.map((social) => social?.id || slugify(social?.label || social?.name || social)).filter(Boolean),
+        ...secondarySocials
+          .map((social) => social?.id || slugify(social?.label || social?.name || social))
+          .filter((id) => id && !primarySocials.some((social) => (social?.id || slugify(social?.label || social?.name || social)) === id))
+      ];
+      return order.map((id) => merged.get(id)).filter(Boolean);
     }
 
-    function mergeInfluencerOptions(localOptions = {}, remoteOptions = {}) {
+    function mergePlainObjectSettings(localObject = {}, remoteObject = {}, localTime = 0, remoteTime = 0) {
+      return localTime >= remoteTime
+        ? { ...(remoteObject || {}), ...(localObject || {}) }
+        : { ...(localObject || {}), ...(remoteObject || {}) };
+    }
+
+    function mergeInfluencerOptions(localOptions = {}, remoteOptions = {}, localTime = 0, remoteTime = 0) {
       const keys = [...new Set([...Object.keys(remoteOptions || {}), ...Object.keys(localOptions || {})])];
       return keys.reduce((result, key) => {
-        result[key] = mergeStatusSettings(localOptions[key] || [], remoteOptions[key] || []);
+        result[key] = mergeStatusSettings(localOptions[key] || [], remoteOptions[key] || [], localTime, remoteTime);
         return result;
       }, {});
     }
@@ -2679,22 +2886,25 @@
     function mergeBoardData(localData, remoteData) {
       const local = normalizeData(localData);
       const remote = normalizeData(remoteData);
+      const mergedDeletedIds = mergeDeletedIds(local, remote);
       return normalizeData({
         ...remote,
-        members: uniqueStrings(remote.members || [], local.members || []),
-        statuses: mergeStatusSettings(local.statuses || [], remote.statuses || []),
-        pedStatuses: mergeStatusSettings(local.pedStatuses || [], remote.pedStatuses || []),
-        creatorStatuses: mergeStatusSettings(local.creatorStatuses || [], remote.creatorStatuses || []),
-        labels: uniqueStrings(remote.labels || [], local.labels || []),
-        formats: uniqueStrings(remote.formats || [], local.formats || []),
-        creatorStores: uniqueStrings(remote.creatorStores || [], local.creatorStores || []),
-        projects: mergeProjects(local.projects || [], remote.projects || []),
-        socials: mergeSocials(local.socials || [], remote.socials || []),
-        influencerOptions: mergeInfluencerOptions(local.influencerOptions || {}, remote.influencerOptions || {}),
-        influencerColumnLabels: { ...(remote.influencerColumnLabels || {}), ...(local.influencerColumnLabels || {}) },
-        tasks: mergeById(local.tasks, remote.tasks),
-        pedPosts: mergeById(local.pedPosts || [], remote.pedPosts || []),
-        influencers: mergeById(local.influencers || [], remote.influencers || [])
+        deletedIds: mergedDeletedIds,
+        settingsUpdatedAt: mergeSettingsUpdatedAt(local, remote),
+        members: mergeStringSettings(local.members || [], remote.members || [], settingUpdatedAt(local, "members"), settingUpdatedAt(remote, "members")),
+        statuses: mergeStatusSettings(local.statuses || [], remote.statuses || [], settingUpdatedAt(local, "statuses"), settingUpdatedAt(remote, "statuses")),
+        pedStatuses: mergeStatusSettings(local.pedStatuses || [], remote.pedStatuses || [], settingUpdatedAt(local, "pedStatuses"), settingUpdatedAt(remote, "pedStatuses")),
+        creatorStatuses: mergeStatusSettings(local.creatorStatuses || [], remote.creatorStatuses || [], settingUpdatedAt(local, "creatorStatuses"), settingUpdatedAt(remote, "creatorStatuses")),
+        labels: mergeStringSettings(local.labels || [], remote.labels || [], settingUpdatedAt(local, "labels"), settingUpdatedAt(remote, "labels")),
+        formats: mergeStringSettings(local.formats || [], remote.formats || [], settingUpdatedAt(local, "formats"), settingUpdatedAt(remote, "formats")),
+        creatorStores: mergeStringSettings(local.creatorStores || [], remote.creatorStores || [], settingUpdatedAt(local, "creatorStores"), settingUpdatedAt(remote, "creatorStores")),
+        projects: mergeProjects(local.projects || [], remote.projects || [], settingUpdatedAt(local, "projects"), settingUpdatedAt(remote, "projects")),
+        socials: mergeSocials(local.socials || [], remote.socials || [], settingUpdatedAt(local, "socials"), settingUpdatedAt(remote, "socials")),
+        influencerOptions: mergeInfluencerOptions(local.influencerOptions || {}, remote.influencerOptions || {}, settingUpdatedAt(local, "influencerOptions"), settingUpdatedAt(remote, "influencerOptions")),
+        influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
+        tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
+        pedPosts: filterDeleted(mergeById(local.pedPosts || [], remote.pedPosts || []), deletedSet({ deletedIds: mergedDeletedIds }, "pedPosts")),
+        influencers: filterDeleted(mergeById(local.influencers || [], remote.influencers || []), deletedSet({ deletedIds: mergedDeletedIds }, "influencers"))
       });
     }
 
@@ -2873,6 +3083,8 @@
             revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
+          pendingLocalData = null;
+          pendingLocalRevision = 0;
           setTimeout(() => {
             applyingRemoteUpdate = false;
           }, 250);
@@ -2900,6 +3112,7 @@
     }
 
     async function saveData(skipUndo = false) {
+      stampChangedData(data, committedData);
       const localRevision = Math.max(dataVersion + 1, Date.now());
       dataVersion = localRevision;
       pendingLocalData = cleanForFirestore(data);
@@ -2907,6 +3120,34 @@
       saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
       saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(skipUndo));
       return saveQueue;
+    }
+
+    async function commitBoardData(localData, localHistory, revision) {
+      if (!boardRef || !boardDb) {
+        return {
+          data: normalizeData(localData),
+          history: normalizeHistory(localHistory),
+          revision
+        };
+      }
+      return runTransaction(boardDb, async (transaction) => {
+        let commitData = normalizeData(localData);
+        let commitHistory = normalizeHistory(localHistory);
+        const latestSnapshot = await transaction.get(boardRef);
+        if (latestSnapshot.exists()) {
+          const latestDoc = latestSnapshot.data();
+          if (latestDoc.data) commitData = mergeBoardData(commitData, applyMovementLog(latestDoc.data));
+          commitHistory = normalizeHistory([...commitHistory, ...normalizeHistory(latestDoc.history || [])]);
+        }
+        const commitRevision = Math.max(revision, Number(latestSnapshot.data()?.revision || 0) + 1, Date.now());
+        transaction.set(boardRef, {
+          data: cleanForFirestore(commitData),
+          history: cleanForFirestore(commitHistory),
+          revision: commitRevision,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        return { data: commitData, history: commitHistory, revision: commitRevision };
+      });
     }
 
     async function performSaveData(skipUndo = false) {
@@ -2920,38 +3161,24 @@
           updateUndoButton();
         }
         if (boardRef) {
-          let remoteHistory = historyEntries;
-          try {
-            const latestSnapshot = await getDoc(boardRef);
-            if (latestSnapshot.exists()) {
-              const latestDoc = latestSnapshot.data();
-              if (latestDoc.data) {
-                data = mergeBoardData(data, applyMovementLog(latestDoc.data));
-                remoteHistory = normalizeHistory(latestDoc.history || historyEntries);
-              }
-            }
-          } catch {
-            remoteHistory = historyEntries;
-          }
-          historyEntries = normalizeHistory([...historyEntries, ...remoteHistory]);
           const nextRevision = Math.max(dataVersion + 1, Date.now());
-          dataVersion = nextRevision;
           suppressRemoteUntil = Date.now() + 1500;
           pendingLocalRevision = nextRevision;
           pendingLocalData = cleanForFirestore(data);
-          const pendingHistory = cleanForFirestore(historyEntries);
-          saveLocalSnapshot(pendingLocalData, pendingHistory, nextRevision);
+          saveLocalSnapshot(pendingLocalData, historyEntries, nextRevision);
           applyingRemoteUpdate = true;
-          await setDoc(boardRef, {
-            data: pendingLocalData,
-            history: pendingHistory,
-            revision: nextRevision,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
+          const committed = await commitBoardData(data, historyEntries, nextRevision);
+          data = committed.data;
+          historyEntries = committed.history;
+          dataVersion = committed.revision;
+          pendingLocalData = cleanForFirestore(data);
+          saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
           setTimeout(() => {
             applyingRemoteUpdate = false;
           }, 250);
           committedData = structuredClone(data);
+          pendingLocalData = null;
+          pendingLocalRevision = 0;
           updateUndoButton();
           syncIndicator.textContent = "Sincronizzato live";
           return;
@@ -2971,6 +3198,30 @@
         committedData = structuredClone(data);
         updateUndoButton();
         syncIndicator.textContent = "Offline: salvato locale";
+      }
+    }
+
+    async function retryPendingLocalSave() {
+      if (!boardRef || !pendingLocalData || applyingRemoteUpdate) return;
+      try {
+        applyingRemoteUpdate = true;
+        const retryData = normalizeData(pendingLocalData);
+        const retryRevision = Math.max(pendingLocalRevision || 0, dataVersion + 1, Date.now());
+        const committed = await commitBoardData(retryData, historyEntries, retryRevision);
+        data = committed.data;
+        historyEntries = committed.history;
+        dataVersion = committed.revision;
+        committedData = structuredClone(data);
+        pendingLocalData = null;
+        pendingLocalRevision = 0;
+        saveLocalSnapshot(data, historyEntries, dataVersion);
+        syncIndicator.textContent = "Sincronizzato live";
+      } catch {
+        syncIndicator.textContent = "Offline: riprovo salvataggio";
+      } finally {
+        setTimeout(() => {
+          applyingRemoteUpdate = false;
+        }, 250);
       }
     }
 
@@ -3297,6 +3548,14 @@
       normalized.labels = [...new Set(normalized.labels || starterData.labels)].filter((label) => String(label).trim().toLowerCase() !== "brief");
       normalized.formats = normalized.formats && normalized.formats.length ? normalized.formats : structuredClone(starterData.formats);
       normalized.projects = ensureProjectDefaults(normalized.projects || structuredClone(starterData.projects));
+      normalized.settingsUpdatedAt = settingMergeKeys.reduce((result, key) => {
+        result[key] = Number(normalized.settingsUpdatedAt?.[key] || 0);
+        return result;
+      }, {});
+      normalized.deletedIds = mergeDeletedIds(normalized, {});
+      const deletedTaskIds = deletedSet(normalized, "tasks");
+      const deletedPedPostIds = deletedSet(normalized, "pedPosts");
+      const deletedInfluencerIds = deletedSet(normalized, "influencers");
       normalized.socials = (normalized.socials || structuredClone(starterData.socials)).map((social) => {
         if (typeof social === "string") {
           return { id: slugify(social), label: social, short: social.slice(0, 2).toUpperCase(), color: "#111827" };
@@ -3309,7 +3568,7 @@
           color: social.color || "#111827"
         };
       });
-      normalized.tasks = (normalized.tasks || []).map((task) => ({
+      normalized.tasks = filterDeleted((normalized.tasks || []).map((task) => ({
         ...task,
         nameEn: task.nameEn || "",
         updatedAt: Number(task.updatedAt || task.createdAt || 0),
@@ -3331,8 +3590,8 @@
           members: Array.isArray(subtask.members) ? subtask.members : [],
           done: Boolean(subtask.done)
         }))
-      }));
-      normalized.pedPosts = (normalized.pedPosts || []).map((post) => ({
+      })), deletedTaskIds);
+      normalized.pedPosts = filterDeleted((normalized.pedPosts || []).map((post) => ({
         id: post.id || `ped${Date.now()}${Math.random()}`,
         sourceTaskId: post.sourceTaskId || "",
         updatedAt: Number(post.updatedAt || post.createdAt || 0),
@@ -3356,8 +3615,8 @@
           members: Array.isArray(subtask.members) ? subtask.members : [],
           done: Boolean(subtask.done)
         }))
-      }));
-      normalized.influencers = applyInfluencerStatusAging((normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key])));
+      })), deletedPedPostIds);
+      normalized.influencers = filterDeleted(applyInfluencerStatusAging((normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key]))), deletedInfluencerIds);
       ensureInfluencerOptionsFromRows(normalized);
       return normalized;
     }
@@ -4663,7 +4922,7 @@
       const existingId = row.contactTaskId || "";
       const existingTask = existingId ? data.tasks.find((task) => task.id === existingId) : null;
       if (!row.contactTaskEnabled) {
-        if (existingTask) data.tasks = data.tasks.filter((task) => task.id !== existingId);
+        if (existingTask) deleteTaskById(existingId);
         row.contactTaskId = "";
         return;
       }
@@ -5023,6 +5282,10 @@
       renderPed();
       renderInfluencers();
       renderCreatorCalendar();
+      renderSettingsLists();
+      setNewTaskDefaultDates();
+      document.getElementById("pedPostDate").value = currentDateKey();
+      pedPostTime.value = "11:00";
       document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode");
       viewGantt.classList.add("is-active");
       viewPed.classList.remove("is-active");
@@ -5036,8 +5299,15 @@
         needsRemoteResync = false;
         saveData(true);
       }
+      setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
     }
+
+    window.addEventListener("beforeunload", (event) => {
+      if (!pendingLocalData) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
 
     function handleLogin() {
       const password = document.getElementById("loginPassword").value;
@@ -5131,12 +5401,21 @@
     });
 
     document.getElementById("openTaskPanel").addEventListener("click", () => {
+      renderBoard();
       setNewTaskDefaultDates();
       resetNewTaskPedFields();
       openPanel("taskPanel");
     });
-    document.getElementById("openProjectPanel").addEventListener("click", () => openPanel("projectPanel"));
-    document.getElementById("openPedPostPanel").addEventListener("click", () => openPanel("pedPostPanel"));
+    document.getElementById("openProjectPanel").addEventListener("click", () => {
+      renderBoard();
+      openPanel("projectPanel");
+    });
+    document.getElementById("openPedPostPanel").addEventListener("click", () => {
+      renderSettingsLists();
+      renderPedProjectOptions();
+      document.getElementById("pedPostDate").value = currentDateKey();
+      openPanel("pedPostPanel");
+    });
     document.getElementById("settings").addEventListener("click", () => {
       if (document.body.classList.contains("influencer-mode")) {
         renderInfluencerSettings();
@@ -5354,11 +5633,7 @@
     document.getElementById("deleteInfluencerButton").addEventListener("click", () => {
       const id = document.getElementById("influencerId").value;
       if (!id) return;
-      const row = (data.influencers || []).find((item) => item.id === id);
-      if (row?.contactTaskId) {
-        data.tasks = data.tasks.filter((task) => task.id !== row.contactTaskId);
-      }
-      data.influencers = (data.influencers || []).filter((row) => row.id !== id);
+      deleteInfluencerById(id);
       saveData();
       renderBoard();
       renderInfluencers();
@@ -5535,7 +5810,7 @@
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
       pedPostProject.value = data.projects[0]?.id || "";
-      document.getElementById("pedPostDate").value = "2026-06-16";
+      document.getElementById("pedPostDate").value = currentDateKey();
       pedPostTime.value = "11:00";
       document.getElementById("pedPostAsset").value = "";
       document.getElementById("pedPostCopy").value = "";
@@ -5759,7 +6034,7 @@
           hideTaskMenus();
           return;
         }
-        data.tasks = data.tasks.filter((item) => item.id !== taskId);
+        deleteTaskById(taskId);
       }
       if (button.dataset.contextAction === "move-next") {
         const originalStart = task.start;
@@ -5793,11 +6068,7 @@
           hideTaskMenus();
           return;
         }
-        const row = (data.influencers || []).find((item) => item.id === id);
-        if (row?.contactTaskId) {
-          data.tasks = data.tasks.filter((task) => task.id !== row.contactTaskId);
-        }
-        data.influencers = (data.influencers || []).filter((row) => row.id !== id);
+        deleteInfluencerById(id);
         saveData();
         renderBoard();
         renderInfluencers();
@@ -5917,14 +6188,15 @@
         if (!confirmDelete("Delete this PED post?")) return;
         if (taskId) {
           const post = (data.pedPosts || []).find((item) => item.sourceTaskId === taskId);
-          if (post) data.pedPosts = (data.pedPosts || []).filter((item) => item.id !== post.id);
+          if (post) deletePedPostById(post.id);
           const task = data.tasks.find((item) => item.id === taskId);
           if (task) {
             task.pedEnabled = false;
             task.pedDate = "";
+            touchItem(task);
           }
         } else if (postId) {
-          data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
+          deletePedPostById(postId);
         }
         saveData();
         renderBoard();
@@ -5956,7 +6228,8 @@
       if (button.dataset.creatorContextAction === "delete") {
         if (!confirmDelete("Delete this Creator Calendar item and its linked publication task?")) return;
         const publication = findPublicationTaskFor(task);
-        data.tasks = (data.tasks || []).filter((item) => item.id !== taskId && item.id !== publication?.id);
+        deleteTaskById(taskId);
+        if (publication?.id) deleteTaskById(publication.id);
         saveData();
         renderBoard();
         renderCreatorCalendar();
@@ -5985,7 +6258,7 @@
       const postId = document.getElementById("editPedPostId").value;
       if (!postId) return;
       if (!confirmDelete("Delete this PED post?")) return;
-      data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== postId);
+      deletePedPostById(postId);
       await saveData();
       renderPed();
       closePedPostEditor();
@@ -5995,7 +6268,7 @@
       const taskId = document.getElementById("editTaskId").value;
       if (!taskId) return;
       if (!confirmDelete("Delete this task?")) return;
-      data.tasks = data.tasks.filter((task) => task.id !== taskId);
+      deleteTaskById(taskId);
       await saveData();
       renderBoard();
       renderCreatorCalendar();
@@ -6295,7 +6568,7 @@
       if (!button) return;
       const id = button.dataset.deleteProject;
       data.projects = data.projects.filter((project) => project.id !== id);
-      data.tasks = data.tasks.filter((task) => task.projectId !== id);
+      (data.tasks || []).filter((task) => task.projectId === id).forEach((task) => deleteTaskById(task.id));
       const fallbackProjectId = data.projects[0]?.id || "";
       data.pedPosts = (data.pedPosts || []).map((post) => post.projectId === id ? { ...post, projectId: fallbackProjectId } : post);
       saveData();
