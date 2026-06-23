@@ -2371,7 +2371,7 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
-    const maxHistoryEntries = 60;
+    const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const influencerColumns = [
       { key: "name", label: "NAME" },
@@ -2530,7 +2530,7 @@
             if (sameData(normalizedRemote, data)) return;
             dataVersion = Math.max(dataVersion, remoteRevision);
             data = normalizedRemote;
-            historyEntries = normalizeHistory(remoteDoc.history);
+            historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             committedData = structuredClone(data);
             saveLocalSnapshot(data, historyEntries, dataVersion);
             renderBoard();
@@ -2547,7 +2547,7 @@
             const snapshotData = snapshot.data();
             const remoteRevision = Number(snapshotData.revision || 0);
             dataVersion = remoteRevision;
-            historyEntries = normalizeHistory(snapshotData.history);
+            historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             const remoteData = normalizeData(snapshotData.data);
             saveLocalSnapshot(remoteData, historyEntries, dataVersion);
             return remoteData;
@@ -3042,12 +3042,11 @@
           suppressRemoteUntil = Date.now() + 1500;
           pendingLocalRevision = nextRevision;
           pendingLocalData = cleanForFirestore(data);
-          const pendingHistory = cleanForFirestore(historyEntries);
-          saveLocalSnapshot(pendingLocalData, pendingHistory, nextRevision);
+          saveLocalSnapshot(pendingLocalData, historyEntries, nextRevision);
           applyingRemoteUpdate = true;
           await setDoc(boardRef, {
             data: pendingLocalData,
-            history: pendingHistory,
+            history: [],
             revision: nextRevision,
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -3067,11 +3066,12 @@
         renderHistoryList();
         historyModal.classList.remove("open");
         setSyncMessage("Version restored");
-      } catch {
+      } catch (error) {
         applyingRemoteUpdate = false;
         pendingLocalData = null;
         pendingLocalRevision = 0;
-        setSyncMessage("Restore failed", true);
+        console.error("Restore failed", error);
+        setSyncMessage(`Restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
       }
     }
 
@@ -3100,21 +3100,19 @@
       }
       return runTransaction(boardDb, async (transaction) => {
         let commitData = normalizeData(localData);
-        let commitHistory = normalizeHistory(localHistory);
         const latestSnapshot = await transaction.get(boardRef);
         if (latestSnapshot.exists()) {
           const latestDoc = latestSnapshot.data();
           if (latestDoc.data) commitData = mergeBoardData(commitData, normalizeData(latestDoc.data));
-          commitHistory = normalizeHistory([...commitHistory, ...normalizeHistory(latestDoc.history || [])]);
         }
         const commitRevision = Math.max(revision, Number(latestSnapshot.data()?.revision || 0) + 1, Date.now());
         transaction.set(boardRef, {
           data: cleanForFirestore(commitData),
-          history: cleanForFirestore(commitHistory),
+          history: [],
           revision: commitRevision,
           updatedAt: serverTimestamp()
         }, { merge: true });
-        return { data: commitData, history: commitHistory, revision: commitRevision };
+        return { data: commitData, history: normalizeHistory(localHistory), revision: commitRevision };
       });
     }
 
@@ -3155,7 +3153,7 @@
         committedData = structuredClone(data);
         updateUndoButton();
         setSyncMessage("Firebase non configurato: salvato solo locale", true);
-      } catch {
+      } catch (error) {
         applyingRemoteUpdate = false;
         const fallbackRevision = Math.max(dataVersion + 1, Date.now());
         dataVersion = fallbackRevision;
@@ -3165,7 +3163,8 @@
         saveLocalSnapshot(pendingLocalData, historyEntries, pendingLocalRevision);
         committedData = structuredClone(data);
         updateUndoButton();
-        setSyncMessage("Offline: salvato solo locale", true);
+        console.error("Firestore save failed", error);
+        setSyncMessage(`Salvataggio non sincronizzato: ${error?.code || error?.message || "errore Firestore"}`, true);
       }
     }
 
@@ -3184,8 +3183,9 @@
         pendingLocalRevision = 0;
         saveLocalSnapshot(data, historyEntries, dataVersion);
         setSyncMessage("Sincronizzato live");
-      } catch {
-        setSyncMessage("Offline: riprovo salvataggio", true);
+      } catch (error) {
+        console.error("Firestore retry failed", error);
+        setSyncMessage(`Riprovo salvataggio: ${error?.code || error?.message || "errore Firestore"}`, true);
       } finally {
         setTimeout(() => {
           applyingRemoteUpdate = false;
