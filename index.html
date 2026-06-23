@@ -1709,7 +1709,7 @@
     svg { display: block; }
 
     @media (max-width: 800px) {
-      :root { --sidebar: 112px; --day: 260px; --timeline-head: 66px; --ped-hour: 150px; }
+      :root { --sidebar: 92px; --day: 210px; --timeline-head: 62px; --ped-hour: 140px; }
       .login-page {
         min-height: 100dvh;
         padding: 20px;
@@ -1733,14 +1733,36 @@
       .toolbar {
         height: auto;
         flex: 0 0 auto;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 8px;
         padding: 8px 10px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+      }
+      .toolbar > * {
+        flex: 0 0 auto;
       }
       .toolbar-btn { height: 36px; padding-inline: 10px; }
       .brand-title { display: none; }
       .month-chip { display: none; }
-      .member-select { width: 116px; }
+      .member-select { width: 136px; max-width: 136px; }
+      .zoom {
+        gap: 3px;
+      }
+      .zoom button {
+        width: 30px;
+        height: 30px;
+      }
+      #zoomLabel {
+        display: none;
+      }
+      .board {
+        grid-template-columns: var(--sidebar) 1fr;
+      }
+      .row-label {
+        padding: 0 8px;
+        font-size: 11px;
+      }
       .settings-panel {
         inset: 8px 8px 78px;
         width: auto;
@@ -2493,7 +2515,7 @@
             const remote = remoteDoc.data;
             const remoteRevision = Number(remoteDoc.revision || 0);
             if (!remote) return;
-            const normalizedRemote = applyMovementLog(remote);
+            const normalizedRemote = normalizeData(remote);
             if (pendingLocalData && sameData(normalizedRemote, pendingLocalData)) {
               pendingLocalData = null;
               pendingLocalRevision = 0;
@@ -3168,7 +3190,7 @@
         const latestSnapshot = await transaction.get(boardRef);
         if (latestSnapshot.exists()) {
           const latestDoc = latestSnapshot.data();
-          if (latestDoc.data) commitData = mergeBoardData(commitData, applyMovementLog(latestDoc.data));
+          if (latestDoc.data) commitData = mergeBoardData(commitData, normalizeData(latestDoc.data));
           commitHistory = normalizeHistory([...commitHistory, ...normalizeHistory(latestDoc.history || [])]);
         }
         const commitRevision = Math.max(revision, Number(latestSnapshot.data()?.revision || 0) + 1, Date.now());
@@ -3362,6 +3384,11 @@
         .filter((task) => !isDoneStatus(task.status))
         .length;
       return pendingCount > 0 ? `${filterValue} (${pendingCount})` : filterValue;
+    }
+
+    function activeClientFilters() {
+      return clientNames.filter((client) => (data.tasks || [])
+        .some((task) => taskMatchesFilter(task, client) && !isDoneStatus(task.status)));
     }
 
     function isDoneStatus(status) {
@@ -4125,8 +4152,9 @@
         pill.innerHTML = `<input value="${escapeHtml(member)}" aria-label="Edit ${escapeHtml(member)}" data-edit-member="${escapeHtml(member)}"><button type="button" aria-label="Move up ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(member)}" data-move-member="${escapeHtml(member)}" data-move-direction="1" ${index === members.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(member)}" data-delete-member="${escapeHtml(member)}">x</button>`;
         memberList.appendChild(pill);
       });
-      clientNames.forEach((client) => memberFilter.appendChild(option(client, filterOptionLabel(client))));
-      const filterOptions = ["all", ...members, ...clientNames];
+      const clientFilters = activeClientFilters();
+      clientFilters.forEach((client) => memberFilter.appendChild(option(client, filterOptionLabel(client))));
+      const filterOptions = ["all", ...members, ...clientFilters];
       memberFilter.value = filterOptions.includes(previousFilter) ? previousFilter : "all";
 
       taskStatus.innerHTML = "";
