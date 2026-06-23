@@ -2528,8 +2528,10 @@
             if (remoteRevision <= dataVersion) return;
             if (applyingRemoteUpdate && Date.now() < suppressRemoteUntil && sameData(normalizedRemote, data)) return;
             if (sameData(normalizedRemote, data)) return;
+            const mergedRemote = mergeBoardData(data, normalizedRemote);
+            const shouldRepairRemote = !sameData(mergedRemote, normalizedRemote);
             dataVersion = Math.max(dataVersion, remoteRevision);
-            data = normalizedRemote;
+            data = mergedRemote;
             historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             committedData = structuredClone(data);
             saveLocalSnapshot(data, historyEntries, dataVersion);
@@ -2539,6 +2541,7 @@
             renderCreatorCalendar();
             updateUndoButton();
             setSyncMessage("Sincronizzato live");
+            if (shouldRepairRemote && !pendingLocalData) saveData(true);
           }, () => {
             setSyncMessage("Errore sincronizzazione Firestore: dati condivisi non aggiornati", true);
           });
