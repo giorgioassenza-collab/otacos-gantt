@@ -643,16 +643,17 @@
 
     .hidden-task-indicator {
       position: absolute;
-      width: 24px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       display: grid;
       place-items: center;
-      color: #ef4444;
-      background: transparent;
-      text-shadow: 0 1px 0 #fff, 0 0 10px rgba(239, 68, 68, .28);
-      font-size: 18px;
-      line-height: 1;
+      border: 1px solid #d0d7e2;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .94);
+      color: #111827;
+      font-size: 15px;
       font-weight: 900;
+      box-shadow: 0 8px 20px rgba(24, 19, 15, .16);
       pointer-events: none;
       z-index: 26;
     }
@@ -5430,9 +5431,10 @@
       hiddenColumns.forEach((left) => {
         const indicator = document.createElement("div");
         indicator.className = "hidden-task-indicator";
-        indicator.style.left = `${left + Math.min(dayWidth - 30, 18)}px`;
+        indicator.style.left = `${left + Math.max(6, (dayWidth - 26) / 2)}px`;
         indicator.style.top = `${indicatorTop}px`;
         indicator.textContent = "↓";
+        indicator.title = "More tasks below";
         bars.appendChild(indicator);
       });
     }
