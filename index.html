@@ -5967,25 +5967,98 @@
       return `${String(hour).padStart(2, "0")}:00`;
     }
 
-    async function finishDrag(event) {
+    function dragScrollElement(state) {
+      if (!state) return null;
+      if (state.type === "gantt") return scroller;
+      if (state.type === "ped") return document.getElementById("pedView");
+      return null;
+    }
+
+    function autoScrollWhileDragging(event, state) {
+      const scrollEl = dragScrollElement(state);
+      if (!scrollEl) return;
+      const rect = scrollEl.getBoundingClientRect();
+      const edge = 56;
+      const maxStep = 34;
+      if (event.clientX > rect.right - edge) {
+        const strength = Math.min(1, (event.clientX - (rect.right - edge)) / edge);
+        scrollEl.scrollLeft += Math.max(8, Math.round(maxStep * strength));
+      } else if (event.clientX < rect.left + edge) {
+        const strength = Math.min(1, ((rect.left + edge) - event.clientX) / edge);
+        scrollEl.scrollLeft -= Math.max(8, Math.round(maxStep * strength));
+      }
+      if (state.type === "ped") {
+        if (event.clientY > rect.bottom - edge) {
+          const strength = Math.min(1, (event.clientY - (rect.bottom - edge)) / edge);
+          scrollEl.scrollTop += Math.max(8, Math.round(maxStep * strength));
+        } else if (event.clientY < rect.top + edge) {
+          const strength = Math.min(1, ((rect.top + edge) - event.clientY) / edge);
+          scrollEl.scrollTop -= Math.max(8, Math.round(maxStep * strength));
+        }
+      }
+      syncHorizontalScrollbar();
+    }
+
+    function startDragState(details) {
+      dragState = {
+        ...details,
+        lastX: details.startX,
+        lastY: details.startY,
+        dragged: false
+      };
+    }
+
+    function updateDragPosition(clientX, clientY, sourceEvent) {
       if (!dragState) return;
-      const state = dragState;
-      dragState = null;
+      const deltaX = clientX - dragState.startX;
+      const deltaY = clientY - dragState.startY;
+      const distance = Math.hypot(deltaX, deltaY);
+      dragState.lastX = clientX;
+      dragState.lastY = clientY;
+      if (distance < 7) return;
+      dragState.dragged = true;
+      dragState.element.classList.remove("is-pressing");
+      dragState.element.classList.add("is-dragging");
+      autoScrollWhileDragging({ clientX, clientY }, dragState);
+      dragState.element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.015)`;
+      sourceEvent?.preventDefault?.();
+    }
+
+    function resetDragVisualState(state) {
+      if (!state) return;
       if (state.pointerId !== undefined && state.element.releasePointerCapture) {
         try { state.element.releasePointerCapture(state.pointerId); } catch (error) {}
       }
       state.element.classList.remove("is-pressing", "is-dragging");
       state.element.style.transform = "";
+    }
+
+    function cancelDrag(event) {
+      if (!dragState) return;
+      if (event?.pointerId !== undefined && dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+      const state = dragState;
+      dragState = null;
+      resetDragVisualState(state);
+    }
+
+    async function finishDrag(event) {
+      if (!dragState) return;
+      if (event?.pointerId !== undefined && dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+      const state = dragState;
+      dragState = null;
+      resetDragVisualState(state);
       if (!state.dragged) return;
       suppressNextClick = true;
       setTimeout(() => { suppressNextClick = false; }, 250);
+      const dropX = Number.isFinite(state.lastX) ? state.lastX : event.clientX;
+      const dropY = Number.isFinite(state.lastY) ? state.lastY : event.clientY;
       if (state.type === "gantt") {
         const task = data.tasks.find((item) => item.id === state.id);
         if (!task) return;
         const oldStart = task.start;
         const oldEnd = task.end || task.start;
         const duration = Math.max(0, dateDiffDays(new Date(`${oldStart}T00:00:00`), new Date(`${oldEnd}T00:00:00`)));
-        const newStart = dateFromTimelineClientX(event.clientX, scroller);
+        const newStart = dateFromTimelineClientX(dropX, scroller);
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
         touchItem(task);
@@ -5997,8 +6070,8 @@
       }
       if (state.type === "ped") {
         const pedView = document.getElementById("pedView");
-        const date = dateFromTimelineClientX(event.clientX, pedView);
-        const time = pedTimeFromClientY(event.clientY);
+        const date = dateFromTimelineClientX(dropX, pedView);
+        const time = pedTimeFromClientY(dropY);
         if (state.taskId) {
           const task = data.tasks.find((item) => item.id === state.taskId);
           if (task) {
@@ -6027,19 +6100,38 @@
 
     document.addEventListener("pointermove", (event) => {
       if (!dragState) return;
-      const deltaX = event.clientX - dragState.startX;
-      const deltaY = event.clientY - dragState.startY;
-      const distance = Math.hypot(deltaX, deltaY);
-      if (distance < 7) return;
-      dragState.dragged = true;
-      dragState.element.classList.remove("is-pressing");
-      dragState.element.classList.add("is-dragging");
-      dragState.element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.015)`;
-      event.preventDefault();
+      if (event.pointerId !== undefined && dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
+      updateDragPosition(event.clientX, event.clientY, event);
     });
 
     document.addEventListener("pointerup", finishDrag);
-    document.addEventListener("pointercancel", finishDrag);
+    document.addEventListener("pointercancel", cancelDrag);
+    function touchDragId(touch) {
+      return `touch-${touch.identifier}`;
+    }
+    function matchingChangedTouch(event) {
+      if (!dragState || typeof dragState.pointerId !== "string") return null;
+      return [...event.changedTouches].find((touch) => touchDragId(touch) === dragState.pointerId) || null;
+    }
+    function matchingActiveTouch(event) {
+      if (!dragState || typeof dragState.pointerId !== "string") return null;
+      return [...event.touches].find((touch) => touchDragId(touch) === dragState.pointerId) || null;
+    }
+    document.addEventListener("touchmove", (event) => {
+      const touch = matchingActiveTouch(event);
+      if (!touch) return;
+      updateDragPosition(touch.clientX, touch.clientY, event);
+    }, { passive: false });
+    document.addEventListener("touchend", (event) => {
+      const touch = matchingChangedTouch(event);
+      if (!touch) return;
+      finishDrag({ pointerId: touchDragId(touch), clientX: touch.clientX, clientY: touch.clientY });
+    }, { passive: false });
+    document.addEventListener("touchcancel", (event) => {
+      const touch = matchingChangedTouch(event);
+      if (!touch) return;
+      cancelDrag({ pointerId: touchDragId(touch) });
+    }, { passive: false });
     document.addEventListener("selectstart", (event) => {
       if (dragState) event.preventDefault();
     });
@@ -6078,16 +6170,32 @@
       if (bar.setPointerCapture) {
         try { bar.setPointerCapture(event.pointerId); } catch (error) {}
       }
-      dragState = {
+      startDragState({
         type: "gantt",
         id: bar.dataset.taskId,
         element: bar,
         pointerId: event.pointerId,
         startX: event.clientX,
-        startY: event.clientY,
-        dragged: false
-      };
+        startY: event.clientY
+      });
     });
+
+    bars.addEventListener("touchstart", (event) => {
+      if (dragState || event.touches.length !== 1) return;
+      const bar = event.target.closest("[data-task-id]");
+      if (!bar) return;
+      const touch = event.touches[0];
+      event.preventDefault();
+      bar.classList.add("is-pressing");
+      startDragState({
+        type: "gantt",
+        id: bar.dataset.taskId,
+        element: bar,
+        pointerId: touchDragId(touch),
+        startX: touch.clientX,
+        startY: touch.clientY
+      });
+    }, { passive: false });
 
     statusMenu.addEventListener("click", (event) => {
       const button = event.target.closest("[data-status-value]");
@@ -6244,17 +6352,34 @@
       if (post.setPointerCapture) {
         try { post.setPointerCapture(event.pointerId); } catch (error) {}
       }
-      dragState = {
+      startDragState({
         type: "ped",
         taskId: post.dataset.taskId || "",
         postId: post.dataset.pedPostId || "",
         element: post,
         pointerId: event.pointerId,
         startX: event.clientX,
-        startY: event.clientY,
-        dragged: false
-      };
+        startY: event.clientY
+      });
     });
+
+    pedCalendar.addEventListener("touchstart", (event) => {
+      if (dragState || event.touches.length !== 1) return;
+      const post = event.target.closest(".ped-post");
+      if (!post) return;
+      const touch = event.touches[0];
+      event.preventDefault();
+      post.classList.add("is-pressing");
+      startDragState({
+        type: "ped",
+        taskId: post.dataset.taskId || "",
+        postId: post.dataset.pedPostId || "",
+        element: post,
+        pointerId: touchDragId(touch),
+        startX: touch.clientX,
+        startY: touch.clientY
+      });
+    }, { passive: false });
 
     pedContextMenu.addEventListener("click", (event) => {
       const button = event.target.closest("[data-ped-context-action]");
