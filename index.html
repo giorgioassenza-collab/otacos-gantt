@@ -2404,6 +2404,22 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="pedToPedModal" aria-label="Add PED item to PED">
+    <div class="modal">
+      <h2>Add to PED</h2>
+      <form id="pedToPedForm">
+        <input id="pedToPedTaskId" type="hidden">
+        <input id="pedToPedPostId" type="hidden">
+        <label class="field">PED date<input id="pedToPedDate" type="date" required></label>
+        <label class="field">PED time<input id="pedToPedTime" type="time" value="12:00" required></label>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closePedToPedModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
   <div class="status-menu" id="influencerInlineMenu" aria-label="Change influencer value"></div>
   <div class="modal-backdrop" id="historyModal" aria-label="Document history">
@@ -2427,6 +2443,7 @@
   </div>
   <div class="context-menu" id="pedContextMenu" aria-label="PED actions">
     <button type="button" data-ped-context-action="modify">Modify</button>
+    <button type="button" data-ped-context-action="add-ped">Add to PED</button>
     <button type="button" data-ped-context-action="add-gantt">Add to GANTT</button>
     <button type="button" data-ped-context-action="delete">Delete</button>
   </div>
@@ -2487,6 +2504,7 @@
     const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
     const pedToGanttModal = document.getElementById("pedToGanttModal");
+    const pedToPedModal = document.getElementById("pedToPedModal");
     const creatorCalendarModal = document.getElementById("creatorCalendarModal");
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
     const creatorCalendarStore = document.getElementById("creatorCalendarStore");
@@ -6425,6 +6443,71 @@
       pedToGanttModal.classList.remove("open");
     }
 
+    function pedPostSourceFromContext(taskId = "", postId = "") {
+      if (taskId) {
+        const task = data.tasks.find((item) => item.id === taskId);
+        if (!task) return null;
+        const linkedPost = linkedPedPostForTask(task.id);
+        if (linkedPost) return linkedPost;
+        return {
+          id: "",
+          sourceTaskId: task.id,
+          title: task.nameEn || task.name || "PED post",
+          projectId: task.projectId || data.projects[0]?.id || "",
+          date: task.pedDate || task.start || currentDateKey(),
+          time: normalizeHour(task.pedTime || "11:00"),
+          status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
+          members: task.members || [],
+          social: [],
+          format: data.formats[0] || "",
+          asset: "",
+          copy: "",
+          subtasks: task.subtasks || []
+        };
+      }
+      return (data.pedPosts || []).find((item) => item.id === postId) || null;
+    }
+
+    function openPedToPedDialog(taskId = "", postId = "") {
+      const sourcePost = pedPostSourceFromContext(taskId, postId);
+      document.getElementById("pedToPedTaskId").value = taskId;
+      document.getElementById("pedToPedPostId").value = postId;
+      document.getElementById("pedToPedDate").value = sourcePost?.date || currentDateKey();
+      document.getElementById("pedToPedTime").value = "12:00";
+      pedToPedModal.classList.add("open");
+    }
+
+    function closePedToPedDialog() {
+      pedToPedModal.classList.remove("open");
+    }
+
+    async function addPedItemToPed(taskId, postId, selectedDate, selectedTime) {
+      if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
+      const sourcePost = pedPostSourceFromContext(taskId, postId);
+      if (!sourcePost) return;
+      const createdAt = Date.now();
+      data.pedPosts = data.pedPosts || [];
+      data.pedPosts.push({
+        id: `ped${createdAt}-copy`,
+        sourceTaskId: "",
+        title: sourcePost.title || "PED post",
+        projectId: sourcePost.projectId || data.projects[0]?.id || "",
+        date: selectedDate,
+        time: normalizeHour(selectedTime || "12:00"),
+        status: sourcePost.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : ""),
+        members: structuredClone(sourcePost.members || []),
+        social: structuredClone(sourcePost.social || []),
+        format: sourcePost.format || data.formats[0] || "",
+        asset: sourcePost.asset || "",
+        copy: sourcePost.copy || "",
+        subtasks: structuredClone(sourcePost.subtasks || []),
+        createdAt,
+        updatedAt: createdAt
+      });
+      await saveData();
+      renderPed();
+    }
+
     async function addPedItemToGantt(taskId, postId, selectedDate) {
       if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
       if (taskId) {
@@ -6477,7 +6560,7 @@
       hideTaskMenus();
       if (post.dataset.taskId) pedContextMenu.dataset.taskId = post.dataset.taskId;
       if (post.dataset.pedPostId) pedContextMenu.dataset.pedPostId = post.dataset.pedPostId;
-      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 124);
+      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 160);
     });
 
     pedCalendar.addEventListener("click", (event) => {
@@ -6544,6 +6627,10 @@
         closePanels();
         if (taskId) openLinkedPedTaskEditor(taskId);
         else if (postId) openPedPostEditor(postId);
+        return;
+      }
+      if (action === "add-ped") {
+        if (postNode) openPedToPedDialog(taskId || "", postId || "");
         return;
       }
       if (action === "add-gantt") {
@@ -6618,6 +6705,7 @@
 
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
     document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
+    document.getElementById("closePedToPedModal").addEventListener("click", closePedToPedDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
 
     document.getElementById("deletePedPostButton").addEventListener("click", async () => {
@@ -6822,6 +6910,17 @@
         document.getElementById("pedToGanttDate").value
       ));
       closePedToGanttDialog();
+    });
+
+    document.getElementById("pedToPedForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await runWithSavingButton(event, async () => addPedItemToPed(
+        document.getElementById("pedToPedTaskId").value,
+        document.getElementById("pedToPedPostId").value,
+        document.getElementById("pedToPedDate").value,
+        document.getElementById("pedToPedTime").value
+      ));
+      closePedToPedDialog();
     });
 
     document.getElementById("creatorCalendarForm").addEventListener("submit", async (event) => {
