@@ -52,6 +52,7 @@
 
     body:not(.is-authenticated) .app,
     body:not(.is-authenticated) .ped-fab,
+    body:not(.is-authenticated) .view-switch,
     body:not(.is-authenticated) .horizontal-scrollbar,
     body:not(.is-authenticated) .sync,
     body:not(.is-authenticated) .settings-panel,
@@ -633,6 +634,26 @@
 
     .sync {
       display: none;
+    }
+
+    .sync.is-error {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: 72px;
+      z-index: 120;
+      display: block;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      background: #fff1f2;
+      color: #991b1b;
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(153, 27, 27, .14);
     }
 
     .ped-fab {
@@ -1689,6 +1710,25 @@
 
     @media (max-width: 800px) {
       :root { --sidebar: 112px; --day: 260px; --timeline-head: 66px; --ped-hour: 150px; }
+      .login-page {
+        min-height: 100dvh;
+        padding: 20px;
+        align-items: center;
+      }
+      .login-box {
+        gap: 18px;
+      }
+      .login-logo {
+        width: min(280px, 82vw);
+      }
+      .login-title {
+        font-size: 24px;
+        letter-spacing: .06em;
+      }
+      .login-button,
+      .login-field {
+        width: min(300px, 100%);
+      }
       .app { min-width: 0; }
       .toolbar {
         height: auto;
@@ -2328,8 +2368,8 @@
       { key: "when", label: "WHEN" }
     ];
     const starterData = {
-      members: ["TR", "SA", "CA", "LA", "Mario Rossi"],
-      statuses: ["Da fare", "In corso", "Bloccata", "Completata"],
+      members: [],
+      statuses: ["TO DO", "In progress", "DONE"],
       pedStatuses: ["Draft", "Ready", "Published"],
       creatorStatuses: ["Scheduled", "Waiting", "Published"],
       creatorStores: ["GIGA TACOS"],
@@ -2340,19 +2380,10 @@
         { id: "tiktok", label: "TikTok", short: "TT", color: "#111827" }
       ],
       projects: [
-        { id: "p1", name: "Tortillas", color: "#147bd1" },
-        { id: "p2", name: "Salse", color: "#15a36d" },
-        { id: "p3", name: "Carne", color: "#7c5cff" },
-        { id: "p4", name: "Lancio", color: "#e4572e" },
         { id: "p-accounting", name: "Accounting", color: "#64748b" },
         { id: "p-customer-care", name: "Customer Care", color: "#0f9f6e" }
       ],
-      tasks: [
-        { id: "t1", projectId: "p1", name: "Impasto e test", nameEn: "Dough and testing", members: ["TR"], status: "In corso", start: "2026-06-14", end: "2026-06-23", info: "", label: "" },
-        { id: "t2", projectId: "p2", name: "Ricette salse", nameEn: "Sauce recipes", members: ["SA", "Mario Rossi"], status: "Da fare", start: "2026-06-22", end: "2026-07-02", info: "", label: "" },
-        { id: "t3", projectId: "p3", name: "Fornitori carne", nameEn: "Meat suppliers", members: ["CA"], status: "Bloccata", start: "2026-06-29", end: "2026-07-12", info: "", label: "" },
-        { id: "t4", projectId: "p4", name: "Preparazione lancio", nameEn: "Launch preparation", members: ["LA", "Mario Rossi"], status: "Completata", start: "2026-07-08", end: "2026-07-24", info: "", label: "" }
-      ],
+      tasks: [],
       pedPosts: [],
       influencers: [],
       influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
@@ -2375,6 +2406,11 @@
     let saveQueue = Promise.resolve();
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
+
+    function setSyncMessage(message, isError = false) {
+      syncIndicator.textContent = message;
+      syncIndicator.classList.toggle("is-error", Boolean(isError));
+    }
     const legacyInfluencerOptionColors = {
       city: "#e0f2fe",
       target: "#dcfce7",
@@ -2477,35 +2513,31 @@
             renderInfluencers();
             renderCreatorCalendar();
             updateUndoButton();
-            syncIndicator.textContent = "Sincronizzato live";
+            setSyncMessage("Sincronizzato live");
             if (shouldRepairRemote) saveData(true);
           }, () => {
-            syncIndicator.textContent = "Errore sincronizzazione Firestore";
+            setSyncMessage("Errore sincronizzazione Firestore: dati condivisi non aggiornati", true);
           });
-          syncIndicator.textContent = "Connesso a Firestore";
+          setSyncMessage("Connesso a Firestore");
           if (snapshot.exists()) {
             const snapshotData = snapshot.data();
             const remoteRevision = Number(snapshotData.revision || 0);
-            const localSnapshot = readLocalSnapshot();
-            if (localSnapshot && localSnapshot.revision > remoteRevision) {
-              dataVersion = localSnapshot.revision;
-              historyEntries = localSnapshot.history || [];
-              needsRemoteResync = true;
-              return normalizeData(localSnapshot.data);
-            }
             dataVersion = remoteRevision;
             historyEntries = normalizeHistory(snapshotData.history);
-            return normalizeData(snapshotData.data);
+            const remoteData = normalizeData(snapshotData.data);
+            saveLocalSnapshot(remoteData, historyEntries, dataVersion);
+            return remoteData;
           }
           historyEntries = [];
           return normalizeData(starterData);
         }
         const localSnapshot = readLocalSnapshot();
         historyEntries = localSnapshot?.history || [];
-        syncIndicator.textContent = "Firebase non configurato: salvataggio locale";
+        setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
         return localSnapshot ? normalizeData(localSnapshot.data) : normalizeData(starterData);
-      } catch {
-        syncIndicator.textContent = "Offline: salvataggio locale";
+      } catch (error) {
+        console.error("Firebase load failed", error);
+        setSyncMessage("Non riesco a leggere i dati condivisi. Controlla Firebase/Auth: stai vedendo solo dati locali.", true);
         const localSnapshot = readLocalSnapshot();
         return localSnapshot ? normalizeData(localSnapshot.data) : normalizeData(starterData);
       }
@@ -3098,12 +3130,12 @@
         renderCreatorCalendar();
         renderHistoryList();
         historyModal.classList.remove("open");
-        syncIndicator.textContent = "Version restored";
+        setSyncMessage("Version restored");
       } catch {
         applyingRemoteUpdate = false;
         pendingLocalData = null;
         pendingLocalRevision = 0;
-        syncIndicator.textContent = "Restore failed";
+        setSyncMessage("Restore failed", true);
       }
     }
 
@@ -3152,7 +3184,7 @@
 
     async function performSaveData(skipUndo = false) {
       try {
-        syncIndicator.textContent = "Salvataggio...";
+        setSyncMessage("Salvataggio...");
         const shouldRecordHistory = !skipUndo && committedData && !sameData(committedData, data);
         if (shouldRecordHistory) {
           undoStack.push(structuredClone(committedData));
@@ -3180,13 +3212,13 @@
           pendingLocalData = null;
           pendingLocalRevision = 0;
           updateUndoButton();
-          syncIndicator.textContent = "Sincronizzato live";
+          setSyncMessage("Sincronizzato live");
           return;
         }
         saveLocalSnapshot(data, historyEntries, dataVersion);
         committedData = structuredClone(data);
         updateUndoButton();
-        syncIndicator.textContent = "Firebase non configurato: salvato locale";
+        setSyncMessage("Firebase non configurato: salvato solo locale", true);
       } catch {
         applyingRemoteUpdate = false;
         const fallbackRevision = Math.max(dataVersion + 1, Date.now());
@@ -3197,7 +3229,7 @@
         saveLocalSnapshot(pendingLocalData, historyEntries, pendingLocalRevision);
         committedData = structuredClone(data);
         updateUndoButton();
-        syncIndicator.textContent = "Offline: salvato locale";
+        setSyncMessage("Offline: salvato solo locale", true);
       }
     }
 
@@ -3215,9 +3247,9 @@
         pendingLocalData = null;
         pendingLocalRevision = 0;
         saveLocalSnapshot(data, historyEntries, dataVersion);
-        syncIndicator.textContent = "Sincronizzato live";
+        setSyncMessage("Sincronizzato live");
       } catch {
-        syncIndicator.textContent = "Offline: riprovo salvataggio";
+        setSyncMessage("Offline: riprovo salvataggio", true);
       } finally {
         setTimeout(() => {
           applyingRemoteUpdate = false;
@@ -3851,7 +3883,7 @@
       const cached = localStorage.getItem(cacheKey);
       if (cached) return cached;
       try {
-        syncIndicator.textContent = "Traduzione...";
+        setSyncMessage("Traduzione...");
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=it|en`;
         const response = await fetch(url);
         if (!response.ok) throw new Error("Translation failed");
@@ -3861,7 +3893,7 @@
         localStorage.setItem(cacheKey, result);
         return result;
       } catch {
-        syncIndicator.textContent = "Traduzione non disponibile";
+        setSyncMessage("Traduzione non disponibile", true);
         return source;
       }
     }
