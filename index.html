@@ -2725,6 +2725,19 @@
             dataVersion = remoteRevision;
             historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             const remoteData = normalizeData(snapshotData.data);
+            const localSnapshot = readLocalSnapshot();
+            if (localSnapshot?.data) {
+              const mergedStartupData = mergeBoardData(localSnapshot.data, remoteData);
+              const localHasNewerChanges = Number(localSnapshot.revision || 0) > remoteRevision || !sameData(mergedStartupData, remoteData);
+              if (localHasNewerChanges) {
+                dataVersion = Math.max(remoteRevision, Number(localSnapshot.revision || 0), Date.now());
+                pendingLocalData = cleanForFirestore(mergedStartupData);
+                pendingLocalRevision = dataVersion;
+                saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
+                setSyncMessage("Ripristino modifiche locali...");
+                return mergedStartupData;
+              }
+            }
             saveLocalSnapshot(remoteData, historyEntries, dataVersion);
             return remoteData;
           }
@@ -2732,13 +2745,17 @@
           return normalizeData(starterData);
         }
         setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
-        historyEntries = [];
-        return normalizeData(starterData);
+        const localSnapshot = readLocalSnapshot();
+        historyEntries = localSnapshot?.history || [];
+        dataVersion = localSnapshot?.revision || 0;
+        return localSnapshot?.data || normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
         setSyncMessage("Non riesco a leggere i dati condivisi: modifiche non sincronizzate.", true);
-        historyEntries = [];
-        return normalizeData(starterData);
+        const localSnapshot = readLocalSnapshot();
+        historyEntries = localSnapshot?.history || [];
+        dataVersion = localSnapshot?.revision || 0;
+        return localSnapshot?.data || normalizeData(starterData);
       }
     }
 
@@ -3259,10 +3276,11 @@
       stampChangedData(data, committedData);
       const localRevision = Math.max(dataVersion + 1, Date.now());
       dataVersion = localRevision;
-      pendingLocalData = cleanForFirestore(data);
+      const saveSnapshotData = cleanForFirestore(data);
+      pendingLocalData = saveSnapshotData;
       pendingLocalRevision = localRevision;
       saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
-      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(skipUndo));
+      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(saveSnapshotData, localRevision, skipUndo));
       return saveQueue;
     }
 
@@ -3292,10 +3310,12 @@
       });
     }
 
-    async function performSaveData(skipUndo = false) {
+    async function performSaveData(saveSnapshotData, saveRevision, skipUndo = false) {
       try {
         setSyncMessage("Salvataggio...");
-        const shouldRecordHistory = !skipUndo && committedData && !sameData(committedData, data);
+        const snapshotData = normalizeData(saveSnapshotData || data);
+        const snapshotRevision = Number(saveRevision || dataVersion || Date.now());
+        const shouldRecordHistory = !skipUndo && committedData && !sameData(committedData, snapshotData);
         if (shouldRecordHistory) {
           undoStack.push(structuredClone(committedData));
           if (undoStack.length > 30) undoStack.shift();
@@ -3303,41 +3323,53 @@
           updateUndoButton();
         }
         if (boardRef) {
-          const nextRevision = Math.max(dataVersion + 1, Date.now());
+          const nextRevision = Math.max(snapshotRevision, dataVersion + 1, Date.now());
           suppressRemoteUntil = Date.now() + 1500;
-          pendingLocalRevision = nextRevision;
-          pendingLocalData = cleanForFirestore(data);
-          saveLocalSnapshot(pendingLocalData, historyEntries, nextRevision);
+          if (!pendingLocalRevision || pendingLocalRevision <= snapshotRevision || sameData(pendingLocalData, saveSnapshotData)) {
+            pendingLocalRevision = nextRevision;
+            pendingLocalData = cleanForFirestore(snapshotData);
+          }
+          saveLocalSnapshot(pendingLocalData || snapshotData, historyEntries, Math.max(pendingLocalRevision || 0, nextRevision));
           applyingRemoteUpdate = true;
-          const committed = await commitBoardData(data, historyEntries, nextRevision);
-          data = committed.data;
+          const committed = await commitBoardData(snapshotData, historyEntries, nextRevision);
+          const committedClean = cleanForFirestore(committed.data);
+          const hasNewerPending = pendingLocalRevision && pendingLocalRevision > nextRevision && !sameData(pendingLocalData, committedClean);
+          if (!hasNewerPending) {
+            data = committed.data;
+          }
           historyEntries = committed.history;
-          dataVersion = committed.revision;
-          pendingLocalData = cleanForFirestore(data);
-          saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
+          dataVersion = Math.max(dataVersion, committed.revision);
+          if (!hasNewerPending) {
+            pendingLocalData = cleanForFirestore(data);
+            pendingLocalRevision = dataVersion;
+            saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
+          }
           setTimeout(() => {
             applyingRemoteUpdate = false;
           }, 250);
-          committedData = structuredClone(data);
-          pendingLocalData = null;
-          pendingLocalRevision = 0;
+          if (!hasNewerPending) {
+            committedData = structuredClone(data);
+            pendingLocalData = null;
+            pendingLocalRevision = 0;
+          }
           updateUndoButton();
           setSyncMessage("Sincronizzato live");
           return;
         }
-        saveLocalSnapshot(data, historyEntries, dataVersion);
-        committedData = structuredClone(data);
+        saveLocalSnapshot(snapshotData, historyEntries, dataVersion);
+        data = snapshotData;
+        committedData = structuredClone(snapshotData);
         updateUndoButton();
         setSyncMessage("Firebase non configurato: salvato solo locale", true);
       } catch (error) {
         applyingRemoteUpdate = false;
         const fallbackRevision = Math.max(dataVersion + 1, Date.now());
         dataVersion = fallbackRevision;
-        pendingLocalData = cleanForFirestore(data);
+        pendingLocalData = cleanForFirestore(saveSnapshotData || data);
         pendingLocalRevision = fallbackRevision;
         suppressRemoteUntil = Date.now() + 30000;
         saveLocalSnapshot(pendingLocalData, historyEntries, pendingLocalRevision);
-        committedData = structuredClone(data);
+        committedData = structuredClone(normalizeData(pendingLocalData));
         updateUndoButton();
         console.error("Firestore save failed", error);
         setSyncMessage(`Salvataggio non sincronizzato: ${error?.code || error?.message || "errore Firestore"}`, true);
@@ -5468,6 +5500,7 @@
       document.getElementById("currentMonth").textContent = "O'TACOS";
       requestAnimationFrame(snapActiveTimelineToToday);
       requestAnimationFrame(syncHorizontalScrollbar);
+      retryPendingLocalSave();
       setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
     }
