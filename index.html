@@ -2371,7 +2371,6 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
-    const movementStorageKey = "tacos-gantt-board-movements-v1";
     const maxHistoryEntries = 60;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const influencerColumns = [
@@ -2424,7 +2423,6 @@
     let suppressRemoteUntil = 0;
     let pendingLocalRevision = 0;
     let pendingLocalData = null;
-    let needsRemoteResync = false;
     let saveQueue = Promise.resolve();
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -2521,22 +2519,26 @@
               pendingLocalRevision = 0;
             }
             if (pendingLocalData && pendingLocalRevision && remoteRevision <= pendingLocalRevision) return;
+            if (pendingLocalData && !sameData(normalizedRemote, pendingLocalData)) {
+              data = mergeBoardData(normalizeData(pendingLocalData), normalizedRemote);
+              pendingLocalData = cleanForFirestore(data);
+              saveData(true);
+              return;
+            }
             if (remoteRevision <= dataVersion) return;
             if (applyingRemoteUpdate && Date.now() < suppressRemoteUntil && sameData(normalizedRemote, data)) return;
             if (sameData(normalizedRemote, data)) return;
-            const mergedRemote = mergeBoardData(data, normalizedRemote);
-            const shouldRepairRemote = !sameData(mergedRemote, normalizedRemote);
             dataVersion = Math.max(dataVersion, remoteRevision);
-            data = mergedRemote;
+            data = normalizedRemote;
             historyEntries = normalizeHistory(remoteDoc.history);
             committedData = structuredClone(data);
+            saveLocalSnapshot(data, historyEntries, dataVersion);
             renderBoard();
             renderPed();
             renderInfluencers();
             renderCreatorCalendar();
             updateUndoButton();
             setSyncMessage("Sincronizzato live");
-            if (shouldRepairRemote) saveData(true);
           }, () => {
             setSyncMessage("Errore sincronizzazione Firestore: dati condivisi non aggiornati", true);
           });
@@ -2553,15 +2555,14 @@
           historyEntries = [];
           return normalizeData(starterData);
         }
-        const localSnapshot = readLocalSnapshot();
-        historyEntries = localSnapshot?.history || [];
         setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
-        return localSnapshot ? normalizeData(localSnapshot.data) : normalizeData(starterData);
+        historyEntries = [];
+        return normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
-        setSyncMessage("Non riesco a leggere i dati condivisi. Controlla Firebase/Auth: stai vedendo solo dati locali.", true);
-        const localSnapshot = readLocalSnapshot();
-        return localSnapshot ? normalizeData(localSnapshot.data) : normalizeData(starterData);
+        setSyncMessage("Non riesco a leggere i dati condivisi: modifiche non sincronizzate.", true);
+        historyEntries = [];
+        return normalizeData(starterData);
       }
     }
 
@@ -2591,93 +2592,6 @@
       } catch {
         return null;
       }
-    }
-
-    function readMovementLog() {
-      try {
-        const raw = localStorage.getItem(movementStorageKey);
-        if (!raw) return { tasks: {}, pedTasks: {}, pedPosts: {} };
-        const parsed = JSON.parse(raw);
-        return {
-          tasks: parsed.tasks || {},
-          pedTasks: parsed.pedTasks || {},
-          pedPosts: parsed.pedPosts || {}
-        };
-      } catch {
-        return { tasks: {}, pedTasks: {}, pedPosts: {} };
-      }
-    }
-
-    function writeMovementLog(log) {
-      localStorage.setItem(movementStorageKey, JSON.stringify(cleanForFirestore(log)));
-    }
-
-    function rememberGanttMove(task) {
-      const log = readMovementLog();
-      log.tasks[task.id] = {
-        start: task.start,
-        end: task.end || task.start,
-        savedAt: Date.now()
-      };
-      writeMovementLog(log);
-    }
-
-    function rememberPedTaskMove(task) {
-      const log = readMovementLog();
-      log.pedTasks[task.id] = {
-        pedDate: task.pedDate || "",
-        pedTime: task.pedTime || "11:00",
-        savedAt: Date.now()
-      };
-      writeMovementLog(log);
-    }
-
-    function rememberPedPostMove(post) {
-      const log = readMovementLog();
-      log.pedPosts[post.id] = {
-        date: post.date || "",
-        time: post.time || "11:00",
-        savedAt: Date.now()
-      };
-      writeMovementLog(log);
-    }
-
-    function applyMovementLog(snapshot) {
-      const normalized = normalizeData(snapshot);
-      const log = readMovementLog();
-      const keepAfter = Date.now() - (1000 * 60 * 60 * 24 * 14);
-      let changed = false;
-      normalized.tasks = (normalized.tasks || []).map((task) => {
-        const taskMove = log.tasks?.[task.id];
-        const pedMove = log.pedTasks?.[task.id];
-        const next = { ...task };
-        if (taskMove?.savedAt > keepAfter && taskMove.savedAt > itemUpdatedAt(next)) {
-          next.start = taskMove.start || next.start;
-          next.end = taskMove.end || next.start;
-          next.updatedAt = taskMove.savedAt;
-          changed = true;
-        }
-        if (pedMove?.savedAt > keepAfter && pedMove.savedAt > itemUpdatedAt(next)) {
-          next.pedDate = pedMove.pedDate || next.pedDate;
-          next.pedTime = pedMove.pedTime || next.pedTime || "11:00";
-          next.updatedAt = pedMove.savedAt;
-          changed = true;
-        }
-        return next;
-      });
-      normalized.pedPosts = (normalized.pedPosts || []).map((post) => {
-        const pedMove = log.pedPosts?.[post.id];
-        if (!(pedMove?.savedAt > keepAfter) || pedMove.savedAt <= itemUpdatedAt(post)) return post;
-        changed = true;
-        return {
-          ...post,
-          date: pedMove.date || post.date,
-          time: pedMove.time || post.time || "11:00",
-          updatedAt: pedMove.savedAt
-        };
-      });
-      if (changed) saveLocalSnapshot(normalized, historyEntries, Math.max(dataVersion, Date.now()));
-      return normalized;
     }
 
     function itemUpdatedAt(item) {
@@ -5355,10 +5269,6 @@
       document.getElementById("currentMonth").textContent = "O'TACOS";
       requestAnimationFrame(snapActiveTimelineToToday);
       requestAnimationFrame(syncHorizontalScrollbar);
-      if (needsRemoteResync) {
-        needsRemoteResync = false;
-        saveData(true);
-      }
       setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
     }
@@ -5950,7 +5860,6 @@
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
         touchItem(task);
-        rememberGanttMove(task);
         renderBoard();
         renderPed();
         renderCreatorCalendar();
@@ -5967,14 +5876,12 @@
             task.pedDate = date;
             task.pedTime = time;
             touchItem(task);
-            rememberPedTaskMove(task);
           }
           const post = (data.pedPosts || []).find((item) => item.sourceTaskId === state.taskId);
           if (post) {
             post.date = date;
             post.time = time;
             touchItem(post);
-            rememberPedPostMove(post);
           }
         } else if (state.postId) {
           const post = (data.pedPosts || []).find((item) => item.id === state.postId);
@@ -5982,7 +5889,6 @@
             post.date = date;
             post.time = time;
             touchItem(post);
-            rememberPedPostMove(post);
           }
         }
         renderPed();
@@ -6103,8 +6009,6 @@
         task.end = shiftDateString(originalEnd, 1);
         task.pedDate = task.pedEnabled && task.pedDate ? shiftDateString(task.pedDate, 1) : task.pedDate;
         touchItem(task);
-        rememberGanttMove(task);
-        if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       }
       saveData();
       renderBoard();
@@ -6155,7 +6059,6 @@
         task.start = selectedDate;
         task.end = selectedDate;
         touchItem(task);
-        rememberGanttMove(task);
         await saveData();
         renderBoard();
         renderPed();
@@ -6454,8 +6357,6 @@
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
         data.tasks.push(...generatedTasks);
       }
-      rememberGanttMove(task);
-      if (task.pedEnabled && task.pedDate) rememberPedTaskMove(task);
       await saveData();
       renderBoard();
       renderPed();
@@ -6483,7 +6384,6 @@
       post.projectId = projectId;
       post.date = date;
       post.time = time;
-      rememberPedPostMove(post);
       if (post.sourceTaskId) {
         const sourceTask = data.tasks.find((task) => task.id === post.sourceTaskId);
         if (sourceTask) {
@@ -6491,7 +6391,6 @@
           sourceTask.pedDate = date;
           sourceTask.pedTime = time;
           touchItem(sourceTask);
-          rememberPedTaskMove(sourceTask);
         }
       }
       post.status = status;
