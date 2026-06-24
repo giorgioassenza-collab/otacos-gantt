@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>O'Tacos Workflow</title>
-  <link rel="icon" type="image/png" sizes="64x64" href="./otacos-favicon.png?v=4">
-  <link rel="shortcut icon" href="./favicon.ico?v=4">
-  <link rel="apple-touch-icon" href="./otacos-favicon.png?v=4">
+  <link rel="icon" type="image/png" sizes="64x64" href="./otacos-favicon.png?v=5">
+  <link rel="shortcut icon" href="./favicon.ico?v=5">
+  <link rel="apple-touch-icon" href="./otacos-favicon.png?v=5">
   <style>
     :root {
       --bg: #f7f5f1;
@@ -600,6 +600,23 @@
     .bar-subtasks svg {
       width: 11px;
       height: 11px;
+    }
+
+    .bar-unassigned {
+      flex: 0 0 auto;
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--orange);
+      box-shadow: 0 6px 14px rgba(255, 90, 20, .28), inset 0 0 0 1px rgba(255,255,255,.28);
+    }
+
+    .bar-unassigned svg {
+      width: 12px;
+      height: 12px;
     }
 
     .status-swatch {
@@ -5955,7 +5972,10 @@
             const subtaskBadge = subtaskCount
               ? `<span class="bar-subtasks" title="${escapeHtml(`${doneSubtaskCount}/${subtaskCount} subtasks`)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3.5 6 1.2 1.2L7 4.8"/><path d="m3.5 12 1.2 1.2L7 10.8"/><path d="m3.5 18 1.2 1.2L7 16.8"/></svg>${escapeHtml(String(subtaskCount))}</span>`
               : "";
-            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
+            const unassignedBadge = (task.members || []).length
+              ? ""
+              : `<span class="bar-unassigned" title="This task is not assigned to anyone" aria-label="This task is not assigned to anyone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 4.2 2.7 18a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></svg></span>`;
+            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${unassignedBadge}${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
