@@ -7095,40 +7095,74 @@
       setTimeout(syncHorizontalScrollbar, 120);
     }
 
+    function localFallbackData() {
+      const localSnapshot = readLocalSnapshot();
+      historyEntries = localSnapshot?.history || [];
+      dataVersion = localSnapshot?.revision || 0;
+      return localSnapshot?.data || normalizeData(starterData);
+    }
+
+    function withTimeout(promise, milliseconds, fallback) {
+      let timerId = 0;
+      const timeout = new Promise((resolve) => {
+        timerId = setTimeout(() => resolve(typeof fallback === "function" ? fallback() : fallback), milliseconds);
+      });
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(timerId));
+    }
+
     async function startApp() {
       if (appStarted) return;
       appStarted = true;
-      document.body.classList.add("is-authenticated");
-      data = await loadData();
-      const automaticPedChanged = syncAutomaticPedPostsForTasks();
-      committedData = structuredClone(data);
-      if (automaticPedChanged) await saveData(true);
-      updateUndoButton();
-      renderTimeline();
-      updateZoom();
-      await importInfluencerSeedIfNeeded();
-      renderBoard();
-      renderPed();
-      renderInfluencers();
-      renderCreatorCalendar();
-      renderBudget();
-      renderSettingsLists();
-      setNewTaskDefaultDates();
-      document.getElementById("pedPostDate").value = currentDateKey();
-      pedPostTime.value = "11:00";
-      document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode", "budget-mode");
-      viewGantt.classList.add("is-active");
-      viewPed.classList.remove("is-active");
-      viewInfluencer.classList.remove("is-active");
-      viewCreatorCalendar.classList.remove("is-active");
-      viewBudget.classList.remove("is-active");
-      document.querySelector(".brand-title").textContent = "Workflow";
-      document.getElementById("currentMonth").textContent = "O'TACOS";
-      requestAnimationFrame(snapActiveTimelineToToday);
-      requestAnimationFrame(syncHorizontalScrollbar);
-      retryPendingLocalSave();
-      setInterval(retryPendingLocalSave, 5000);
-      setInterval(refreshSharedData, 1800);
+      try {
+        document.body.classList.add("is-authenticated");
+        data = await withTimeout(loadData(), 7000, () => {
+          setSyncMessage("Connessione lenta: apro con dati locali", true);
+          return localFallbackData();
+        });
+        const automaticPedChanged = syncAutomaticPedPostsForTasks();
+        committedData = structuredClone(data);
+        if (automaticPedChanged) await withTimeout(saveData(true), 4000, null);
+        updateUndoButton();
+        renderTimeline();
+        updateZoom();
+        await withTimeout(importInfluencerSeedIfNeeded(), 4500, null);
+        renderBoard();
+        renderPed();
+        renderInfluencers();
+        renderCreatorCalendar();
+        renderBudget();
+        renderSettingsLists();
+        setNewTaskDefaultDates();
+        document.getElementById("pedPostDate").value = currentDateKey();
+        pedPostTime.value = "11:00";
+        document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode", "budget-mode");
+        viewGantt.classList.add("is-active");
+        viewPed.classList.remove("is-active");
+        viewInfluencer.classList.remove("is-active");
+        viewCreatorCalendar.classList.remove("is-active");
+        viewBudget.classList.remove("is-active");
+        document.querySelector(".brand-title").textContent = "Workflow";
+        document.getElementById("currentMonth").textContent = "O'TACOS";
+        requestAnimationFrame(snapActiveTimelineToToday);
+        requestAnimationFrame(syncHorizontalScrollbar);
+        retryPendingLocalSave();
+        setInterval(retryPendingLocalSave, 5000);
+        setInterval(refreshSharedData, 1800);
+      } catch (error) {
+        console.error("App start failed", error);
+        data = localFallbackData();
+        committedData = structuredClone(data);
+        document.body.classList.add("is-authenticated");
+        renderTimeline();
+        updateZoom();
+        renderBoard();
+        renderPed();
+        renderInfluencers();
+        renderCreatorCalendar();
+        renderBudget();
+        renderSettingsLists();
+        setSyncMessage("Aperto in locale: sincronizzazione da controllare", true);
+      }
     }
 
     window.addEventListener("beforeunload", (event) => {
@@ -7137,16 +7171,21 @@
       event.returnValue = "";
     });
 
-    function handleLogin() {
+    async function handleLogin() {
       const password = document.getElementById("loginPassword").value;
       const error = document.getElementById("loginError");
+      const button = document.getElementById("loginButton");
       if (password !== accessPassword) {
         error.textContent = "Password non corretta";
         return;
       }
       error.textContent = "";
       sessionStorage.setItem("logo-gantt-authenticated", "true");
-      startApp();
+      button.disabled = true;
+      button.textContent = "ACCESSO...";
+      await startApp();
+      button.disabled = false;
+      button.textContent = "ACCEDI";
     }
 
     document.getElementById("loginButton").addEventListener("click", handleLogin);
