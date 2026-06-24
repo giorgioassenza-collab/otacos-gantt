@@ -3466,7 +3466,6 @@
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
     const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
-    const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
     const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
     const budgetSheetNames = ["JUNE26", "MAY26", "APR26", "MAR26", "FEB26", "GEN26", "DIC25", "NOV25", "OCT25", "SEP25", "AUG25", "JUL25"];
     const influencerColumns = [
@@ -5321,25 +5320,8 @@
       budgetState = { ...budgetState, loading: true, error: "" };
       renderBudget();
       try {
-        let parsed = null;
-        if (window.XLSX) {
-          const workbookResponse = await fetch(budgetWorkbookUrl, { cache: "no-store" });
-          if (workbookResponse.ok) {
-            const workbook = window.XLSX.read(await workbookResponse.arrayBuffer(), { type: "array", cellHTML: false, cellFormula: false, cellDates: true });
-            parsed = parseBudgetWorkbook(workbook);
-          }
-        }
-        if (!parsed || parsed.sheets?.length <= 1 || (!parsed.transactions.length && !parsed.forecast.length)) {
-          parsed = await loadBudgetCsvSheets();
-        }
-        if (!parsed || (!parsed.transactions.length && !parsed.forecast.length)) {
-          const response = await fetch(budgetCsvUrl, { cache: "no-store" });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
-        }
-        if (!parsed.summary) parsed.summary = await loadBudgetTotalSummary();
-        if (!parsed.summary) parsed.summary = budgetFallbackSummary();
-        budgetState = { loaded: true, loading: false, rows: parsed.transactions || [], forecast: [], title: parsed.title, sheets: parsed.sheets || [], summary: parsed.summary, error: "" };
+        const summary = await loadBudgetTotalSummary();
+        budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "TOTAL", sheets: [], summary: summary || budgetFallbackSummary(), error: "" };
       } catch (error) {
         budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", sheets: [], summary: budgetFallbackSummary(), error: "" };
       }
@@ -5550,27 +5532,23 @@
     }
 
     async function loadInfluencerRowsFromSheet() {
-      if (window.XLSX) {
-        const response = await fetch("https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=xlsx");
-        if (response.ok) {
-          const workbook = window.XLSX.read(await response.arrayBuffer(), { type: "array", cellHTML: false, cellFormula: false });
-          const rows = rowsFromInfluencerWorkbook(workbook);
-          if (rows.length) return rows;
-        }
+      try {
+        const response = await fetch(influencerCsvUrl, { cache: "no-store" });
+        if (!response.ok) return [];
+        const rows = parseCsv(await response.text());
+        const headerIndex = rows.findIndex((row) => row.map((cell) => cell.trim().toUpperCase()).includes("NAME"));
+        if (headerIndex < 0) return [];
+        const headers = rows[headerIndex].map((cell) => cell.trim().toUpperCase());
+        return rows.slice(headerIndex + 1)
+          .map((row) => {
+            const raw = {};
+            headers.forEach((header, index) => { raw[header] = (row[index] || "").trim(); });
+            return normalizeInfluencerRow(raw);
+          })
+          .filter((row) => row.name);
+      } catch {
+        return [];
       }
-      const response = await fetch(influencerCsvUrl);
-      if (!response.ok) return [];
-      const rows = parseCsv(await response.text());
-      const headerIndex = rows.findIndex((row) => row.map((cell) => cell.trim().toUpperCase()).includes("NAME"));
-      if (headerIndex < 0) return [];
-      const headers = rows[headerIndex].map((cell) => cell.trim().toUpperCase());
-      return rows.slice(headerIndex + 1)
-        .map((row) => {
-          const raw = {};
-          headers.forEach((header, index) => { raw[header] = (row[index] || "").trim(); });
-          return normalizeInfluencerRow(raw);
-        })
-        .filter((row) => row.name);
     }
 
     async function importInfluencerSeedIfNeeded() {
