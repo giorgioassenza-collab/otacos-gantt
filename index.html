@@ -3271,6 +3271,16 @@
 
     function deletePedPostById(id) {
       if (!id) return;
+      const post = (data.pedPosts || []).find((item) => item.id === id);
+      if (post?.sourceTaskId) {
+        const task = (data.tasks || []).find((item) => item.id === post.sourceTaskId);
+        if (task) {
+          task.pedAutoDismissed = true;
+          task.pedEnabled = false;
+          task.pedDate = "";
+          touchItem(task);
+        }
+      }
       markDeleted("pedPosts", id);
       data.pedPosts = (data.pedPosts || []).filter((post) => post.id !== id);
     }
@@ -4096,29 +4106,36 @@
           color: social.color || "#111827"
         };
       });
-      normalized.tasks = filterDeleted((normalized.tasks || []).map((task) => ({
-        ...task,
-        nameEn: task.nameEn || "",
-        updatedAt: Number(task.updatedAt || task.createdAt || 0),
-        end: task.end || task.start || "2026-06-16",
-        info: task.info || "",
-        label: task.label || (task.hasHomeLabel ? "Video in store" : ""),
-        pedEnabled: Boolean(task.pedEnabled),
-        pedDate: task.pedDate || task.start || "",
-        pedTitle: task.pedTitle || "",
-        pedSocial: Array.isArray(task.pedSocial) ? task.pedSocial : [],
-        pedAsset: task.pedAsset || "",
-        pedCopy: task.pedCopy || "",
-        creatorStatus: task.creatorStatus || (normalized.creatorStatuses[0] ? statusName(normalized.creatorStatuses[0]) : ""),
-        creatorStore: task.creatorStore || "",
-        creatorTime: task.creatorTime || "10:00",
-        subtasks: (task.subtasks || []).map((subtask) => ({
-          id: subtask.id || `s${Date.now()}${Math.random()}`,
-          title: subtask.title || "",
-          members: Array.isArray(subtask.members) ? subtask.members : [],
-          done: Boolean(subtask.done)
-        }))
-      })), deletedTaskIds);
+      normalized.tasks = filterDeleted((normalized.tasks || []).map((task) => {
+        const label = task.label || (task.hasHomeLabel ? "Video in store" : "");
+        const autoPed = String(label || "").trim().toLowerCase() === "pubblicazione";
+        const autoPedDismissed = Boolean(task.pedAutoDismissed);
+        return {
+          ...task,
+          nameEn: task.nameEn || "",
+          updatedAt: Number(task.updatedAt || task.createdAt || 0),
+          end: task.end || task.start || "2026-06-16",
+          info: task.info || "",
+          label,
+          pedAutoDismissed: autoPedDismissed,
+          pedEnabled: Boolean(task.pedEnabled) || (autoPed && !autoPedDismissed),
+          pedDate: task.pedDate || (autoPed && !autoPedDismissed ? task.start : "") || "",
+          pedTime: task.pedTime || (autoPed && !autoPedDismissed ? "12:00" : "11:00"),
+          pedTitle: task.pedTitle || "",
+          pedSocial: Array.isArray(task.pedSocial) ? task.pedSocial : [],
+          pedAsset: task.pedAsset || "",
+          pedCopy: task.pedCopy || "",
+          creatorStatus: task.creatorStatus || (normalized.creatorStatuses[0] ? statusName(normalized.creatorStatuses[0]) : ""),
+          creatorStore: task.creatorStore || "",
+          creatorTime: task.creatorTime || "10:00",
+          subtasks: (task.subtasks || []).map((subtask) => ({
+            id: subtask.id || `s${Date.now()}${Math.random()}`,
+            title: subtask.title || "",
+            members: Array.isArray(subtask.members) ? subtask.members : [],
+            done: Boolean(subtask.done)
+          }))
+        };
+      }), deletedTaskIds);
       normalized.pedPosts = filterDeleted((normalized.pedPosts || []).map((post) => ({
         id: post.id || `ped${Date.now()}${Math.random()}`,
         sourceTaskId: post.sourceTaskId || "",
@@ -4441,6 +4458,10 @@
       return String(label || "").trim().toLowerCase() === "pubblicazione";
     }
 
+    function shouldAutoCreatePedPost(task) {
+      return Boolean(task && isPublicationLabel(task.label) && !task.pedAutoDismissed);
+    }
+
     function isCreatorLabel(label) {
       return String(label || "").trim().toLowerCase() === "creator";
     }
@@ -4538,6 +4559,7 @@
           info: "",
           label: "Pubblicazione",
           pedEnabled: false,
+          pedAutoDismissed: false,
           pedDate: "",
           updatedAt: createdAt
         });
@@ -4770,7 +4792,7 @@
       data.pedPosts = data.pedPosts || [];
       let post = linkedPedPostForTask(task.id);
       const pedDate = task.pedDate || task.start;
-      const pedTime = normalizeHour(task.pedTime || "11:00");
+      const pedTime = normalizeHour(task.pedTime || (shouldAutoCreatePedPost(task) ? "12:00" : "11:00"));
       if (!post) {
         const createdAt = Date.now();
         post = {
@@ -4797,11 +4819,40 @@
         post.title = post.title || task.nameEn || task.name;
         post.projectId = task.projectId || post.projectId || data.projects[0]?.id || "";
         post.date = pedDate;
-        post.time = pedTime;
+        post.time = post.time || pedTime;
         if (!(post.members || []).length) post.members = task.members || [];
         touchItem(post);
       }
       return post;
+    }
+
+    function syncAutomaticPedPostsForTasks(tasks = data.tasks || []) {
+      let changed = false;
+      (tasks || []).forEach((task) => {
+        if (!shouldAutoCreatePedPost(task)) return;
+        const expectedDate = task.start || task.pedDate || currentDateKey();
+        if (!task.pedEnabled) {
+          task.pedEnabled = true;
+          changed = true;
+        }
+        if (task.pedDate !== expectedDate) {
+          task.pedDate = expectedDate;
+          changed = true;
+        }
+        if (!task.pedTime) {
+          task.pedTime = "12:00";
+          changed = true;
+        }
+        const beforeCount = (data.pedPosts || []).length;
+        const post = ensurePedPostForTask(task, { syncFromTask: true });
+        if ((data.pedPosts || []).length !== beforeCount) changed = true;
+        if (post && post.date !== expectedDate) {
+          post.date = expectedDate;
+          touchItem(post);
+          changed = true;
+        }
+      });
+      return changed;
     }
 
     function removeLinkedPedPostForTask(taskId) {
@@ -5829,7 +5880,9 @@
       appStarted = true;
       document.body.classList.add("is-authenticated");
       data = await loadData();
+      const automaticPedChanged = syncAutomaticPedPostsForTasks();
       committedData = structuredClone(data);
+      if (automaticPedChanged) await saveData(true);
       updateUndoButton();
       renderTimeline();
       updateZoom();
@@ -6331,6 +6384,7 @@
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
       data.tasks.push(baseTask, ...generatedTasks);
       if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
+      syncAutomaticPedPostsForTasks([baseTask, ...generatedTasks]);
       await saveData();
       renderPed();
       renderBoard();
@@ -6521,6 +6575,12 @@
         const newStart = dateFromTimelineClientX(dropX, scroller);
         task.start = newStart;
         task.end = shiftDateString(newStart, duration);
+        if (shouldAutoCreatePedPost(task)) {
+          task.pedEnabled = true;
+          task.pedDate = newStart;
+          task.pedTime = task.pedTime || "12:00";
+          syncAutomaticPedPostsForTasks([task]);
+        }
         touchItem(task);
         renderBoard();
         renderPed();
@@ -7188,15 +7248,17 @@
       task.info = info;
       task.pedEnabled = pedEnabled;
       task.pedDate = pedDate;
-      task.pedTime = task.pedTime || "11:00";
+      task.pedTime = task.pedTime || (shouldAutoCreatePedPost(task) ? "12:00" : "11:00");
+      if (task.pedEnabled) task.pedAutoDismissed = false;
       touchItem(task);
-      if (task.pedEnabled) ensurePedPostForTask(task, { syncFromTask: true });
+      if (task.pedEnabled || shouldAutoCreatePedPost(task)) ensurePedPostForTask(task, { syncFromTask: true });
       else removeLinkedPedPostForTask(task.id);
       if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
         data.tasks.push(...generatedTasks);
       }
+      syncAutomaticPedPostsForTasks([task, ...generatedTasks]);
       await saveData();
       renderBoard();
       renderPed();
