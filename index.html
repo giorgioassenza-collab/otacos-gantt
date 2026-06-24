@@ -3381,8 +3381,14 @@
     const clientNames = ["Giorgia", "Alice"];
 
     function setSyncMessage(message, isError = false) {
+      if (isError) {
+        console.warn("Workflow background sync notice:", message);
+        syncIndicator.textContent = "";
+        syncIndicator.classList.remove("is-error");
+        return;
+      }
       syncIndicator.textContent = message;
-      syncIndicator.classList.toggle("is-error", Boolean(isError));
+      syncIndicator.classList.remove("is-error");
     }
 
     function ensureXlsxLoaded() {
