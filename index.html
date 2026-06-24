@@ -4,10 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>O'Tacos Workflow</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3Cpath d='M43 28c5 5 1 13-7 16' fill='none' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="icon" type="image/png" sizes="64x64" href="./otacos-favicon.png?v=6">
-  <link rel="shortcut icon" href="./favicon.ico?v=6">
-  <link rel="apple-touch-icon" href="./otacos-favicon.png?v=6">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
+  <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="./otacos-favicon.png?v=7">
   <style>
     :root {
       --bg: #f7f5f1;
@@ -295,6 +294,7 @@
     body.influencer-mode .board,
     body.influencer-mode .ped-view,
     body.influencer-mode .creator-calendar-view,
+    body.influencer-mode .budget-view,
     body.influencer-mode #openTaskPanel,
     body.influencer-mode #openProjectPanel,
     body.influencer-mode #openPedPostPanel,
@@ -306,10 +306,24 @@
     body.creator-calendar-mode .board,
     body.creator-calendar-mode .ped-view,
     body.creator-calendar-mode .influencer-view,
+    body.creator-calendar-mode .budget-view,
     body.creator-calendar-mode #openTaskPanel,
     body.creator-calendar-mode #openProjectPanel,
     body.creator-calendar-mode #openPedPostPanel,
     body.creator-calendar-mode #memberFilter {
+      display: none;
+    }
+
+    body.budget-mode .board,
+    body.budget-mode .ped-view,
+    body.budget-mode .influencer-view,
+    body.budget-mode .creator-calendar-view,
+    body.budget-mode #openTaskPanel,
+    body.budget-mode #openProjectPanel,
+    body.budget-mode #openPedPostPanel,
+    body.budget-mode #memberFilter,
+    body.budget-mode .zoom,
+    body.budget-mode #settings {
       display: none;
     }
 
@@ -324,6 +338,10 @@
     }
 
     body:not(.creator-calendar-mode) .creator-calendar-view {
+      display: none;
+    }
+
+    body:not(.budget-mode) .budget-view {
       display: none;
     }
 
@@ -1013,15 +1031,16 @@
     .social-badge {
       display: inline-grid;
       place-items: center;
-      min-width: 22px;
+      min-width: 0;
       height: 18px;
-      padding: 0 6px;
+      padding: 0 8px;
       border-radius: 999px;
       background: var(--ink);
       box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1);
       font-size: 9px;
       font-weight: 900;
       line-height: 1;
+      white-space: nowrap;
     }
 
     .ped-social-row {
@@ -1124,6 +1143,7 @@
     .view-switch.is-open .view-switch-menu button:nth-child(2) { transition-delay: 28ms; }
     .view-switch.is-open .view-switch-menu button:nth-child(3) { transition-delay: 56ms; }
     .view-switch.is-open .view-switch-menu button:nth-child(4) { transition-delay: 84ms; }
+    .view-switch.is-open .view-switch-menu button:nth-child(5) { transition-delay: 112ms; }
 
     .view-switch-menu button:hover {
       color: var(--ink);
@@ -1325,6 +1345,185 @@
       color: #746c63;
       font-size: 13px;
       font-weight: 800;
+      text-align: center;
+    }
+
+    .budget-view {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      background: var(--bg);
+    }
+
+    .budget-shell {
+      display: grid;
+      gap: 14px;
+      max-width: 1280px;
+      margin: 0 auto 86px;
+    }
+
+    .budget-hero,
+    .budget-panel {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fffdf9;
+      box-shadow: 0 12px 34px rgba(24, 19, 15, .07);
+    }
+
+    .budget-hero {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(150px, 190px));
+      gap: 12px;
+      padding: 16px;
+      align-items: stretch;
+    }
+
+    .budget-title {
+      display: grid;
+      gap: 6px;
+      align-content: center;
+    }
+
+    .budget-title h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .budget-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .budget-kpi {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      background: #fff8f1;
+    }
+
+    .budget-kpi span {
+      color: #6c6259;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .budget-kpi strong {
+      font-size: 22px;
+      line-height: 1.05;
+      font-weight: 950;
+    }
+
+    .budget-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr);
+      gap: 14px;
+    }
+
+    .budget-panel {
+      min-width: 0;
+      padding: 16px;
+    }
+
+    .budget-panel h3 {
+      margin: 0 0 14px;
+      font-size: 13px;
+      font-weight: 950;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .budget-bars {
+      display: grid;
+      gap: 10px;
+    }
+
+    .budget-bar {
+      display: grid;
+      grid-template-columns: 120px 1fr 92px;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .budget-bar-track {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #f0ebe4;
+    }
+
+    .budget-bar-fill {
+      height: 100%;
+      min-width: 4px;
+      border-radius: inherit;
+      background: var(--orange);
+    }
+
+    .budget-table-wrap {
+      overflow: auto;
+      max-height: 420px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+    }
+
+    .budget-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .budget-table th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fff4eb;
+      color: #5f554c;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .budget-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line-soft);
+      font-weight: 750;
+      vertical-align: top;
+    }
+
+    .budget-category {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #fff0e7;
+      color: var(--orange-dark);
+      font-size: 11px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .budget-empty {
+      padding: 26px;
+      border: 1px dashed #d9d2c8;
+      border-radius: 12px;
+      color: var(--muted);
+      background: #fffdf9;
+      font-size: 13px;
+      font-weight: 850;
       text-align: center;
     }
 
@@ -1691,7 +1890,7 @@
 
     .project-pill.social-pill {
       display: grid;
-      grid-template-columns: minmax(90px, 1fr) 48px 42px auto auto auto;
+      grid-template-columns: minmax(120px, 1fr) 42px auto auto auto;
       gap: 6px;
       padding: 5px 8px;
     }
@@ -2440,6 +2639,19 @@
         min-width: 980px;
         padding: 12px 8px 126px;
       }
+      .budget-view {
+        padding: 10px 8px 126px;
+      }
+      .budget-shell {
+        margin-bottom: 0;
+      }
+      .budget-hero,
+      .budget-grid {
+        grid-template-columns: 1fr;
+      }
+      .budget-bar {
+        grid-template-columns: 92px 1fr 82px;
+      }
       .influencer-controls {
         position: sticky;
         left: 0;
@@ -2550,6 +2762,12 @@
     <section class="creator-calendar-view" id="creatorCalendarView" aria-label="Creator Calendar">
       <div class="creator-calendar" id="creatorCalendar"></div>
     </section>
+
+    <section class="budget-view" id="budgetView" aria-label="Budget">
+      <div class="budget-shell" id="budgetShell">
+        <div class="budget-empty">Loading budget...</div>
+      </div>
+    </section>
   </main>
 
   <div class="view-switch" id="viewSwitch" aria-label="Views">
@@ -2559,6 +2777,7 @@
       <button id="viewPed" type="button">PED</button>
       <button id="viewInfluencer" type="button">INFLUENCER</button>
       <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
+      <button id="viewBudget" type="button">BUDGET</button>
     </div>
   </div>
   <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
@@ -2669,7 +2888,6 @@
     <h3>Social</h3>
     <form id="socialForm">
       <label class="field">Name<input id="socialName" value="New social" required></label>
-      <label class="field">Short<input id="socialShort" value="NS" maxlength="4" required></label>
       <label class="field">Color<input id="socialColor" type="color" value="#111827" required></label>
       <button class="primary-btn" type="submit">Add social</button>
     </form>
@@ -3003,6 +3221,9 @@
     const viewPed = document.getElementById("viewPed");
     const viewInfluencer = document.getElementById("viewInfluencer");
     const viewCreatorCalendar = document.getElementById("viewCreatorCalendar");
+    const viewBudget = document.getElementById("viewBudget");
+    const budgetView = document.getElementById("budgetView");
+    const budgetShell = document.getElementById("budgetShell");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
@@ -3063,6 +3284,7 @@
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
     const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
+    const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
     const influencerColumns = [
       { key: "name", label: "NAME" },
       { key: "city", label: "CITY" },
@@ -3114,6 +3336,7 @@
     let pendingLocalRevision = 0;
     let pendingLocalData = null;
     let saveQueue = Promise.resolve();
+    let budgetState = { loaded: false, loading: false, rows: [], error: "" };
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
 
@@ -3987,6 +4210,7 @@
     }
 
     function activeHorizontalScrollElement() {
+      if (document.body.classList.contains("budget-mode")) return budgetView;
       if (document.body.classList.contains("ped-mode")) return pedView;
       if (document.body.classList.contains("creator-calendar-mode")) return creatorCalendarView;
       if (document.body.classList.contains("influencer-mode")) return influencerView;
@@ -4122,11 +4346,11 @@
       const label = document.createElement("label");
       label.className = "check-item";
       const color = social.color || "#111827";
-      const short = (social.short || social.label || social.id || "").slice(0, 4).toUpperCase();
+      const displayName = social.label || social.id || "Social";
       label.innerHTML = `
         <input type="checkbox" name="${escapeHtml(groupName)}" value="${escapeHtml(social.id)}"${checked ? " checked" : ""}>
-        <span>${escapeHtml(social.label || social.id)}</span>
-        <span class="social-badge" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(short)}</span>
+        <span>${escapeHtml(displayName)}</span>
+        <span class="social-badge" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(displayName)}</span>
       `;
       return label;
     }
@@ -4460,6 +4684,208 @@
       row.push(cell);
       if (row.some((value) => value.trim())) rows.push(row);
       return rows;
+    }
+
+    function parseBudgetAmount(value) {
+      const clean = String(value || "")
+        .replace(/[^\d,.\-]/g, "")
+        .trim();
+      if (!clean) return 0;
+      const normalized = clean.includes(",")
+        ? clean.replace(/\./g, "").replace(",", ".")
+        : clean;
+      const amount = Number(normalized);
+      return Number.isFinite(amount) ? amount : 0;
+    }
+
+    function budgetCurrency(value) {
+      return new Intl.NumberFormat("it-IT", {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 0
+      }).format(value || 0);
+    }
+
+    function budgetDateLabel(value) {
+      const text = String(value || "").trim();
+      if (!text) return "";
+      const direct = new Date(text);
+      if (!Number.isNaN(direct.getTime())) {
+        return direct.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+      }
+      return text;
+    }
+
+    function budgetMonthKey(value, fallbackTitle = "") {
+      const text = String(value || "").trim();
+      const direct = new Date(text);
+      if (!Number.isNaN(direct.getTime())) {
+        return direct.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+      }
+      const titleMatch = String(fallbackTitle || "").match(/([A-Z]{3})(\d{2})/i);
+      if (titleMatch) return `${titleMatch[1].slice(0, 1).toUpperCase()}${titleMatch[1].slice(1).toLowerCase()} 20${titleMatch[2]}`;
+      return "No date";
+    }
+
+    function budgetCategoryFromHeader(rows, headerIndex, colIndex) {
+      for (let rowIndex = headerIndex - 1; rowIndex >= Math.max(0, headerIndex - 4); rowIndex -= 1) {
+        const label = String(rows[rowIndex]?.[colIndex] || "").trim();
+        if (!label) continue;
+        if (/GENERAL/i.test(label)) return "General";
+        if (/MEDIA/i.test(label)) return "Media";
+        if (/INFLUENCER/i.test(label)) return "Influencer";
+        if (/EVENT/i.test(label)) return "Events";
+        return label.replace(/\s*\(.*?\)\s*/g, "").trim();
+      }
+      return "General";
+    }
+
+    function parseBudgetRows(rows) {
+      const title = rows[0]?.find((cell) => String(cell || "").trim()) || "Budget";
+      const transactions = [];
+      const forecast = [];
+      const headerPoints = [];
+      rows.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+          const label = String(cell || "").trim().toUpperCase();
+          const next3 = String(row[colIndex + 3] || "").trim();
+          if (label === "DATE" && next3) {
+            headerPoints.push({ rowIndex, colIndex, category: budgetCategoryFromHeader(rows, rowIndex, colIndex) });
+          }
+          if (label === "WHAT" && String(row[colIndex + 1] || "").trim()) {
+            headerPoints.push({ rowIndex, colIndex, category: "Forecast", forecast: true });
+          }
+        });
+      });
+
+      headerPoints.forEach((header) => {
+        const nextHeader = headerPoints
+          .filter((candidate) => candidate.colIndex === header.colIndex && candidate.rowIndex > header.rowIndex)
+          .sort((left, right) => left.rowIndex - right.rowIndex)[0];
+        const stopRow = nextHeader?.rowIndex || rows.length;
+        for (let rowIndex = header.rowIndex + 1; rowIndex < stopRow; rowIndex += 1) {
+          const row = rows[rowIndex] || [];
+          if (header.forecast) {
+            const what = String(row[header.colIndex] || "").trim();
+            const amount = parseBudgetAmount(row[header.colIndex + 1]);
+            if (what && amount) forecast.push({ what, amount });
+            continue;
+          }
+          const date = String(row[header.colIndex] || "").trim();
+          const why = String(row[header.colIndex + 1] || "").trim();
+          const what = String(row[header.colIndex + 2] || "").trim();
+          const amountCell = String(row[header.colIndex + 3] || "").trim();
+          const amount = parseBudgetAmount(amountCell);
+          const isTotal = [date, why, what, amountCell].some((value) => /totale|total/i.test(value));
+          if (isTotal || (!date && !why && !what && !amount)) continue;
+          transactions.push({
+            category: header.category,
+            date,
+            why,
+            what,
+            amount,
+            month: budgetMonthKey(date, title)
+          });
+        }
+      });
+      return { title, transactions, forecast };
+    }
+
+    function aggregateBudget(items, key) {
+      const totals = new Map();
+      items.forEach((item) => {
+        const name = item[key] || "-";
+        totals.set(name, (totals.get(name) || 0) + (item.amount || 0));
+      });
+      return [...totals.entries()]
+        .map(([name, amount]) => ({ name, amount }))
+        .sort((left, right) => right.amount - left.amount);
+    }
+
+    function budgetBarsMarkup(items, total) {
+      if (!items.length) return `<div class="budget-empty">No data yet.</div>`;
+      const max = Math.max(...items.map((item) => item.amount), 1);
+      return `<div class="budget-bars">${items.map((item) => `
+        <div class="budget-bar">
+          <span>${escapeHtml(item.name)}</span>
+          <div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.max(4, (item.amount / max) * 100)}%"></div></div>
+          <strong>${escapeHtml(budgetCurrency(item.amount))}</strong>
+        </div>
+      `).join("")}</div>`;
+    }
+
+    async function loadBudgetData(force = false) {
+      if (budgetState.loading || (budgetState.loaded && !force)) return;
+      budgetState = { ...budgetState, loading: true, error: "" };
+      renderBudget();
+      try {
+        const response = await fetch(budgetCsvUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const parsed = parseBudgetRows(parseCsv(await response.text()));
+        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, error: "" };
+      } catch (error) {
+        budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", error: "Cannot load the Budget sheet. Check that the Google Sheet is public with link access." };
+      }
+      renderBudget();
+    }
+
+    function renderBudget() {
+      if (!budgetShell) return;
+      if (budgetState.loading) {
+        budgetShell.innerHTML = `<div class="budget-empty">Loading budget...</div>`;
+        return;
+      }
+      if (budgetState.error) {
+        budgetShell.innerHTML = `<div class="budget-empty">${escapeHtml(budgetState.error)}<br><a class="profile-link" href="${escapeHtml(budgetCsvUrl)}" target="_blank" rel="noopener">Open source sheet</a></div>`;
+        return;
+      }
+      const rows = budgetState.rows || [];
+      const forecast = budgetState.forecast || [];
+      const totalSpent = rows.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const totalForecast = forecast.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const remaining = totalForecast ? totalForecast - totalSpent : 0;
+      const byCategory = aggregateBudget(rows, "category");
+      const byMonth = aggregateBudget(rows, "month");
+      budgetShell.innerHTML = `
+        <section class="budget-hero">
+          <div class="budget-title">
+            <h2>Budget</h2>
+            <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
+          </div>
+          <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
+          <div class="budget-kpi"><span>Forecast</span><strong>${totalForecast ? escapeHtml(budgetCurrency(totalForecast)) : "Not set"}</strong></div>
+          <div class="budget-kpi"><span>Remaining</span><strong>${totalForecast ? escapeHtml(budgetCurrency(remaining)) : "-"}</strong></div>
+        </section>
+        <section class="budget-grid">
+          <div class="budget-panel">
+            <h3>By category</h3>
+            ${budgetBarsMarkup(byCategory, totalSpent)}
+          </div>
+          <div class="budget-panel">
+            <h3>By month</h3>
+            ${budgetBarsMarkup(byMonth, totalSpent)}
+          </div>
+        </section>
+        <section class="budget-panel">
+          <h3>Details</h3>
+          <div class="budget-table-wrap">
+            <table class="budget-table">
+              <thead><tr><th>Date</th><th>Category</th><th>Why</th><th>What</th><th>Amount</th></tr></thead>
+              <tbody>
+                ${rows.length ? rows.map((row) => `
+                  <tr>
+                    <td>${escapeHtml(budgetDateLabel(row.date) || "-")}</td>
+                    <td><span class="budget-category">${escapeHtml(row.category || "-")}</span></td>
+                    <td>${escapeHtml(row.why || "-")}</td>
+                    <td>${escapeHtml(row.what || "-")}</td>
+                    <td>${escapeHtml(budgetCurrency(row.amount))}</td>
+                  </tr>
+                `).join("") : `<tr><td colspan="5">No expenses found.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
     }
 
     function rowMatchKey(row) {
@@ -4911,7 +5337,7 @@
         editPedPostSocials.appendChild(socialCheckboxItem(social, "editPedPostSocials", selectedEditPedSocials.has(social.id)));
         const pill = document.createElement("div");
         pill.className = "project-pill social-pill";
-        pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input value="${escapeHtml(social.short)}" maxlength="4" aria-label="Short ${escapeHtml(social.label)}" data-social-short="${escapeHtml(social.id)}"><input type="color" value="${escapeHtml(social.color)}" aria-label="Color ${escapeHtml(social.label)}" data-social-color="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
+        pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input type="color" value="${escapeHtml(social.color)}" aria-label="Color ${escapeHtml(social.label)}" data-social-color="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
         socialList.appendChild(pill);
       });
     }
@@ -5100,8 +5526,7 @@
         const socialItem = (data.socials || []).find((entry) => entry.id === item);
         const color = socialItem ? socialItem.color : "#111827";
         const label = socialItem ? socialItem.label : item;
-        const short = socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase();
-        return `<span class="social-badge" title="${escapeHtml(label)}" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(short)}</span>`;
+        return `<span class="social-badge" title="${escapeHtml(label)}" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(label)}</span>`;
       }).join("");
     }
 
@@ -6091,15 +6516,17 @@
       renderPed();
       renderInfluencers();
       renderCreatorCalendar();
+      renderBudget();
       renderSettingsLists();
       setNewTaskDefaultDates();
       document.getElementById("pedPostDate").value = currentDateKey();
       pedPostTime.value = "11:00";
-      document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode");
+      document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode", "budget-mode");
       viewGantt.classList.add("is-active");
       viewPed.classList.remove("is-active");
       viewInfluencer.classList.remove("is-active");
       viewCreatorCalendar.classList.remove("is-active");
+      viewBudget.classList.remove("is-active");
       document.querySelector(".brand-title").textContent = "Workflow";
       document.getElementById("currentMonth").textContent = "O'TACOS";
       requestAnimationFrame(snapActiveTimelineToToday);
@@ -6261,6 +6688,7 @@
       if (view === "ped") return "PED";
       if (view === "influencer") return "INFLUENCER";
       if (view === "creator-calendar") return "CREATOR CALENDAR";
+      if (view === "budget") return "BUDGET";
       return "GANTT";
     }
 
@@ -6268,19 +6696,22 @@
       const pedMode = view === "ped";
       const influencerMode = view === "influencer";
       const creatorCalendarMode = view === "creator-calendar";
+      const budgetMode = view === "budget";
       closeViewSwitch();
       document.body.classList.toggle("ped-mode", pedMode);
       document.body.classList.toggle("influencer-mode", influencerMode);
       document.body.classList.toggle("creator-calendar-mode", creatorCalendarMode);
+      document.body.classList.toggle("budget-mode", budgetMode);
       viewGantt.classList.toggle("is-active", view === "gantt");
       viewPed.classList.toggle("is-active", pedMode);
       viewInfluencer.classList.toggle("is-active", influencerMode);
       viewCreatorCalendar.classList.toggle("is-active", creatorCalendarMode);
+      viewBudget.classList.toggle("is-active", budgetMode);
       document.getElementById("viewSwitchCurrent").textContent = viewLabel(view);
-      document.querySelector(".brand-title").textContent = creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
-      document.getElementById("currentMonth").textContent = creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
+      document.querySelector(".brand-title").textContent = budgetMode ? "Budget" : creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
+      document.getElementById("currentMonth").textContent = budgetMode ? "BUDGET" : creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
       closePanels();
-      if (!influencerMode) {
+      if (!influencerMode && !budgetMode) {
         zoomIndex = zooms.length - 1;
         updateZoom();
       }
@@ -6288,7 +6719,12 @@
       if (pedMode) renderPed();
       if (influencerMode) renderInfluencers();
       if (creatorCalendarMode) renderCreatorCalendar();
-      requestAnimationFrame(snapActiveTimelineToToday);
+      if (budgetMode) {
+        renderBudget();
+        loadBudgetData(true);
+      } else {
+        requestAnimationFrame(snapActiveTimelineToToday);
+      }
       requestAnimationFrame(syncHorizontalScrollbar);
     }
 
@@ -6308,6 +6744,7 @@
     viewPed.addEventListener("click", () => setView("ped"));
     viewInfluencer.addEventListener("click", () => setView("influencer"));
     viewCreatorCalendar.addEventListener("click", () => setView("creator-calendar"));
+    viewBudget.addEventListener("click", () => setView("budget"));
 
     document.getElementById("taskAddEndDate").addEventListener("change", (event) => {
       document.getElementById("taskEndWrap").hidden = !event.target.checked;
@@ -7720,7 +8157,7 @@
     document.getElementById("socialForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const label = document.getElementById("socialName").value.trim();
-      const short = document.getElementById("socialShort").value.trim().toUpperCase();
+      const short = label;
       const color = document.getElementById("socialColor").value;
       const id = slugify(label);
       if (!label || !short) return;
@@ -7737,7 +8174,6 @@
       renderBoard();
       renderPed();
       document.getElementById("socialName").value = "New social";
-      document.getElementById("socialShort").value = "NS";
       document.getElementById("socialColor").value = "#111827";
     });
 
@@ -8114,21 +8550,6 @@
           return;
         }
         social.label = label;
-        saveData();
-        renderSettingsLists();
-        renderBoard();
-        renderPed();
-        return;
-      }
-      const shortInput = event.target.closest("[data-social-short]");
-      if (shortInput) {
-        const social = data.socials.find((item) => item.id === shortInput.dataset.socialShort);
-        const short = shortInput.value.trim().toUpperCase();
-        if (!social || !short) {
-          renderBoard();
-          return;
-        }
-        social.short = short;
         saveData();
         renderSettingsLists();
         renderBoard();
