@@ -2864,6 +2864,36 @@
       <button class="login-button" id="loginButton" type="button">ACCEDI</button>
     </div>
   </section>
+  <script>
+    (() => {
+      const unlock = () => {
+        const input = document.getElementById("loginPassword");
+        const error = document.getElementById("loginError");
+        const button = document.getElementById("loginButton");
+        if (!input || !button) return;
+        if (input.value !== "otacos2026") {
+          if (error) error.textContent = "Password non corretta";
+          return;
+        }
+        if (error) error.textContent = "";
+        sessionStorage.setItem("logo-gantt-authenticated", "true");
+        button.textContent = "ACCESSO...";
+        button.disabled = true;
+        document.body.classList.add("is-authenticated");
+      };
+      window.addEventListener("DOMContentLoaded", () => {
+        const button = document.getElementById("loginButton");
+        const input = document.getElementById("loginPassword");
+        if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
+          document.body.classList.add("is-authenticated");
+        }
+        button?.addEventListener("click", unlock, { capture: true });
+        input?.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") unlock();
+        }, { capture: true });
+      });
+    })();
+  </script>
 
   <main class="app">
     <header class="toolbar">
@@ -7181,11 +7211,13 @@
       }
       error.textContent = "";
       sessionStorage.setItem("logo-gantt-authenticated", "true");
+      document.body.classList.add("is-authenticated");
       button.disabled = true;
       button.textContent = "ACCESSO...";
-      await startApp();
-      button.disabled = false;
-      button.textContent = "ACCEDI";
+      startApp().finally(() => {
+        button.disabled = false;
+        button.textContent = "ACCEDI";
+      });
     }
 
     document.getElementById("loginButton").addEventListener("click", handleLogin);
