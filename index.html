@@ -2858,15 +2858,16 @@
       <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
       <h1 class="login-title">WORKFLOW</h1>
       <label class="login-field">
-        <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter'&&window.otacosUnlock){window.otacosUnlock(event)}">
         <span class="login-error" id="loginError"></span>
       </label>
-      <button class="login-button" id="loginButton" type="button">ACCEDI</button>
+      <button class="login-button" id="loginButton" type="button" onclick="window.otacosUnlock&&window.otacosUnlock(event)">ACCEDI</button>
     </div>
   </section>
   <script>
     (() => {
-      const unlock = () => {
+      const unlock = (event) => {
+        if (event?.preventDefault) event.preventDefault();
         const input = document.getElementById("loginPassword");
         const error = document.getElementById("loginError");
         const button = document.getElementById("loginButton");
@@ -2880,7 +2881,12 @@
         button.textContent = "ACCESSO...";
         button.disabled = true;
         document.body.classList.add("is-authenticated");
+        document.querySelector(".login-page")?.setAttribute("hidden", "hidden");
+        setTimeout(() => {
+          if (typeof window.startWorkflowApp === "function") window.startWorkflowApp();
+        }, 0);
       };
+      window.otacosUnlock = unlock;
       window.addEventListener("DOMContentLoaded", () => {
         const button = document.getElementById("loginButton");
         const input = document.getElementById("loginPassword");
@@ -7194,6 +7200,7 @@
         setSyncMessage("Aperto in locale: sincronizzazione da controllare", true);
       }
     }
+    window.startWorkflowApp = startApp;
 
     window.addEventListener("beforeunload", (event) => {
       if (!pendingLocalData) return;
