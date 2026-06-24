@@ -3284,6 +3284,7 @@
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
     const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
+    const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
     const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
     const influencerColumns = [
       { key: "name", label: "NAME" },
@@ -4740,8 +4741,8 @@
       return "General";
     }
 
-    function parseBudgetRows(rows) {
-      const title = rows[0]?.find((cell) => String(cell || "").trim()) || "Budget";
+    function parseBudgetRows(rows, sheetName = "") {
+      const title = sheetName || rows[0]?.find((cell) => String(cell || "").trim()) || "Budget";
       const transactions = [];
       const forecast = [];
       const headerPoints = [];
@@ -4779,6 +4780,7 @@
           const isTotal = [date, why, what, amountCell].some((value) => /totale|total/i.test(value));
           if (isTotal || (!date && !why && !what && !amount)) continue;
           transactions.push({
+            sheet: sheetName || title,
             category: header.category,
             date,
             why,
@@ -4789,6 +4791,28 @@
         }
       });
       return { title, transactions, forecast };
+    }
+
+    function budgetRowsFromWorksheet(sheet) {
+      if (!window.XLSX || !sheet || !sheet["!ref"]) return [];
+      return window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: "" })
+        .map((row) => row.map((cell) => String(cell || "").trim()))
+        .filter((row) => row.some(Boolean));
+    }
+
+    function parseBudgetWorkbook(workbook) {
+      const parsedSheets = workbook.SheetNames
+        .map((sheetName) => {
+          const parsed = parseBudgetRows(budgetRowsFromWorksheet(workbook.Sheets[sheetName]), sheetName);
+          return { sheetName, ...parsed };
+        })
+        .filter((sheet) => sheet.transactions.length || sheet.forecast.length);
+      return {
+        title: parsedSheets.length ? `All tabs (${parsedSheets.length})` : "Budget",
+        transactions: parsedSheets.flatMap((sheet) => sheet.transactions),
+        forecast: parsedSheets.flatMap((sheet) => sheet.forecast),
+        sheets: parsedSheets.map((sheet) => sheet.sheetName)
+      };
     }
 
     function aggregateBudget(items, key) {
@@ -4819,10 +4843,20 @@
       budgetState = { ...budgetState, loading: true, error: "" };
       renderBudget();
       try {
-        const response = await fetch(budgetCsvUrl, { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const parsed = parseBudgetRows(parseCsv(await response.text()));
-        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, error: "" };
+        let parsed = null;
+        if (window.XLSX) {
+          const workbookResponse = await fetch(budgetWorkbookUrl, { cache: "no-store" });
+          if (workbookResponse.ok) {
+            const workbook = window.XLSX.read(await workbookResponse.arrayBuffer(), { type: "array", cellHTML: false, cellFormula: false, cellDates: true });
+            parsed = parseBudgetWorkbook(workbook);
+          }
+        }
+        if (!parsed || (!parsed.transactions.length && !parsed.forecast.length)) {
+          const response = await fetch(budgetCsvUrl, { cache: "no-store" });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
+        }
+        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, sheets: parsed.sheets || [], error: "" };
       } catch (error) {
         budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", error: "Cannot load the Budget sheet. Check that the Google Sheet is public with link access." };
       }
@@ -4846,6 +4880,7 @@
       const remaining = totalForecast ? totalForecast - totalSpent : 0;
       const byCategory = aggregateBudget(rows, "category");
       const byMonth = aggregateBudget(rows, "month");
+      const bySheet = aggregateBudget(rows, "sheet");
       budgetShell.innerHTML = `
         <section class="budget-hero">
           <div class="budget-title">
@@ -4865,22 +4900,27 @@
             <h3>By month</h3>
             ${budgetBarsMarkup(byMonth, totalSpent)}
           </div>
+          <div class="budget-panel">
+            <h3>By tab</h3>
+            ${budgetBarsMarkup(bySheet, totalSpent)}
+          </div>
         </section>
         <section class="budget-panel">
           <h3>Details</h3>
           <div class="budget-table-wrap">
             <table class="budget-table">
-              <thead><tr><th>Date</th><th>Category</th><th>Why</th><th>What</th><th>Amount</th></tr></thead>
+              <thead><tr><th>Tab</th><th>Date</th><th>Category</th><th>Why</th><th>What</th><th>Amount</th></tr></thead>
               <tbody>
                 ${rows.length ? rows.map((row) => `
                   <tr>
+                    <td>${escapeHtml(row.sheet || "-")}</td>
                     <td>${escapeHtml(budgetDateLabel(row.date) || "-")}</td>
                     <td><span class="budget-category">${escapeHtml(row.category || "-")}</span></td>
                     <td>${escapeHtml(row.why || "-")}</td>
                     <td>${escapeHtml(row.what || "-")}</td>
                     <td>${escapeHtml(budgetCurrency(row.amount))}</td>
                   </tr>
-                `).join("") : `<tr><td colspan="5">No expenses found.</td></tr>`}
+                `).join("") : `<tr><td colspan="6">No expenses found.</td></tr>`}
               </tbody>
             </table>
           </div>
