@@ -1373,7 +1373,7 @@
 
     .budget-hero {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(150px, 190px));
+      grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(140px, 180px));
       gap: 12px;
       padding: 16px;
       align-items: stretch;
@@ -1426,6 +1426,41 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr);
       gap: 14px;
+    }
+
+    .budget-filters {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(180px, 1fr)) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fffdf9;
+      box-shadow: 0 8px 24px rgba(24, 19, 15, .05);
+    }
+
+    .budget-filters label {
+      display: grid;
+      gap: 6px;
+      color: #6c6259;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .budget-filters select {
+      height: 36px;
+      border: 1px solid #d9d2c8;
+      border-radius: 9px;
+      padding: 0 10px;
+      color: var(--ink);
+      background: #fffaf4;
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: none;
+      letter-spacing: 0;
     }
 
     .budget-panel {
@@ -2649,6 +2684,9 @@
       .budget-grid {
         grid-template-columns: 1fr;
       }
+      .budget-filters {
+        grid-template-columns: 1fr;
+      }
       .budget-bar {
         grid-template-columns: 92px 1fr 82px;
       }
@@ -3286,6 +3324,7 @@
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
     const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
+    const budgetSheetNames = ["JUNE26", "MAY26", "APR26", "MAR26", "FEB26", "GEN26", "DIC25", "NOV25", "OCT25", "SEP25", "AUG25", "JUL25"];
     const influencerColumns = [
       { key: "name", label: "NAME" },
       { key: "city", label: "CITY" },
@@ -4728,6 +4767,28 @@
       return "No date";
     }
 
+    function budgetMonthSortValue(monthName) {
+      const value = String(monthName || "");
+      const match = value.match(/^([A-Za-z]{3})\s+(\d{4})$/);
+      if (!match) return 999999;
+      const monthMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dic: 11, dec: 11, gen: 0 };
+      return Number(match[2]) * 12 + (monthMap[match[1].toLowerCase()] ?? 0);
+    }
+
+    function uniqueSortedBudgetValues(rows, key) {
+      const values = [...new Set(rows.map((row) => row[key]).filter(Boolean))];
+      if (key === "month") return values.sort((left, right) => budgetMonthSortValue(left) - budgetMonthSortValue(right));
+      if (key === "sheet") {
+        return values.sort((left, right) => {
+          const leftIndex = budgetSheetNames.indexOf(left);
+          const rightIndex = budgetSheetNames.indexOf(right);
+          if (leftIndex >= 0 || rightIndex >= 0) return (leftIndex < 0 ? 999 : leftIndex) - (rightIndex < 0 ? 999 : rightIndex);
+          return left.localeCompare(right);
+        });
+      }
+      return values.sort((left, right) => left.localeCompare(right));
+    }
+
     function budgetCategoryFromHeader(rows, headerIndex, colIndex) {
       for (let rowIndex = headerIndex - 1; rowIndex >= Math.max(0, headerIndex - 4); rowIndex -= 1) {
         const label = String(rows[rowIndex]?.[colIndex] || "").trim();
@@ -4753,7 +4814,7 @@
           if (label === "DATE" && next3) {
             headerPoints.push({ rowIndex, colIndex, category: budgetCategoryFromHeader(rows, rowIndex, colIndex) });
           }
-          if (label === "WHAT" && String(row[colIndex + 1] || "").trim()) {
+          if (label === "WHAT" && String(row[colIndex + 1] || "").trim() && String(row[colIndex - 2] || "").trim().toUpperCase() !== "DATE") {
             headerPoints.push({ rowIndex, colIndex, category: "Forecast", forecast: true });
           }
         });
@@ -4778,7 +4839,7 @@
           const amountCell = String(row[header.colIndex + 3] || "").trim();
           const amount = parseBudgetAmount(amountCell);
           const isTotal = [date, why, what, amountCell].some((value) => /totale|total/i.test(value));
-          if (isTotal || (!date && !why && !what && !amount)) continue;
+          if (isTotal || !amount || (!date && !why && !what)) continue;
           transactions.push({
             sheet: sheetName || title,
             category: header.category,
@@ -4815,6 +4876,25 @@
       };
     }
 
+    async function loadBudgetCsvSheets() {
+      const results = await Promise.allSettled(budgetSheetNames.map(async (sheetName) => {
+        const url = `https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return parseBudgetRows(parseCsv(await response.text()), sheetName);
+      }));
+      const parsedSheets = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value)
+        .filter((sheet) => sheet.transactions.length || sheet.forecast.length);
+      return {
+        title: parsedSheets.length ? `All tabs (${parsedSheets.length})` : "Budget",
+        transactions: parsedSheets.flatMap((sheet) => sheet.transactions),
+        forecast: parsedSheets.flatMap((sheet) => sheet.forecast),
+        sheets: parsedSheets.map((sheet) => sheet.title)
+      };
+    }
+
     function aggregateBudget(items, key) {
       const totals = new Map();
       items.forEach((item) => {
@@ -4838,6 +4918,18 @@
       `).join("")}</div>`;
     }
 
+    function budgetSelectMarkup(id, label, values, selectedValue, allLabel) {
+      const safeSelected = values.includes(selectedValue) ? selectedValue : "all";
+      return `
+        <label>${escapeHtml(label)}
+          <select id="${escapeHtml(id)}" data-budget-filter>
+            <option value="all" ${safeSelected === "all" ? "selected" : ""}>${escapeHtml(allLabel)}</option>
+            ${values.map((value) => `<option value="${escapeHtml(value)}" ${value === safeSelected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("")}
+          </select>
+        </label>
+      `;
+    }
+
     async function loadBudgetData(force = false) {
       if (budgetState.loading || (budgetState.loaded && !force)) return;
       budgetState = { ...budgetState, loading: true, error: "" };
@@ -4850,6 +4942,9 @@
             const workbook = window.XLSX.read(await workbookResponse.arrayBuffer(), { type: "array", cellHTML: false, cellFormula: false, cellDates: true });
             parsed = parseBudgetWorkbook(workbook);
           }
+        }
+        if (!parsed || parsed.sheets?.length <= 1 || (!parsed.transactions.length && !parsed.forecast.length)) {
+          parsed = await loadBudgetCsvSheets();
         }
         if (!parsed || (!parsed.transactions.length && !parsed.forecast.length)) {
           const response = await fetch(budgetCsvUrl, { cache: "no-store" });
@@ -4874,35 +4969,55 @@
         return;
       }
       const rows = budgetState.rows || [];
+      const monthFilter = document.getElementById("budgetMonthFilter")?.value || "all";
+      const categoryFilter = document.getElementById("budgetCategoryFilter")?.value || "all";
+      const sheetFilter = document.getElementById("budgetSheetFilter")?.value || "all";
+      const months = uniqueSortedBudgetValues(rows, "month");
+      const categories = uniqueSortedBudgetValues(rows, "category");
+      const sheets = uniqueSortedBudgetValues(rows, "sheet");
+      const filteredRows = rows.filter((row) => {
+        if (monthFilter !== "all" && row.month !== monthFilter) return false;
+        if (categoryFilter !== "all" && row.category !== categoryFilter) return false;
+        if (sheetFilter !== "all" && row.sheet !== sheetFilter) return false;
+        return true;
+      });
       const forecast = budgetState.forecast || [];
       const totalSpent = rows.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const totalForecast = forecast.reduce((sum, item) => sum + (item.amount || 0), 0);
       const remaining = totalForecast ? totalForecast - totalSpent : 0;
-      const byCategory = aggregateBudget(rows, "category");
-      const byMonth = aggregateBudget(rows, "month");
-      const bySheet = aggregateBudget(rows, "sheet");
+      const byCategory = aggregateBudget(filteredRows, "category");
+      const byMonth = aggregateBudget(filteredRows, "month");
+      const bySheet = aggregateBudget(filteredRows, "sheet");
       budgetShell.innerHTML = `
         <section class="budget-hero">
           <div class="budget-title">
             <h2>Budget</h2>
             <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
           </div>
+          <div class="budget-kpi"><span>Selected spent</span><strong>${escapeHtml(budgetCurrency(selectedSpent))}</strong></div>
           <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
           <div class="budget-kpi"><span>Forecast</span><strong>${totalForecast ? escapeHtml(budgetCurrency(totalForecast)) : "Not set"}</strong></div>
           <div class="budget-kpi"><span>Remaining</span><strong>${totalForecast ? escapeHtml(budgetCurrency(remaining)) : "-"}</strong></div>
         </section>
+        <section class="budget-filters">
+          ${budgetSelectMarkup("budgetMonthFilter", "Month", months, monthFilter, "All months")}
+          ${budgetSelectMarkup("budgetCategoryFilter", "Category", categories, categoryFilter, "All categories")}
+          ${budgetSelectMarkup("budgetSheetFilter", "Tab", sheets, sheetFilter, "All tabs")}
+          <button class="toolbar-btn" type="button" data-budget-refresh>Refresh</button>
+        </section>
         <section class="budget-grid">
           <div class="budget-panel">
             <h3>By category</h3>
-            ${budgetBarsMarkup(byCategory, totalSpent)}
+            ${budgetBarsMarkup(byCategory, selectedSpent)}
           </div>
           <div class="budget-panel">
             <h3>By month</h3>
-            ${budgetBarsMarkup(byMonth, totalSpent)}
+            ${budgetBarsMarkup(byMonth, selectedSpent)}
           </div>
           <div class="budget-panel">
             <h3>By tab</h3>
-            ${budgetBarsMarkup(bySheet, totalSpent)}
+            ${budgetBarsMarkup(bySheet, selectedSpent)}
           </div>
         </section>
         <section class="budget-panel">
@@ -4911,7 +5026,7 @@
             <table class="budget-table">
               <thead><tr><th>Tab</th><th>Date</th><th>Category</th><th>Why</th><th>What</th><th>Amount</th></tr></thead>
               <tbody>
-                ${rows.length ? rows.map((row) => `
+                ${filteredRows.length ? filteredRows.map((row) => `
                   <tr>
                     <td>${escapeHtml(row.sheet || "-")}</td>
                     <td>${escapeHtml(budgetDateLabel(row.date) || "-")}</td>
@@ -4920,7 +5035,7 @@
                     <td>${escapeHtml(row.what || "-")}</td>
                     <td>${escapeHtml(budgetCurrency(row.amount))}</td>
                   </tr>
-                `).join("") : `<tr><td colspan="6">No expenses found.</td></tr>`}
+                `).join("") : `<tr><td colspan="6">No expenses found for these filters.</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -8622,6 +8737,14 @@
     }, { passive: true });
     creatorCalendarView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     influencerView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
+    budgetShell.addEventListener("change", (event) => {
+      if (!event.target.closest("[data-budget-filter]")) return;
+      renderBudget();
+    });
+    budgetShell.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-budget-refresh]")) return;
+      loadBudgetData(true);
+    });
     horizontalScrollRange.addEventListener("input", () => {
       const scrollEl = activeHorizontalScrollElement();
       if (!scrollEl) return;
