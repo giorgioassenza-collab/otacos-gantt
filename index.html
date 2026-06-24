@@ -1424,98 +1424,8 @@
 
     .budget-grid {
       display: grid;
-      grid-template-columns: minmax(380px, .72fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr);
       gap: 14px;
-    }
-
-    .budget-grid.is-wide {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .budget-donut-wrap {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 18px;
-      align-items: center;
-    }
-
-    .budget-donut {
-      --budget-donut: conic-gradient(var(--orange) 0 100%);
-      position: relative;
-      width: 230px;
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: var(--budget-donut);
-      box-shadow: inset 0 0 0 1px rgba(24, 19, 15, .08), 0 18px 40px rgba(24, 19, 15, .08);
-    }
-
-    .budget-donut::after {
-      content: "";
-      position: absolute;
-      inset: 34px;
-      border-radius: 50%;
-      background: #fffdf9;
-      box-shadow: inset 0 0 0 1px var(--line-soft);
-    }
-
-    .budget-donut-center {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      display: grid;
-      place-content: center;
-      gap: 2px;
-      text-align: center;
-      pointer-events: none;
-    }
-
-    .budget-donut-center strong {
-      font-size: 24px;
-      font-weight: 950;
-    }
-
-    .budget-donut-center span {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 950;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-
-    .budget-legend {
-      display: grid;
-      gap: 8px;
-    }
-
-    .budget-legend button {
-      display: grid;
-      grid-template-columns: 14px minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: center;
-      min-height: 34px;
-      border: 1px solid transparent;
-      border-radius: 9px;
-      padding: 6px 8px;
-      color: var(--ink);
-      background: #fff8f1;
-      font-size: 12px;
-      font-weight: 900;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .budget-legend button:hover,
-    .budget-legend button.is-active {
-      border-color: rgba(255, 90, 20, .28);
-      background: #fff0e7;
-      transform: translateY(-1px);
-    }
-
-    .budget-legend-swatch {
-      width: 12px;
-      height: 12px;
-      border-radius: 4px;
-      box-shadow: inset 0 0 0 1px rgba(24, 19, 15, .14);
     }
 
     .budget-filters {
@@ -1639,60 +1549,6 @@
       font-size: 11px;
       font-weight: 950;
       white-space: nowrap;
-    }
-
-    .budget-matrix-wrap {
-      overflow: auto;
-      border: 1px solid var(--line-soft);
-      border-radius: 10px;
-    }
-
-    .budget-matrix {
-      width: 100%;
-      min-width: 760px;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    .budget-matrix th,
-    .budget-matrix td {
-      padding: 10px;
-      border-bottom: 1px solid var(--line-soft);
-      text-align: right;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .budget-matrix th {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      background: #fff4eb;
-      color: #5f554c;
-      font-size: 11px;
-      font-weight: 950;
-      text-transform: uppercase;
-    }
-
-    .budget-matrix th:first-child,
-    .budget-matrix td:first-child {
-      position: sticky;
-      left: 0;
-      z-index: 2;
-      text-align: left;
-      background: #fffdf9;
-      font-weight: 950;
-    }
-
-    .budget-matrix th:first-child {
-      z-index: 3;
-      background: #fff4eb;
-    }
-
-    .budget-matrix tr.is-total td {
-      color: var(--orange-dark);
-      background: #fff8f1;
-      font-weight: 950;
     }
 
     .budget-empty {
@@ -4946,89 +4802,6 @@
       return "General";
     }
 
-    function normalizeBudgetMonthName(value) {
-      const raw = String(value || "").trim();
-      const map = {
-        JULY: "Jul 2025",
-        AUGUST: "Aug 2025",
-        SEPTEMBER: "Sep 2025",
-        OCTOBER: "Oct 2025",
-        NOVEMBER: "Nov 2025",
-        DECEMBER: "Dec 2025",
-        JANUARY: "Jan 2026",
-        FEBRUARY: "Feb 2026",
-        MARCH: "Mar 2026",
-        APRIL: "Apr 2026",
-        MAY: "May 2026",
-        JUNE: "Jun 2026"
-      };
-      return map[raw.toUpperCase()] || raw;
-    }
-
-    function parseBudgetTotalRows(rows) {
-      const headerIndex = rows.findIndex((row) => row.some((cell) => String(cell || "").trim().toUpperCase() === "EXPENSES"));
-      if (headerIndex < 0) return null;
-      const headers = rows[headerIndex].map((cell) => String(cell || "").trim().toUpperCase());
-      const indexOf = (name) => headers.indexOf(name);
-      const mediaIndex = indexOf("MEDIA");
-      const influencerIndex = indexOf("INFLUENCER");
-      const eventsIndex = indexOf("EVENTS");
-      const generalIndex = indexOf("GENERAL");
-      const expensesIndex = indexOf("EXPENSES");
-      const invoicedIndex = indexOf("INVOICED");
-      const deltaIndex = indexOf("DELTA");
-      const feeIndex = indexOf("FEE");
-      const months = [];
-      let yearlyRow = null;
-      rows.slice(headerIndex + 1).forEach((row) => {
-        const label = String(row[0] || "").trim();
-        if (!label) return;
-        if (/TOTAL YEAR/i.test(label)) {
-          yearlyRow = row;
-          return;
-        }
-        if (/^TOTAL/i.test(label)) return;
-        const media = parseBudgetAmount(row[mediaIndex]);
-        const influencer = parseBudgetAmount(row[influencerIndex]);
-        const events = parseBudgetAmount(row[eventsIndex]);
-        const general = parseBudgetAmount(row[generalIndex]);
-        const expenses = parseBudgetAmount(row[expensesIndex]) || media + influencer + events + general;
-        const invoiced = parseBudgetAmount(row[invoicedIndex]);
-        const delta = parseBudgetAmount(row[deltaIndex]);
-        months.push({
-          month: normalizeBudgetMonthName(label),
-          media,
-          influencer,
-          events,
-          general,
-          expenses,
-          invoiced,
-          delta
-        });
-      });
-      if (!yearlyRow) return null;
-      const categories = {
-        Media: parseBudgetAmount(yearlyRow[mediaIndex]),
-        Influencer: parseBudgetAmount(yearlyRow[influencerIndex]),
-        Events: parseBudgetAmount(yearlyRow[eventsIndex]),
-        General: parseBudgetAmount(yearlyRow[generalIndex])
-      };
-      const operationalSpent = parseBudgetAmount(yearlyRow[expensesIndex]) || Object.values(categories).reduce((sum, value) => sum + value, 0);
-      const totalBudget = parseBudgetAmount(yearlyRow[invoicedIndex]) || 150000;
-      const fee = parseBudgetAmount(yearlyRow[feeIndex]) || 60000;
-      const totalSpent = operationalSpent + fee;
-      return {
-        months,
-        categories,
-        operationalSpent,
-        totalBudget,
-        fee,
-        totalSpent,
-        remaining: totalBudget - totalSpent,
-        delta: parseBudgetAmount(yearlyRow[deltaIndex])
-      };
-    }
-
     function parseBudgetRows(rows, sheetName = "") {
       const title = sheetName || rows[0]?.find((cell) => String(cell || "").trim()) || "Budget";
       const transactions = [];
@@ -5089,10 +4862,7 @@
     }
 
     function parseBudgetWorkbook(workbook) {
-      const totalSheetName = workbook.SheetNames.find((name) => ["TOTAL", "TOT"].includes(String(name).trim().toUpperCase()));
-      const totalSummary = totalSheetName ? parseBudgetTotalRows(budgetRowsFromWorksheet(workbook.Sheets[totalSheetName])) : null;
       const parsedSheets = workbook.SheetNames
-        .filter((sheetName) => sheetName !== totalSheetName)
         .map((sheetName) => {
           const parsed = parseBudgetRows(budgetRowsFromWorksheet(workbook.Sheets[sheetName]), sheetName);
           return { sheetName, ...parsed };
@@ -5102,16 +4872,8 @@
         title: parsedSheets.length ? `All tabs (${parsedSheets.length})` : "Budget",
         transactions: parsedSheets.flatMap((sheet) => sheet.transactions),
         forecast: parsedSheets.flatMap((sheet) => sheet.forecast),
-        sheets: parsedSheets.map((sheet) => sheet.sheetName),
-        summary: totalSummary
+        sheets: parsedSheets.map((sheet) => sheet.sheetName)
       };
-    }
-
-    async function loadBudgetTotalSummary() {
-      const url = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/gviz/tq?tqx=out:csv&sheet=TOTAL";
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) return null;
-      return parseBudgetTotalRows(parseCsv(await response.text()));
     }
 
     async function loadBudgetCsvSheets() {
@@ -5129,8 +4891,7 @@
         title: parsedSheets.length ? `All tabs (${parsedSheets.length})` : "Budget",
         transactions: parsedSheets.flatMap((sheet) => sheet.transactions),
         forecast: parsedSheets.flatMap((sheet) => sheet.forecast),
-        sheets: parsedSheets.map((sheet) => sheet.title),
-        summary: await loadBudgetTotalSummary()
+        sheets: parsedSheets.map((sheet) => sheet.title)
       };
     }
 
@@ -5155,89 +4916,6 @@
           <strong>${escapeHtml(budgetCurrency(item.amount))}</strong>
         </div>
       `).join("")}</div>`;
-    }
-
-    function budgetColor(category) {
-      const colors = {
-        Media: "#ff5a14",
-        Influencer: "#2563eb",
-        Events: "#16a34a",
-        General: "#7c3aed",
-        Fee: "#111827",
-        Remaining: "#ded7cd"
-      };
-      return colors[category] || "#f59e0b";
-    }
-
-    function budgetDonutGradient(items, total) {
-      let cursor = 0;
-      const segments = items.map((item) => {
-        const start = cursor;
-        const end = cursor + ((item.amount || 0) / Math.max(total, 1)) * 100;
-        cursor = end;
-        return `${budgetColor(item.name)} ${start}% ${end}%`;
-      });
-      return `conic-gradient(${segments.join(", ")})`;
-    }
-
-    function budgetLegendMarkup(items, activeCategory) {
-      const total = items.reduce((sum, item) => sum + item.amount, 0);
-      return `<div class="budget-legend">${items.map((item) => `
-        <button type="button" data-budget-legend="${escapeHtml(item.name)}" class="${activeCategory === item.name ? "is-active" : ""}">
-          <span class="budget-legend-swatch" style="background:${escapeHtml(budgetColor(item.name))}"></span>
-          <span>${escapeHtml(item.name)}</span>
-          <strong>${escapeHtml(budgetCurrency(item.amount))} / ${Math.round(((item.amount || 0) / Math.max(total, 1)) * 100)}%</strong>
-        </button>
-      `).join("")}</div>`;
-    }
-
-    function budgetMatrixMarkup(summary, activeCategory = "all") {
-      const categories = ["Media", "Influencer", "Events", "General"];
-      const rows = summary?.months || [];
-      const visibleCategories = activeCategory && activeCategory !== "all" && categories.includes(activeCategory) ? [activeCategory] : categories;
-      const totals = categories.reduce((result, category) => ({ ...result, [category]: 0 }), {});
-      rows.forEach((row) => {
-        totals.Media += row.media || 0;
-        totals.Influencer += row.influencer || 0;
-        totals.Events += row.events || 0;
-        totals.General += row.general || 0;
-      });
-      return `
-        <div class="budget-matrix-wrap">
-          <table class="budget-matrix">
-            <thead>
-              <tr><th>Month</th>${visibleCategories.map((category) => `<th>${escapeHtml(category)}</th>`).join("")}<th>Total</th><th>Remaining month</th></tr>
-            </thead>
-            <tbody>
-              ${rows.map((row) => {
-                const valueFor = { Media: row.media, Influencer: row.influencer, Events: row.events, General: row.general };
-                return `<tr>
-                  <td>${escapeHtml(row.month)}</td>
-                  ${visibleCategories.map((category) => `<td>${escapeHtml(budgetCurrency(valueFor[category] || 0))}</td>`).join("")}
-                  <td>${escapeHtml(budgetCurrency(row.expenses || 0))}</td>
-                  <td>${escapeHtml(budgetCurrency(row.delta || 0))}</td>
-                </tr>`;
-              }).join("")}
-              <tr class="is-total">
-                <td>Total operational</td>
-                ${visibleCategories.map((category) => `<td>${escapeHtml(budgetCurrency(totals[category] || 0))}</td>`).join("")}
-                <td>${escapeHtml(budgetCurrency(summary?.operationalSpent || 0))}</td>
-                <td>${escapeHtml(budgetCurrency(summary?.delta || 0))}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-
-    function budgetMonthlyItems(summary, activeCategory = "all", fallbackRows = []) {
-      if (!summary?.months?.length) return aggregateBudget(fallbackRows, "month");
-      const keyByCategory = { Media: "media", Influencer: "influencer", Events: "events", General: "general" };
-      const key = keyByCategory[activeCategory] || "expenses";
-      return summary.months.map((row) => ({
-        name: row.month,
-        amount: row[key] || 0
-      })).filter((item) => item.amount > 0 || key === "expenses");
     }
 
     function budgetSelectMarkup(id, label, values, selectedValue, allLabel) {
@@ -5273,7 +4951,7 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
         }
-        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, sheets: parsed.sheets || [], summary: parsed.summary || null, error: "" };
+        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, sheets: parsed.sheets || [], error: "" };
       } catch (error) {
         budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", error: "Cannot load the Budget sheet. Check that the Google Sheet is public with link access." };
       }
@@ -5295,8 +4973,7 @@
       const categoryFilter = document.getElementById("budgetCategoryFilter")?.value || "all";
       const sheetFilter = document.getElementById("budgetSheetFilter")?.value || "all";
       const months = uniqueSortedBudgetValues(rows, "month");
-      const summary = budgetState.summary || null;
-      const categories = summary ? ["Media", "Influencer", "Events", "General", "Fee", "Remaining"] : uniqueSortedBudgetValues(rows, "category");
+      const categories = uniqueSortedBudgetValues(rows, "category");
       const sheets = uniqueSortedBudgetValues(rows, "sheet");
       const filteredRows = rows.filter((row) => {
         if (monthFilter !== "all" && row.month !== monthFilter) return false;
@@ -5305,32 +4982,22 @@
         return true;
       });
       const forecast = budgetState.forecast || [];
-      const totalSpent = summary?.totalSpent || rows.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const totalSpent = rows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
-      const totalForecast = summary?.totalBudget || forecast.reduce((sum, item) => sum + (item.amount || 0), 0) || 150000;
-      const remaining = summary?.remaining ?? (totalForecast ? totalForecast - totalSpent : 0);
+      const totalForecast = forecast.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const remaining = totalForecast ? totalForecast - totalSpent : 0;
       const byCategory = aggregateBudget(filteredRows, "category");
-      const byMonth = budgetMonthlyItems(summary, categoryFilter, filteredRows);
-      const categoryItems = summary
-        ? [
-            { name: "Media", amount: summary.categories.Media || 0 },
-            { name: "Influencer", amount: summary.categories.Influencer || 0 },
-            { name: "Events", amount: summary.categories.Events || 0 },
-            { name: "General", amount: summary.categories.General || 0 },
-            { name: "Fee", amount: summary.fee || 0 },
-            { name: "Remaining", amount: Math.max(0, summary.remaining || 0) }
-          ].filter((item) => item.amount > 0 || item.name === "Remaining")
-        : [...byCategory, { name: "Remaining", amount: Math.max(0, remaining) }];
-      const donutTotal = summary?.totalBudget || categoryItems.reduce((sum, item) => sum + item.amount, 0);
+      const byMonth = aggregateBudget(filteredRows, "month");
+      const bySheet = aggregateBudget(filteredRows, "sheet");
       budgetShell.innerHTML = `
         <section class="budget-hero">
           <div class="budget-title">
             <h2>Budget</h2>
-            <p>Budget totale ${escapeHtml(budgetCurrency(totalForecast))} · fee ${escapeHtml(budgetCurrency(summary?.fee || 60000))}</p>
+            <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
           </div>
-          <div class="budget-kpi"><span>Operational spent</span><strong>${escapeHtml(budgetCurrency(summary?.operationalSpent || selectedSpent))}</strong></div>
-          <div class="budget-kpi"><span>Fee</span><strong>${escapeHtml(budgetCurrency(summary?.fee || 60000))}</strong></div>
+          <div class="budget-kpi"><span>Selected spent</span><strong>${escapeHtml(budgetCurrency(selectedSpent))}</strong></div>
           <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
+          <div class="budget-kpi"><span>Forecast</span><strong>${totalForecast ? escapeHtml(budgetCurrency(totalForecast)) : "Not set"}</strong></div>
           <div class="budget-kpi"><span>Remaining</span><strong>${totalForecast ? escapeHtml(budgetCurrency(remaining)) : "-"}</strong></div>
         </section>
         <section class="budget-filters">
@@ -5341,22 +5008,37 @@
         </section>
         <section class="budget-grid">
           <div class="budget-panel">
-            <h3>Interactive budget split</h3>
-            <div class="budget-donut-wrap">
-              <div class="budget-donut" style="--budget-donut:${escapeHtml(budgetDonutGradient(categoryItems, donutTotal))}">
-                <div class="budget-donut-center"><strong>${Math.round((totalSpent / Math.max(totalForecast, 1)) * 100)}%</strong><span>spent</span></div>
-              </div>
-              ${budgetLegendMarkup(categoryItems, categoryFilter)}
-            </div>
+            <h3>By category</h3>
+            ${budgetBarsMarkup(byCategory, selectedSpent)}
           </div>
           <div class="budget-panel">
             <h3>By month</h3>
             ${budgetBarsMarkup(byMonth, selectedSpent)}
           </div>
+          <div class="budget-panel">
+            <h3>By tab</h3>
+            ${budgetBarsMarkup(bySheet, selectedSpent)}
+          </div>
         </section>
         <section class="budget-panel">
-          <h3>Month by month · category by category</h3>
-          ${summary ? budgetMatrixMarkup(summary, categoryFilter) : `<div class="budget-empty">The TOTAL tab is not available yet.</div>`}
+          <h3>Details</h3>
+          <div class="budget-table-wrap">
+            <table class="budget-table">
+              <thead><tr><th>Tab</th><th>Date</th><th>Category</th><th>Why</th><th>What</th><th>Amount</th></tr></thead>
+              <tbody>
+                ${filteredRows.length ? filteredRows.map((row) => `
+                  <tr>
+                    <td>${escapeHtml(row.sheet || "-")}</td>
+                    <td>${escapeHtml(budgetDateLabel(row.date) || "-")}</td>
+                    <td><span class="budget-category">${escapeHtml(row.category || "-")}</span></td>
+                    <td>${escapeHtml(row.why || "-")}</td>
+                    <td>${escapeHtml(row.what || "-")}</td>
+                    <td>${escapeHtml(budgetCurrency(row.amount))}</td>
+                  </tr>
+                `).join("") : `<tr><td colspan="6">No expenses found for these filters.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
         </section>
       `;
     }
@@ -9060,15 +8742,6 @@
       renderBudget();
     });
     budgetShell.addEventListener("click", (event) => {
-      const legendButton = event.target.closest("[data-budget-legend]");
-      if (legendButton) {
-        const select = document.getElementById("budgetCategoryFilter");
-        if (select) {
-          select.value = select.value === legendButton.dataset.budgetLegend ? "all" : legendButton.dataset.budgetLegend;
-        }
-        renderBudget();
-        return;
-      }
       if (!event.target.closest("[data-budget-refresh]")) return;
       loadBudgetData(true);
     });
