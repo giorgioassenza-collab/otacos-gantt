@@ -3505,19 +3505,8 @@
             dataVersion = remoteRevision;
             historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             const remoteData = normalizeData(snapshotData.data);
-            const localSnapshot = readLocalSnapshot();
-            if (localSnapshot?.data) {
-              const mergedStartupData = mergeBoardData(localSnapshot.data, remoteData);
-              const localHasNewerChanges = Number(localSnapshot.revision || 0) > remoteRevision || !sameData(mergedStartupData, remoteData);
-              if (localHasNewerChanges) {
-                dataVersion = Math.max(remoteRevision, Number(localSnapshot.revision || 0), Date.now());
-                pendingLocalData = cleanForFirestore(mergedStartupData);
-                pendingLocalRevision = dataVersion;
-                saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
-                setSyncMessage("Ripristino modifiche locali...");
-                return mergedStartupData;
-              }
-            }
+            pendingLocalData = null;
+            pendingLocalRevision = 0;
             saveLocalSnapshot(remoteData, historyEntries, dataVersion);
             return remoteData;
           }
@@ -4183,6 +4172,28 @@
         setSyncMessage("Sincronizzato live");
       } catch (error) {
         console.error("Firestore retry failed", error);
+        const retryError = String(error?.code || error?.message || "");
+        if (retryError === "22" || retryError.includes("22")) {
+          pendingLocalData = null;
+          pendingLocalRevision = 0;
+          try {
+            const snapshot = await getDoc(boardRef);
+            if (snapshot.exists() && snapshot.data()?.data) {
+              dataVersion = Number(snapshot.data().revision || dataVersion || 0);
+              data = normalizeData(snapshot.data().data);
+              committedData = structuredClone(data);
+              saveLocalSnapshot(data, historyEntries, dataVersion);
+              renderBoard();
+              renderPed();
+              renderInfluencers();
+              renderCreatorCalendar();
+            }
+          } catch (reloadError) {
+            console.error("Firestore reload after retry failed", reloadError);
+          }
+          setSyncMessage("Dati locali vecchi scartati: sincronizzato con Firebase", true);
+          return;
+        }
         setSyncMessage(`Riprovo salvataggio: ${error?.code || error?.message || "errore Firestore"}`, true);
       } finally {
         setTimeout(() => {
