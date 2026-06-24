@@ -581,6 +581,27 @@
       font-weight: 700;
     }
 
+    .bar-subtasks {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: 999px;
+      color: #4b5563;
+      background: #f3f4f6;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1);
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .bar-subtasks svg {
+      width: 11px;
+      height: 11px;
+    }
+
     .status-swatch {
       width: 10px;
       height: 10px;
@@ -706,7 +727,10 @@
       min-height: 0;
       overflow: auto;
       background: var(--bg);
+      scrollbar-width: none;
     }
+
+    .ped-view::-webkit-scrollbar { display: none; }
 
     .ped-calendar {
       position: relative;
@@ -903,7 +927,10 @@
       min-height: 0;
       overflow: auto;
       background: var(--bg);
+      scrollbar-width: none;
     }
+
+    .creator-calendar-view::-webkit-scrollbar { display: none; }
 
     .creator-calendar {
       position: relative;
@@ -968,14 +995,34 @@
     .social-badge {
       display: inline-grid;
       place-items: center;
-      min-width: 18px;
-      height: 16px;
-      margin-right: 3px;
-      border-radius: 4px;
-      color: #fff;
+      min-width: 22px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: 999px;
       background: var(--ink);
-      font-size: 8px;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1);
+      font-size: 9px;
       font-weight: 900;
+      line-height: 1;
+    }
+
+    .ped-social-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      min-height: 18px;
+      margin: 0 0 5px;
+      padding-right: 72px;
+    }
+
+    .ped-social-row:empty {
+      display: none;
+    }
+
+    .check-item .social-badge {
+      margin-left: auto;
+      transform: scale(.95);
+      transform-origin: center right;
     }
 
     .view-switch {
@@ -2745,6 +2792,22 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="influencerToGanttModal" aria-label="Add influencer to GANTT">
+    <div class="modal">
+      <h2>Add to GANTT</h2>
+      <form id="influencerToGanttForm">
+        <input id="influencerToGanttId" type="hidden">
+        <label class="field">Project<select id="influencerToGanttProject" required></select></label>
+        <label class="field">Who<select id="influencerToGanttWho" required></select></label>
+        <label class="field">Date<input id="influencerToGanttDate" type="date" required></label>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="closeInfluencerToGanttModal" type="button">Close</button>
+          <button class="primary-btn" type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="pedToPedModal" aria-label="Add PED item to PED">
     <div class="modal">
       <h2>Add to PED</h2>
@@ -2775,16 +2838,17 @@
 
   <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
     <button type="button" data-context-action="modify">Modify</button>
+    <button type="button" data-context-action="duplicate">Duplicate</button>
+    <button type="button" data-context-action="add-ped">Add to PED</button>
     <button type="button" data-context-action="delete">Delete</button>
-    <button type="button" data-context-action="move-next">Move to next day</button>
   </div>
   <div class="context-menu" id="influencerContextMenu" aria-label="Influencer actions">
     <button type="button" data-influencer-context-action="modify">Modify</button>
+    <button type="button" data-influencer-context-action="add-gantt">Add to GANTT</button>
     <button type="button" data-influencer-context-action="delete">Delete</button>
   </div>
   <div class="context-menu" id="pedContextMenu" aria-label="PED actions">
     <button type="button" data-ped-context-action="modify">Modify</button>
-    <button type="button" data-ped-context-action="add-ped">Add to PED</button>
     <button type="button" data-ped-context-action="add-gantt">Add to GANTT</button>
     <button type="button" data-ped-context-action="delete">Delete</button>
   </div>
@@ -2846,6 +2910,7 @@
     const pedPostModal = document.getElementById("pedPostModal");
     const pedToGanttModal = document.getElementById("pedToGanttModal");
     const pedToPedModal = document.getElementById("pedToPedModal");
+    const influencerToGanttModal = document.getElementById("influencerToGanttModal");
     const creatorCalendarModal = document.getElementById("creatorCalendarModal");
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
     const creatorCalendarStore = document.getElementById("creatorCalendarStore");
@@ -3948,6 +4013,19 @@
       return label;
     }
 
+    function socialCheckboxItem(social, groupName, checked = false) {
+      const label = document.createElement("label");
+      label.className = "check-item";
+      const color = social.color || "#111827";
+      const short = (social.short || social.label || social.id || "").slice(0, 4).toUpperCase();
+      label.innerHTML = `
+        <input type="checkbox" name="${escapeHtml(groupName)}" value="${escapeHtml(social.id)}"${checked ? " checked" : ""}>
+        <span>${escapeHtml(social.label || social.id)}</span>
+        <span class="social-badge" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(short)}</span>
+      `;
+      return label;
+    }
+
     function selectedMembers(container) {
       return [...container.querySelectorAll("input[type='checkbox']:checked")].map((item) => item.value);
     }
@@ -4732,14 +4810,14 @@
       pedPostFormat.disabled = data.formats.length === 0;
       editPedPostFormat.disabled = data.formats.length === 0;
 
+      const selectedPedSocials = new Set(selectedValues(pedPostSocials));
+      const selectedEditPedSocials = new Set(selectedValues(editPedPostSocials));
       pedPostSocials.innerHTML = "";
       editPedPostSocials.innerHTML = "";
       socialList.innerHTML = "";
       data.socials.forEach((social, index) => {
-        pedPostSocials.appendChild(checkboxItem(social.id, "pedPostSocials"));
-        pedPostSocials.lastElementChild.lastChild.textContent = social.label;
-        editPedPostSocials.appendChild(checkboxItem(social.id, "editPedPostSocials"));
-        editPedPostSocials.lastElementChild.lastChild.textContent = social.label;
+        pedPostSocials.appendChild(socialCheckboxItem(social, "pedPostSocials", selectedPedSocials.has(social.id)));
+        editPedPostSocials.appendChild(socialCheckboxItem(social, "editPedPostSocials", selectedEditPedSocials.has(social.id)));
         const pill = document.createElement("div");
         pill.className = "project-pill";
         pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input value="${escapeHtml(social.short)}" maxlength="4" aria-label="Short ${escapeHtml(social.label)}" data-social-short="${escapeHtml(social.id)}"><input type="color" value="${escapeHtml(social.color)}" aria-label="Color ${escapeHtml(social.label)}" data-social-color="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
@@ -4860,6 +4938,27 @@
       if (post) deletePedPostById(post.id);
     }
 
+    function duplicateGanttTask(task) {
+      if (!task) return null;
+      const createdAt = Date.now();
+      const duplicate = {
+        ...structuredClone(task),
+        id: `t${createdAt}-copy`,
+        pedEnabled: false,
+        pedAutoDismissed: false,
+        pedDate: "",
+        pedTime: "12:00",
+        createdAt,
+        updatedAt: createdAt,
+        subtasks: (task.subtasks || []).map((subtask, index) => ({
+          ...structuredClone(subtask),
+          id: `s${createdAt}-${index}`
+        }))
+      };
+      data.tasks.push(duplicate);
+      return duplicate;
+    }
+
     function renderSubtasks(task) {
       renderSubtasksFor(subtaskList, task, "data-subtask-done", "data-delete-subtask");
     }
@@ -4908,7 +5007,10 @@
     function socialMarkup(social = []) {
       return social.map((item) => {
         const socialItem = (data.socials || []).find((entry) => entry.id === item);
-        return `<span class="social-badge" style="background:${escapeHtml(socialItem ? socialItem.color : "#111827")}">${escapeHtml(socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase())}</span>`;
+        const color = socialItem ? socialItem.color : "#111827";
+        const label = socialItem ? socialItem.label : item;
+        const short = socialItem ? socialItem.short : String(item).slice(0, 2).toUpperCase();
+        return `<span class="social-badge" title="${escapeHtml(label)}" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(short)}</span>`;
       }).join("");
     }
 
@@ -5003,7 +5105,8 @@
       const fullPreview = zoomIndex > 3;
       if (!fullPreview) {
         return `
-          <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+          <div class="ped-social-row">${socialMarkup(item.social)}</div>
+          <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
           <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
           <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
           <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
@@ -5011,7 +5114,8 @@
         `;
       }
       return `
-        <div class="ped-post-title">${socialMarkup(item.social)}<span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+        <div class="ped-social-row">${socialMarkup(item.social)}</div>
+        <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
@@ -5776,7 +5880,12 @@
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
             const compactPreview = zoomIndex <= 1;
-            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span><span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
+            const subtaskCount = (task.subtasks || []).length;
+            const doneSubtaskCount = (task.subtasks || []).filter((subtask) => subtask.done).length;
+            const subtaskBadge = subtaskCount
+              ? `<span class="bar-subtasks" title="${escapeHtml(`${doneSubtaskCount}/${subtaskCount} subtasks`)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3.5 6 1.2 1.2L7 4.8"/><path d="m3.5 12 1.2 1.2L7 10.8"/><path d="m3.5 18 1.2 1.2L7 16.8"/></svg>${escapeHtml(String(subtaskCount))}</span>`
+              : "";
+            bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
         projectTop += rowHeight;
@@ -6175,9 +6284,7 @@
       event.preventDefault();
       hideTaskMenus();
       influencerContextMenu.dataset.influencerId = row.dataset.influencerId;
-      influencerContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - 180)}px`;
-      influencerContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - 90)}px`;
-      influencerContextMenu.classList.add("open");
+      placeContextMenu(influencerContextMenu, event.clientX, event.clientY, 190, 120);
     });
 
     influencerInlineMenu.addEventListener("click", (event) => {
@@ -6778,7 +6885,7 @@
       event.preventDefault();
       hideTaskMenus();
       taskContextMenu.dataset.taskId = bar.dataset.taskId;
-      placeContextMenu(taskContextMenu, event.clientX, event.clientY, 190, 120);
+      placeContextMenu(taskContextMenu, event.clientX, event.clientY, 190, 160);
     });
 
     taskContextMenu.addEventListener("click", (event) => {
@@ -6793,20 +6900,21 @@
         openTaskEditor(taskId);
         return;
       }
+      if (button.dataset.contextAction === "duplicate") {
+        const duplicate = duplicateGanttTask(task);
+        syncAutomaticPedPostsForTasks([duplicate]);
+      }
+      if (button.dataset.contextAction === "add-ped") {
+        hideTaskMenus();
+        openGanttToPedDialog(taskId);
+        return;
+      }
       if (button.dataset.contextAction === "delete") {
         if (!confirmDelete("Delete this task?")) {
           hideTaskMenus();
           return;
         }
         deleteTaskById(taskId);
-      }
-      if (button.dataset.contextAction === "move-next") {
-        const originalStart = task.start;
-        const originalEnd = task.end || task.start;
-        task.start = shiftDateString(originalStart, 1);
-        task.end = shiftDateString(originalEnd, 1);
-        task.pedDate = task.pedEnabled && task.pedDate ? shiftDateString(task.pedDate, 1) : task.pedDate;
-        touchItem(task);
       }
       saveData();
       renderBoard();
@@ -6823,6 +6931,11 @@
       if (button.dataset.influencerContextAction === "modify") {
         hideTaskMenus();
         openInfluencerEditor(id);
+        return;
+      }
+      if (button.dataset.influencerContextAction === "add-gantt") {
+        hideTaskMenus();
+        openInfluencerToGanttDialog(id);
         return;
       }
       if (button.dataset.influencerContextAction === "delete") {
@@ -6847,6 +6960,62 @@
 
     function closePedToGanttDialog() {
       pedToGanttModal.classList.remove("open");
+    }
+
+    function fillInfluencerToGanttFields(row) {
+      const projectSelect = document.getElementById("influencerToGanttProject");
+      const whoSelect = document.getElementById("influencerToGanttWho");
+      projectSelect.innerHTML = "";
+      whoSelect.innerHTML = "";
+      (data.projects || []).forEach((project) => projectSelect.appendChild(option(project.id, project.name)));
+      assignableMembers().forEach((member) => whoSelect.appendChild(option(member)));
+      projectSelect.value = (data.projects || [])[0]?.id || "";
+      whoSelect.value = assignableMembers()[0] || "";
+      document.getElementById("influencerToGanttDate").value = currentDateKey();
+      projectSelect.disabled = !(data.projects || []).length;
+      whoSelect.disabled = !assignableMembers().length;
+    }
+
+    function openInfluencerToGanttDialog(influencerId) {
+      const row = (data.influencers || []).find((item) => item.id === influencerId);
+      if (!row) return;
+      document.getElementById("influencerToGanttId").value = influencerId;
+      fillInfluencerToGanttFields(row);
+      influencerToGanttModal.classList.add("open");
+    }
+
+    function closeInfluencerToGanttDialog() {
+      influencerToGanttModal.classList.remove("open");
+    }
+
+    async function addInfluencerToGantt(influencerId, projectId, member, date) {
+      const row = (data.influencers || []).find((item) => item.id === influencerId);
+      if (!row || !projectId || !member || !date) return;
+      const createdAt = Date.now();
+      const taskName = `TO CONTACT ${row.name || "Influencer"}`;
+      const task = {
+        id: `t${createdAt}-influencer-gantt`,
+        projectId,
+        name: taskName,
+        nameEn: taskName,
+        members: [member],
+        status: contactTaskStatus(),
+        start: date,
+        end: date,
+        info: row.ttLink || row.igLink || row.ttProfile || row.igProfile || "",
+        label: "",
+        pedEnabled: false,
+        pedDate: "",
+        pedTime: "12:00",
+        subtasks: [],
+        createdAt,
+        updatedAt: createdAt
+      };
+      data.tasks.push(task);
+      await saveData();
+      renderBoard();
+      renderPed();
+      renderCreatorCalendar();
     }
 
     function pedPostSourceFromContext(taskId = "", postId = "") {
@@ -6880,6 +7049,16 @@
       document.getElementById("pedToPedPostId").value = postId;
       document.getElementById("pedToPedDate").value = sourcePost?.date || currentDateKey();
       document.getElementById("pedToPedTime").value = "12:00";
+      pedToPedModal.classList.add("open");
+    }
+
+    function openGanttToPedDialog(taskId) {
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      document.getElementById("pedToPedTaskId").value = taskId;
+      document.getElementById("pedToPedPostId").value = "";
+      document.getElementById("pedToPedDate").value = task.pedDate || task.start || currentDateKey();
+      document.getElementById("pedToPedTime").value = normalizeHour(task.pedTime || "12:00");
       pedToPedModal.classList.add("open");
     }
 
@@ -6966,7 +7145,7 @@
       hideTaskMenus();
       if (post.dataset.taskId) pedContextMenu.dataset.taskId = post.dataset.taskId;
       if (post.dataset.pedPostId) pedContextMenu.dataset.pedPostId = post.dataset.pedPostId;
-      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 160);
+      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 120);
     });
 
     pedCalendar.addEventListener("click", (event) => {
@@ -7033,10 +7212,6 @@
         closePanels();
         if (taskId) openLinkedPedTaskEditor(taskId);
         else if (postId) openPedPostEditor(postId);
-        return;
-      }
-      if (action === "add-ped") {
-        if (postNode) openPedToPedDialog(taskId || "", postId || "");
         return;
       }
       if (action === "add-gantt") {
@@ -7112,6 +7287,7 @@
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
     document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
     document.getElementById("closePedToPedModal").addEventListener("click", closePedToPedDialog);
+    document.getElementById("closeInfluencerToGanttModal").addEventListener("click", closeInfluencerToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
 
     document.getElementById("deletePedPostButton").addEventListener("click", async () => {
@@ -7318,6 +7494,17 @@
         document.getElementById("pedToGanttDate").value
       ));
       closePedToGanttDialog();
+    });
+
+    document.getElementById("influencerToGanttForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await runWithSavingButton(event, async () => addInfluencerToGantt(
+        document.getElementById("influencerToGanttId").value,
+        document.getElementById("influencerToGanttProject").value,
+        document.getElementById("influencerToGanttWho").value,
+        document.getElementById("influencerToGanttDate").value
+      ));
+      closeInfluencerToGanttDialog();
     });
 
     document.getElementById("pedToPedForm").addEventListener("submit", async (event) => {
