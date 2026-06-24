@@ -1030,34 +1030,94 @@
       right: 18px;
       bottom: 54px;
       z-index: 24;
-      display: flex;
-      gap: 6px;
-      padding: 5px;
+      display: grid;
       max-width: calc(100vw - 36px);
-      overflow-x: auto;
-      border: 1px solid #ded7cd;
-      border-radius: 999px;
-      background: rgba(255, 253, 249, .97);
-      box-shadow: 0 10px 26px rgba(24, 19, 15, .15);
+      justify-items: end;
     }
 
     .view-switch button {
       height: 34px;
       border: 0;
       border-radius: 999px;
-      padding: 0 12px;
+      padding: 0 14px;
       white-space: nowrap;
-      color: #625950;
-      background: transparent;
+      color: #fff;
+      background: var(--orange);
       font-size: 12px;
       font-weight: 900;
+      box-shadow: 0 10px 22px rgba(255, 90, 20, .24);
       cursor: pointer;
+    }
+
+    .view-switch-current {
+      position: relative;
+      z-index: 2;
+      min-width: 82px;
+      box-shadow: 0 12px 28px rgba(255, 90, 20, .28), inset 0 -2px 0 rgba(24, 19, 15, .12);
+      transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), background .18s var(--ease-out);
+    }
+
+    .view-switch-current:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 34px rgba(255, 90, 20, .34), inset 0 -2px 0 rgba(24, 19, 15, .12);
+    }
+
+    .view-switch.is-open .view-switch-current {
+      background: #ff6a22;
+      transform: translateY(-1px) scale(1.01);
+    }
+
+    .view-switch-menu {
+      position: absolute;
+      right: 0;
+      bottom: 44px;
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+      pointer-events: none;
+    }
+
+    .view-switch-menu button {
+      min-width: 82px;
+      color: #4b4038;
+      background: rgba(255, 253, 249, .98);
+      box-shadow: 0 12px 28px rgba(24, 19, 15, .14);
+      border: 1px solid rgba(222, 215, 205, .92);
+      opacity: 0;
+      transform: translateY(12px) scale(.96);
+      transition:
+        opacity .2s var(--ease-out),
+        transform .24s var(--ease-spring),
+        background .16s var(--ease-out),
+        color .16s var(--ease-out),
+        box-shadow .16s var(--ease-out);
+    }
+
+    .view-switch.is-open .view-switch-menu {
+      pointer-events: auto;
+    }
+
+    .view-switch.is-open .view-switch-menu button {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .view-switch.is-open .view-switch-menu button:nth-child(1) { transition-delay: 0ms; }
+    .view-switch.is-open .view-switch-menu button:nth-child(2) { transition-delay: 28ms; }
+    .view-switch.is-open .view-switch-menu button:nth-child(3) { transition-delay: 56ms; }
+    .view-switch.is-open .view-switch-menu button:nth-child(4) { transition-delay: 84ms; }
+
+    .view-switch-menu button:hover {
+      color: var(--ink);
+      background: #fff7ef;
+      box-shadow: 0 16px 34px rgba(24, 19, 15, .18);
+      transform: translateY(-1px) scale(1.015);
     }
 
     .view-switch button.is-active {
       color: #fff;
-      background: var(--ink);
-      box-shadow: inset 0 -2px 0 rgba(255, 90, 20, .35);
+      background: var(--orange);
+      border-color: transparent;
     }
 
     .horizontal-scrollbar {
@@ -1880,11 +1940,16 @@
       box-shadow: 0 8px 18px rgba(255, 90, 20, .2);
     }
 
-    .view-switch,
     .horizontal-scrollbar {
       background: rgba(255, 253, 249, .9);
       border-color: rgba(222, 215, 205, .82);
       box-shadow: 0 14px 34px rgba(24, 19, 15, .13), 0 1px 0 rgba(255,255,255,.85) inset;
+    }
+
+    .view-switch {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
     }
 
     .view-switch button {
@@ -1899,6 +1964,16 @@
     .view-switch button.is-active {
       box-shadow: 0 8px 18px rgba(24, 19, 15, .22), inset 0 -2px 0 rgba(255, 90, 20, .48);
       animation: activeTabPop .24s var(--ease-spring);
+    }
+
+    .view-switch-menu button.is-active {
+      display: none;
+    }
+
+    .view-switch-current,
+    .view-switch-current:hover {
+      color: #fff;
+      background: var(--orange);
     }
 
     .bar,
@@ -2285,25 +2360,24 @@
         max-height: 220px;
       }
       .view-switch {
-        left: 8px;
+        left: auto;
         right: 8px;
         bottom: calc(48px + env(safe-area-inset-bottom));
         transform: none;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 4px;
-        overflow: hidden;
-        border-radius: 16px;
-        padding: 4px;
+        justify-items: end;
+        overflow: visible;
+        padding: 0;
       }
       .view-switch button {
-        min-width: 0;
+        min-width: 86px;
         height: 38px;
-        padding: 0 5px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 10px;
+        padding: 0 12px;
+        font-size: 11px;
         line-height: 1.05;
+      }
+      .view-switch-menu {
+        bottom: 48px;
       }
       .horizontal-scrollbar {
         left: 8px !important;
@@ -2438,11 +2512,14 @@
     </section>
   </main>
 
-  <div class="view-switch" aria-label="Views">
-    <button id="viewGantt" class="is-active" type="button">GANTT</button>
-    <button id="viewPed" type="button">PED</button>
-    <button id="viewInfluencer" type="button">INFLUENCER</button>
-    <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
+  <div class="view-switch" id="viewSwitch" aria-label="Views">
+    <button class="view-switch-current" id="viewSwitchCurrent" type="button" aria-haspopup="true" aria-expanded="false">GANTT</button>
+    <div class="view-switch-menu" id="viewSwitchMenu">
+      <button id="viewGantt" class="is-active" type="button">GANTT</button>
+      <button id="viewPed" type="button">PED</button>
+      <button id="viewInfluencer" type="button">INFLUENCER</button>
+      <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
+    </div>
   </div>
   <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
     <input id="horizontalScrollRange" type="range" min="0" max="0" value="0" aria-label="Horizontal scroll">
@@ -2508,7 +2585,6 @@
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
       <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
-      <label class="field">Format<select id="pedPostFormat" required></select></label>
       <label class="field">Asset<textarea id="pedPostAsset" placeholder="Link asset"></textarea></label>
       <label class="field">Copy<textarea id="pedPostCopy" placeholder="Copy"></textarea></label>
       <button class="primary-btn" type="submit">Add post</button>
@@ -2549,13 +2625,6 @@
       <button class="primary-btn" type="submit">Add status</button>
     </form>
     <div class="stack-list" id="pedStatusList"></div>
-
-    <h3>Format</h3>
-    <form id="formatForm">
-      <label class="field">New format<input id="formatName" value="New format" required></label>
-      <button class="primary-btn" type="submit">Add format</button>
-    </form>
-    <div class="stack-list" id="formatList"></div>
 
     <h3>Social</h3>
     <form id="socialForm">
@@ -2739,7 +2808,6 @@
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
         <label class="field">Social<div class="check-list" id="editPedPostSocials"></div></label>
-        <label class="field">Format<select id="editPedPostFormat" required></select></label>
         <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
         <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
         <section class="subtasks">
@@ -2899,13 +2967,11 @@
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
     const pedPostProject = document.getElementById("pedPostProject");
-    const pedPostFormat = document.getElementById("pedPostFormat");
     const pedPostTime = document.getElementById("pedPostTime");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
     const editPedPostSocials = document.getElementById("editPedPostSocials");
     const editPedPostProject = document.getElementById("editPedPostProject");
-    const editPedPostFormat = document.getElementById("editPedPostFormat");
     const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
     const pedToGanttModal = document.getElementById("pedToGanttModal");
@@ -2930,7 +2996,6 @@
     const statusList = document.getElementById("statusList");
     const pedStatusList = document.getElementById("pedStatusList");
     const labelList = document.getElementById("labelList");
-    const formatList = document.getElementById("formatList");
     const socialList = document.getElementById("socialList");
     const creatorStatusList = document.getElementById("creatorStatusList");
     const creatorStoreList = document.getElementById("creatorStoreList");
@@ -4796,20 +4861,6 @@
         labelList.appendChild(pill);
       });
 
-      pedPostFormat.innerHTML = "";
-      editPedPostFormat.innerHTML = "";
-      formatList.innerHTML = "";
-      data.formats.forEach((format, index) => {
-        pedPostFormat.appendChild(option(format));
-        editPedPostFormat.appendChild(option(format));
-        const pill = document.createElement("div");
-        pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(format)}" aria-label="Edit ${escapeHtml(format)}" data-edit-format="${escapeHtml(format)}"><button type="button" aria-label="Move up ${escapeHtml(format)}" data-move-format="${escapeHtml(format)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(format)}" data-move-format="${escapeHtml(format)}" data-move-direction="1" ${index === data.formats.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(format)}" data-delete-format="${escapeHtml(format)}">x</button>`;
-        formatList.appendChild(pill);
-      });
-      pedPostFormat.disabled = data.formats.length === 0;
-      editPedPostFormat.disabled = data.formats.length === 0;
-
       const selectedPedSocials = new Set(selectedValues(pedPostSocials));
       const selectedEditPedSocials = new Set(selectedValues(editPedPostSocials));
       pedPostSocials.innerHTML = "";
@@ -5109,7 +5160,6 @@
           <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
           <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
           <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
-          <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
           <div class="ped-preview-line">Copy: ${escapeHtml(previewName(item.copy || "-"))}</div>
         `;
       }
@@ -5118,7 +5168,6 @@
         <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
-        <div class="ped-preview-line">Format: ${escapeHtml(item.format || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
         ${assetPreview || assetEmbed ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
         ${assetPreview ? `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy">` : ""}
@@ -5798,7 +5847,6 @@
       editPedPostTime.value = normalizeHour(post.time);
       document.getElementById("editPedPostDate").closest(".field").hidden = false;
       editPedPostStatus.value = post.status || "";
-      editPedPostFormat.value = post.format || data.formats[0] || "";
       [...editPedPostMembers.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = (post.members || []).includes(item.value);
       });
@@ -6154,10 +6202,30 @@
       });
     });
 
+    function closeViewSwitch() {
+      const switcher = document.getElementById("viewSwitch");
+      switcher.classList.remove("is-open");
+      document.getElementById("viewSwitchCurrent").setAttribute("aria-expanded", "false");
+    }
+
+    function toggleViewSwitch() {
+      const switcher = document.getElementById("viewSwitch");
+      const isOpen = switcher.classList.toggle("is-open");
+      document.getElementById("viewSwitchCurrent").setAttribute("aria-expanded", String(isOpen));
+    }
+
+    function viewLabel(view) {
+      if (view === "ped") return "PED";
+      if (view === "influencer") return "INFLUENCER";
+      if (view === "creator-calendar") return "CREATOR CALENDAR";
+      return "GANTT";
+    }
+
     function setView(view) {
       const pedMode = view === "ped";
       const influencerMode = view === "influencer";
       const creatorCalendarMode = view === "creator-calendar";
+      closeViewSwitch();
       document.body.classList.toggle("ped-mode", pedMode);
       document.body.classList.toggle("influencer-mode", influencerMode);
       document.body.classList.toggle("creator-calendar-mode", creatorCalendarMode);
@@ -6165,6 +6233,7 @@
       viewPed.classList.toggle("is-active", pedMode);
       viewInfluencer.classList.toggle("is-active", influencerMode);
       viewCreatorCalendar.classList.toggle("is-active", creatorCalendarMode);
+      document.getElementById("viewSwitchCurrent").textContent = viewLabel(view);
       document.querySelector(".brand-title").textContent = creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
       document.getElementById("currentMonth").textContent = creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
       closePanels();
@@ -6179,6 +6248,18 @@
       requestAnimationFrame(snapActiveTimelineToToday);
       requestAnimationFrame(syncHorizontalScrollbar);
     }
+
+    document.getElementById("viewSwitchCurrent").addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleViewSwitch();
+    });
+    document.getElementById("viewSwitch").addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    document.addEventListener("click", closeViewSwitch);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeViewSwitch();
+    });
 
     viewGantt.addEventListener("click", () => setView("gantt"));
     viewPed.addEventListener("click", () => setView("ped"));
@@ -6516,13 +6597,12 @@
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
-      const format = pedPostFormat.value;
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
-      if (!title || !projectId || !date || !status || !format) return;
+      if (!title || !projectId || !date || !status) return;
       data.pedPosts = data.pedPosts || [];
       const createdAt = Date.now();
-      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
+      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format: "", asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
       await saveData();
       renderPed();
       event.currentTarget.reset();
@@ -7456,8 +7536,7 @@
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
       const social = selectedValues(editPedPostSocials);
-      const format = editPedPostFormat.value;
-      if (!title || !projectId || !date || !status || !format) return;
+      if (!title || !projectId || !date || !status) return;
       post.title = title;
       post.projectId = projectId;
       post.date = date;
@@ -7475,7 +7554,6 @@
       post.status = status;
       post.members = members;
       post.social = social;
-      post.format = format;
       post.asset = document.getElementById("editPedPostAsset").value.trim();
       post.copy = document.getElementById("editPedPostCopy").value.trim();
       touchItem(post);
@@ -7834,43 +7912,6 @@
       renderPed();
     });
 
-    formatList.addEventListener("click", (event) => {
-      const moveButton = event.target.closest("[data-move-format]");
-      if (moveButton) {
-        const index = data.formats.indexOf(moveButton.dataset.moveFormat);
-        data.formats = moveItem(data.formats, index, Number(moveButton.dataset.moveDirection));
-        saveData();
-        renderBoard();
-        renderPed();
-        return;
-      }
-      const button = event.target.closest("[data-delete-format]");
-      if (!button) return;
-      const format = button.dataset.deleteFormat;
-      data.formats = data.formats.filter((item) => item !== format);
-      const fallback = data.formats[0] || "";
-      data.pedPosts = (data.pedPosts || []).map((post) => post.format === format ? { ...post, format: fallback } : post);
-      saveData();
-      renderBoard();
-      renderPed();
-    });
-
-    formatList.addEventListener("change", (event) => {
-      const input = event.target.closest("[data-edit-format]");
-      if (!input) return;
-      const oldFormat = input.dataset.editFormat;
-      const newFormat = input.value.trim();
-      if (!newFormat || (newFormat !== oldFormat && data.formats.includes(newFormat))) {
-        renderBoard();
-        return;
-      }
-      data.formats = data.formats.map((item) => item === oldFormat ? newFormat : item);
-      data.pedPosts = (data.pedPosts || []).map((post) => post.format === oldFormat ? { ...post, format: newFormat } : post);
-      saveData();
-      renderBoard();
-      renderPed();
-    });
-
     document.getElementById("pedStatusForm").addEventListener("submit", (event) => {
       event.preventDefault();
       const status = document.getElementById("pedStatusName").value.trim();
@@ -7880,17 +7921,6 @@
       renderBoard();
       renderPed();
       document.getElementById("pedStatusName").value = "New PED status";
-    });
-
-    document.getElementById("formatForm").addEventListener("submit", (event) => {
-      event.preventDefault();
-      const format = document.getElementById("formatName").value.trim();
-      if (!format || data.formats.includes(format)) return;
-      data.formats.push(format);
-      saveData();
-      renderBoard();
-      renderPed();
-      document.getElementById("formatName").value = "New format";
     });
 
     document.getElementById("creatorStatusForm").addEventListener("submit", (event) => {
