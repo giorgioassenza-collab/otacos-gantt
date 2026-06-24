@@ -5029,6 +5029,70 @@
       };
     }
 
+    function budgetFallbackSummary() {
+      const categories = {
+        Media: 22801.62,
+        Influencer: 31622.47,
+        Events: 14328,
+        General: 0
+      };
+      const operationalSpent = Object.values(categories).reduce((sum, value) => sum + value, 0);
+      const totalBudget = 150000;
+      const fee = 60000;
+      const totalSpent = operationalSpent + fee;
+      return {
+        months: [],
+        categories,
+        operationalSpent,
+        totalBudget,
+        fee,
+        totalSpent,
+        remaining: totalBudget - totalSpent,
+        delta: totalBudget - totalSpent
+      };
+    }
+
+    function orderedBudgetMonths(summary) {
+      return [...(summary?.months || [])].sort((left, right) => budgetMonthSortValue(right.month) - budgetMonthSortValue(left.month));
+    }
+
+    function budgetMonthOptions(summary, fallbackRows = []) {
+      const summaryMonths = orderedBudgetMonths(summary).map((row) => row.month);
+      return summaryMonths.length ? summaryMonths : uniqueSortedBudgetValues(fallbackRows, "month").reverse();
+    }
+
+    function budgetSummaryForMonth(summary, month = "all") {
+      if (!summary) return null;
+      const categories = ["Media", "Influencer", "Events", "General"];
+      if (!month || month === "all") return {
+        ...summary,
+        categories: { ...summary.categories },
+        months: orderedBudgetMonths(summary)
+      };
+      const row = (summary.months || []).find((item) => item.month === month);
+      if (!row) return {
+        ...summary,
+        categories: categories.reduce((result, category) => ({ ...result, [category]: 0 }), {}),
+        months: []
+      };
+      const monthCategories = {
+        Media: row.media || 0,
+        Influencer: row.influencer || 0,
+        Events: row.events || 0,
+        General: row.general || 0
+      };
+      const operationalSpent = row.expenses || Object.values(monthCategories).reduce((sum, value) => sum + value, 0);
+      return {
+        ...summary,
+        months: [row],
+        categories: monthCategories,
+        operationalSpent,
+        totalSpent: operationalSpent,
+        remaining: row.delta || 0,
+        delta: row.delta || 0
+      };
+    }
+
     function parseBudgetRows(rows, sheetName = "") {
       const title = sheetName || rows[0]?.find((cell) => String(cell || "").trim()) || "Budget";
       const transactions = [];
@@ -5163,7 +5227,6 @@
         Influencer: "#2563eb",
         Events: "#16a34a",
         General: "#7c3aed",
-        Fee: "#111827",
         Remaining: "#ded7cd"
       };
       return colors[category] || "#f59e0b";
@@ -5191,9 +5254,9 @@
       `).join("")}</div>`;
     }
 
-    function budgetMatrixMarkup(summary, activeCategory = "all") {
+    function budgetMatrixMarkup(summary, activeCategory = "all", activeMonth = "all") {
       const categories = ["Media", "Influencer", "Events", "General"];
-      const rows = summary?.months || [];
+      const rows = budgetSummaryForMonth(summary, activeMonth)?.months || [];
       const visibleCategories = activeCategory && activeCategory !== "all" && categories.includes(activeCategory) ? [activeCategory] : categories;
       const totals = categories.reduce((result, category) => ({ ...result, [category]: 0 }), {});
       rows.forEach((row) => {
@@ -5209,6 +5272,7 @@
               <tr><th>Month</th>${visibleCategories.map((category) => `<th>${escapeHtml(category)}</th>`).join("")}<th>Total</th><th>Remaining month</th></tr>
             </thead>
             <tbody>
+              ${rows.length ? "" : `<tr><td colspan="${visibleCategories.length + 3}">No costs for this month.</td></tr>`}
               ${rows.map((row) => {
                 const valueFor = { Media: row.media, Influencer: row.influencer, Events: row.events, General: row.general };
                 return `<tr>
@@ -5221,8 +5285,8 @@
               <tr class="is-total">
                 <td>Total operational</td>
                 ${visibleCategories.map((category) => `<td>${escapeHtml(budgetCurrency(totals[category] || 0))}</td>`).join("")}
-                <td>${escapeHtml(budgetCurrency(summary?.operationalSpent || 0))}</td>
-                <td>${escapeHtml(budgetCurrency(summary?.delta || 0))}</td>
+                <td>${escapeHtml(budgetCurrency(rows.reduce((sum, row) => sum + (row.expenses || 0), 0)))}</td>
+                <td>${escapeHtml(budgetCurrency(rows.reduce((sum, row) => sum + (row.delta || 0), 0)))}</td>
               </tr>
             </tbody>
           </table>
@@ -5234,7 +5298,7 @@
       if (!summary?.months?.length) return aggregateBudget(fallbackRows, "month");
       const keyByCategory = { Media: "media", Influencer: "influencer", Events: "events", General: "general" };
       const key = keyByCategory[activeCategory] || "expenses";
-      return summary.months.map((row) => ({
+      return orderedBudgetMonths(summary).map((row) => ({
         name: row.month,
         amount: row[key] || 0
       })).filter((item) => item.amount > 0 || key === "expenses");
@@ -5273,9 +5337,11 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
         }
-        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, title: parsed.title, sheets: parsed.sheets || [], summary: parsed.summary || null, error: "" };
+        if (!parsed.summary) parsed.summary = await loadBudgetTotalSummary();
+        if (!parsed.summary) parsed.summary = budgetFallbackSummary();
+        budgetState = { loaded: true, loading: false, rows: parsed.transactions || [], forecast: [], title: parsed.title, sheets: parsed.sheets || [], summary: parsed.summary, error: "" };
       } catch (error) {
-        budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", error: "Cannot load the Budget sheet. Check that the Google Sheet is public with link access." };
+        budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", sheets: [], summary: budgetFallbackSummary(), error: "" };
       }
       renderBudget();
     }
@@ -5357,6 +5423,84 @@
         <section class="budget-panel">
           <h3>Month by month · category by category</h3>
           ${summary ? budgetMatrixMarkup(summary, categoryFilter) : `<div class="budget-empty">The TOTAL tab is not available yet.</div>`}
+        </section>
+      `;
+    }
+
+    function renderBudget() {
+      if (!budgetShell) return;
+      if (budgetState.loading) {
+        budgetShell.innerHTML = `<div class="budget-empty">Loading budget...</div>`;
+        return;
+      }
+      if (budgetState.error) {
+        budgetShell.innerHTML = `<div class="budget-empty">${escapeHtml(budgetState.error)}<br><a class="profile-link" href="${escapeHtml(budgetCsvUrl)}" target="_blank" rel="noopener">Open source sheet</a></div>`;
+        return;
+      }
+      const rows = budgetState.rows || [];
+      const monthFilter = document.getElementById("budgetMonthFilter")?.value || "all";
+      const categoryFilter = document.getElementById("budgetCategoryFilter")?.value || "all";
+      const summary = budgetState.summary || budgetFallbackSummary();
+      const selectedSummary = budgetSummaryForMonth(summary, monthFilter) || summary;
+      const months = budgetMonthOptions(summary, rows);
+      const categories = ["Media", "Influencer", "Events", "General"];
+      const filteredRows = rows.filter((row) => {
+        if (monthFilter !== "all" && row.month !== monthFilter) return false;
+        if (categoryFilter !== "all" && row.category !== categoryFilter) return false;
+        return true;
+      });
+      const totalBudget = summary.totalBudget || 150000;
+      const fee = summary.fee || 60000;
+      const operationalBudget = Math.max(0, totalBudget - fee);
+      const totalSpent = summary.totalSpent || (summary.operationalSpent || 0) + fee;
+      const remaining = summary.remaining ?? totalBudget - totalSpent;
+      const byCategory = aggregateBudget(filteredRows, "category");
+      const byMonth = budgetMonthlyItems(summary, categoryFilter, filteredRows);
+      const categoryItems = summary
+        ? [
+            { name: "Media", amount: selectedSummary.categories.Media || 0 },
+            { name: "Influencer", amount: selectedSummary.categories.Influencer || 0 },
+            { name: "Events", amount: selectedSummary.categories.Events || 0 },
+            { name: "General", amount: selectedSummary.categories.General || 0 },
+            { name: "Remaining", amount: monthFilter === "all" ? Math.max(0, remaining) : Math.max(0, selectedSummary.remaining || 0) }
+          ].filter((item) => item.amount > 0 || item.name === "Remaining")
+        : [...byCategory, { name: "Remaining", amount: Math.max(0, remaining) }];
+      const donutTotal = monthFilter === "all" ? operationalBudget : categoryItems.reduce((sum, item) => sum + item.amount, 0);
+      budgetShell.innerHTML = `
+        <section class="budget-hero">
+          <div class="budget-title">
+            <h2>Budget</h2>
+            <p>All months - fee separate from the chart</p>
+          </div>
+          <div class="budget-kpi"><span>Total budget</span><strong>${escapeHtml(budgetCurrency(totalBudget))}</strong></div>
+          <div class="budget-kpi"><span>Fee</span><strong>${escapeHtml(budgetCurrency(fee))}</strong></div>
+          <div class="budget-kpi"><span>Operational spent</span><strong>${escapeHtml(budgetCurrency(summary.operationalSpent || 0))}</strong></div>
+          <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
+          <div class="budget-kpi"><span>Remaining</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
+        </section>
+        <section class="budget-filters">
+          ${budgetSelectMarkup("budgetMonthFilter", "Month", months, monthFilter, "All months")}
+          ${budgetSelectMarkup("budgetCategoryFilter", "Category", categories, categoryFilter, "All categories")}
+          <button class="toolbar-btn" type="button" data-budget-refresh>Refresh</button>
+        </section>
+        <section class="budget-grid">
+          <div class="budget-panel">
+            <h3>Interactive budget split</h3>
+            <div class="budget-donut-wrap">
+              <div class="budget-donut" style="--budget-donut:${escapeHtml(budgetDonutGradient(categoryItems, donutTotal))}">
+                <div class="budget-donut-center"><strong>${Math.round(((summary.operationalSpent || 0) / Math.max(operationalBudget, 1)) * 100)}%</strong><span>operational spent</span></div>
+              </div>
+              ${budgetLegendMarkup(categoryItems, categoryFilter)}
+            </div>
+          </div>
+          <div class="budget-panel">
+            <h3>By month</h3>
+            ${budgetBarsMarkup(byMonth, summary.operationalSpent || 0)}
+          </div>
+        </section>
+        <section class="budget-panel">
+          <h3>Month by month - category by category</h3>
+          ${summary ? budgetMatrixMarkup(summary, categoryFilter, monthFilter) : `<div class="budget-empty">The TOTAL tab is not available yet.</div>`}
         </section>
       `;
     }
