@@ -3403,9 +3403,45 @@
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    let initializeApp;
+    let getAuth;
+    let signInAnonymously;
+    let doc;
+    let getDoc;
+    let getFirestore;
+    let onSnapshot;
+    let runTransaction;
+    let serverTimestamp;
+    let setDoc;
+    let firebaseModulesReady = false;
+    // import { runTransaction } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"
+    const dynamicImport = (url) => import(url);
+
+    async function loadFirebaseModules() {
+      if (firebaseModulesReady) return true;
+      try {
+        const [appModule, authModule, firestoreModule] = await Promise.all([
+          dynamicImport("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
+          dynamicImport("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
+          dynamicImport("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
+        ]);
+        initializeApp = appModule.initializeApp;
+        getAuth = authModule.getAuth;
+        signInAnonymously = authModule.signInAnonymously;
+        doc = firestoreModule.doc;
+        getDoc = firestoreModule.getDoc;
+        getFirestore = firestoreModule.getFirestore;
+        onSnapshot = firestoreModule.onSnapshot;
+        runTransaction = firestoreModule.runTransaction;
+        serverTimestamp = firestoreModule.serverTimestamp;
+        setDoc = firestoreModule.setDoc;
+        firebaseModulesReady = true;
+        return true;
+      } catch (error) {
+        console.error("Firebase modules unavailable", error);
+        return false;
+      }
+    }
 
     window.FIREBASE_CONFIG = {
       apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
@@ -3622,7 +3658,7 @@
     async function loadData() {
       try {
         const config = window.FIREBASE_CONFIG;
-        if (config && config.apiKey && config.projectId) {
+        if (config && config.apiKey && config.projectId && await loadFirebaseModules()) {
           const app = initializeApp(config);
           const auth = getAuth(app);
           await signInAnonymously(auth);
