@@ -2852,7 +2852,7 @@
     }
   </style>
 </head>
-<body>
+<body class="is-authenticated">
   <section class="login-page" aria-label="Accesso">
     <div class="login-box">
       <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
@@ -7232,7 +7232,8 @@
       if (event.key === "Enter") handleLogin();
     });
 
-    if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
+    sessionStorage.setItem("logo-gantt-authenticated", "true");
+    if (typeof document.documentElement?.style?.setProperty === "function") {
       startApp();
     }
 
