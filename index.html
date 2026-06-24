@@ -3221,7 +3221,6 @@
     <button type="button" data-creator-context-action="delete">Delete</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -3377,12 +3376,27 @@
     let pendingLocalData = null;
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], error: "" };
+    let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
 
     function setSyncMessage(message, isError = false) {
       syncIndicator.textContent = message;
       syncIndicator.classList.toggle("is-error", Boolean(isError));
+    }
+
+    function ensureXlsxLoaded() {
+      if (window.XLSX) return Promise.resolve(window.XLSX);
+      if (xlsxLoadPromise) return xlsxLoadPromise;
+      xlsxLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        script.async = true;
+        script.onload = () => resolve(window.XLSX);
+        script.onerror = () => reject(new Error("Cannot load XLSX library"));
+        document.head.appendChild(script);
+      });
+      return xlsxLoadPromise;
     }
     const legacyInfluencerOptionColors = {
       city: "#e0f2fe",
@@ -3520,7 +3534,7 @@
         return localSnapshot?.data || normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
-        setSyncMessage("Non riesco a leggere i dati condivisi: modifiche non sincronizzate.", true);
+        setSyncMessage(`Non riesco a leggere i dati condivisi: ${error?.code || error?.message || "errore Firebase"}`, true);
         const localSnapshot = readLocalSnapshot();
         historyEntries = localSnapshot?.history || [];
         dataVersion = localSnapshot?.revision || 0;
@@ -4947,6 +4961,11 @@
       renderBudget();
       try {
         let parsed = null;
+        try {
+          await ensureXlsxLoaded();
+        } catch (error) {
+          console.warn("XLSX library unavailable for budget, falling back to CSV", error);
+        }
         if (window.XLSX) {
           const workbookResponse = await fetch(budgetWorkbookUrl, { cache: "no-store" });
           if (workbookResponse.ok) {
@@ -5099,6 +5118,11 @@
     }
 
     async function loadInfluencerRowsFromSheet() {
+      try {
+        await ensureXlsxLoaded();
+      } catch (error) {
+        console.warn("XLSX library unavailable for influencers, falling back to CSV", error);
+      }
       if (window.XLSX) {
         const response = await fetch("https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=xlsx");
         if (response.ok) {
@@ -6677,12 +6701,20 @@
       updateUndoButton();
       renderTimeline();
       updateZoom();
-      await importInfluencerSeedIfNeeded();
       renderBoard();
       renderPed();
       renderInfluencers();
       renderCreatorCalendar();
       renderBudget();
+      void (async () => {
+        try {
+          await importInfluencerSeedIfNeeded();
+          renderInfluencers();
+          renderBoard();
+        } catch (error) {
+          console.warn("Influencer import skipped", error);
+        }
+      })();
       renderSettingsLists();
       setNewTaskDefaultDates();
       document.getElementById("pedPostDate").value = currentDateKey();
