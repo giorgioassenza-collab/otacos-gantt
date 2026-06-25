@@ -999,6 +999,90 @@
       font-weight: 850;
     }
 
+    .asset-open {
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: zoom-in;
+      text-align: left;
+    }
+
+    .asset-open:hover .asset-preview,
+    .asset-open:hover .asset-video-preview {
+      box-shadow: 0 0 0 3px rgba(255, 90, 20, .14);
+    }
+
+    .asset-viewer-modal {
+      width: min(980px, calc(100vw - 32px));
+      max-height: calc(100vh - 96px);
+    }
+
+    .asset-viewer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .asset-viewer-head h2 {
+      margin: 0;
+    }
+
+    .asset-viewer-stage {
+      min-height: min(62vh, 620px);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #111827;
+    }
+
+    .asset-viewer-stage img,
+    .asset-viewer-stage video,
+    .asset-viewer-stage iframe {
+      display: block;
+      max-width: 100%;
+      max-height: min(62vh, 620px);
+      width: auto;
+      height: auto;
+      border: 0;
+      background: #fff;
+    }
+
+    .asset-viewer-stage iframe {
+      width: 100%;
+      height: min(62vh, 620px);
+    }
+
+    .asset-viewer-empty {
+      padding: 28px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .asset-viewer-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .asset-viewer-count {
+      color: #766d64;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
     .ped-post small {
       display: block;
       margin-top: 4px;
@@ -3373,6 +3457,21 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="assetViewerModal" aria-label="Asset viewer">
+    <div class="modal asset-viewer-modal">
+      <div class="asset-viewer-head">
+        <h2 id="assetViewerTitle">Asset preview</h2>
+        <button class="secondary-btn" id="closeAssetViewerModal" type="button">Close</button>
+      </div>
+      <div class="asset-viewer-stage" id="assetViewerStage"></div>
+      <div class="asset-viewer-controls">
+        <button class="secondary-btn" id="assetViewerPrev" type="button">Previous</button>
+        <span class="asset-viewer-count" id="assetViewerCount"></span>
+        <button class="secondary-btn" id="assetViewerNext" type="button">Next</button>
+      </div>
+    </div>
+  </div>
+
   <div class="status-menu" id="statusMenu" aria-label="Change status"></div>
   <div class="status-menu" id="influencerInlineMenu" aria-label="Change influencer value"></div>
   <div class="modal-backdrop" id="historyModal" aria-label="Document history">
@@ -3461,6 +3560,12 @@
     const pedPostModal = document.getElementById("pedPostModal");
     const pedToGanttModal = document.getElementById("pedToGanttModal");
     const pedToPedModal = document.getElementById("pedToPedModal");
+    const assetViewerModal = document.getElementById("assetViewerModal");
+    const assetViewerStage = document.getElementById("assetViewerStage");
+    const assetViewerTitle = document.getElementById("assetViewerTitle");
+    const assetViewerCount = document.getElementById("assetViewerCount");
+    const assetViewerPrev = document.getElementById("assetViewerPrev");
+    const assetViewerNext = document.getElementById("assetViewerNext");
     const influencerToGanttModal = document.getElementById("influencerToGanttModal");
     const creatorCalendarModal = document.getElementById("creatorCalendarModal");
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
@@ -3565,6 +3670,8 @@
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], summary: null, error: "" };
     let budgetMonthSortMode = "spend";
+    let assetViewerItems = [];
+    let assetViewerIndex = 0;
     let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -6202,6 +6309,11 @@
       return `<div class="ped-format-chip">${pedFormatIconMarkup(normalized)}<span>${escapeHtml(normalized)}</span></div>`;
     }
 
+    function assetOpenButtonMarkup(item, content) {
+      if (!String(item.asset || "").trim()) return content;
+      return `<button class="asset-open" type="button" data-asset-open="${escapeHtml(encodeURIComponent(item.asset || ""))}" data-asset-format="${escapeHtml(normalizePedFormat(item.format))}">${content}</button>`;
+    }
+
     function normalizeHour(value) {
       const match = String(value || "").match(/^(\d{1,2})(?::(\d{2}))?/);
       if (!match) return "11:00";
@@ -6269,6 +6381,29 @@
       return id ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w320` : "";
     }
 
+    function driveFileId(value) {
+      const url = String(value || "").trim();
+      if (!url.includes("drive.google.com")) return "";
+      return url.match(/\/d\/([^/]+)/)?.[1] || url.match(/[?&]id=([^&]+)/)?.[1] || "";
+    }
+
+    function driveFolderId(value) {
+      const url = String(value || "").trim();
+      if (!url.includes("drive.google.com")) return "";
+      return url.match(/\/folders\/([^/?#]+)/)?.[1] || (url.includes("folderview") ? url.match(/[?&]id=([^&]+)/)?.[1] : "") || "";
+    }
+
+    function assetLinks(value) {
+      return String(value || "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    function isImageAsset(value) {
+      return /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i.test(String(value || "").trim());
+    }
+
     function isVideoAsset(value) {
       const url = String(value || "").trim();
       return /\.(mp4|mov|m4v|webm|avi|mkv)(\?.*)?$/i.test(url)
@@ -6300,6 +6435,40 @@
       return "";
     }
 
+    function assetViewerItemFromLink(link, preferredFormat = "") {
+      const url = String(link || "").trim();
+      if (!url) return null;
+      const folderId = driveFolderId(url);
+      if (folderId) {
+        return {
+          type: "folder",
+          src: `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
+          label: "Drive folder"
+        };
+      }
+      const fileId = driveFileId(url);
+      if (fileId && normalizePedFormat(preferredFormat) === "Video") {
+        return { type: "iframe", src: url.replace("/view", "/preview"), label: "Drive video" };
+      }
+      if (fileId) {
+        return {
+          type: "image",
+          src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200`,
+          fallback: url.replace("/view", "/preview"),
+          label: "Drive asset"
+        };
+      }
+      if (isVideoAsset(url)) return { type: "video", src: url, label: "Video" };
+      if (isImageAsset(url)) return { type: "image", src: url, label: "Image" };
+      return { type: "iframe", src: url, label: "Asset" };
+    }
+
+    function assetViewerItemsFromValue(value, preferredFormat = "") {
+      const links = assetLinks(value);
+      if (!links.length) return [];
+      return links.map((link) => assetViewerItemFromLink(link, preferredFormat)).filter(Boolean);
+    }
+
     function pedSubtaskPreview(subtasks = []) {
       if (!subtasks.length) return "-";
       return subtasks
@@ -6312,8 +6481,9 @@
       const status = item.status || "";
       const statusColorValue = pedStatusColor(status);
       const assetVideo = isVideoAsset(item.asset);
-      const assetPreview = assetVideo ? "" : drivePreviewUrl(item.asset);
-      const assetEmbed = assetVideo || assetPreview ? "" : assetEmbedUrl(item.asset);
+      const assetFolder = Boolean(driveFolderId(item.asset));
+      const assetPreview = assetVideo || assetFolder ? "" : drivePreviewUrl(item.asset);
+      const assetEmbed = assetVideo || assetPreview || assetFolder ? "" : assetEmbedUrl(item.asset);
       const fullPreview = zoomIndex > 3;
       if (!fullPreview) {
         return `
@@ -6332,12 +6502,71 @@
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
-        ${assetVideo || assetPreview || assetEmbed ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
-        ${assetVideo ? videoAssetPreviewMarkup("Video preview") : ""}
-        ${assetPreview ? `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">` : ""}
-        ${assetEmbed ? `<iframe class="asset-frame" src="${escapeHtml(assetEmbed)}" loading="lazy" referrerpolicy="no-referrer"></iframe>` : ""}
+        ${assetVideo || assetPreview || assetEmbed || assetFolder ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
+        ${assetFolder ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Open carousel")) : ""}
+        ${assetVideo ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Video preview")) : ""}
+        ${assetPreview ? assetOpenButtonMarkup(item, `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`) : ""}
+        ${assetEmbed ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Open asset")) : ""}
         <div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>
       `;
+    }
+
+    function renderAssetViewer() {
+      const item = assetViewerItems[assetViewerIndex];
+      assetViewerStage.innerHTML = "";
+      if (!item) {
+        assetViewerStage.innerHTML = `<div class="asset-viewer-empty">No asset available.</div>`;
+        assetViewerCount.textContent = "";
+        assetViewerPrev.disabled = true;
+        assetViewerNext.disabled = true;
+        return;
+      }
+      assetViewerTitle.textContent = item.label || "Asset preview";
+      assetViewerCount.textContent = assetViewerItems.length > 1 ? `${assetViewerIndex + 1} / ${assetViewerItems.length}` : "";
+      assetViewerPrev.disabled = assetViewerItems.length <= 1;
+      assetViewerNext.disabled = assetViewerItems.length <= 1;
+      if (item.type === "image") {
+        const image = document.createElement("img");
+        image.src = item.src;
+        image.alt = item.label || "Asset preview";
+        image.onerror = () => {
+          if (item.fallback) {
+            assetViewerStage.innerHTML = `<iframe src="${escapeHtml(item.fallback)}" loading="lazy" referrerpolicy="no-referrer"></iframe>`;
+          } else {
+            assetViewerStage.innerHTML = `<div class="asset-viewer-empty">Preview not available.</div>`;
+          }
+        };
+        assetViewerStage.appendChild(image);
+        return;
+      }
+      if (item.type === "video") {
+        const video = document.createElement("video");
+        video.src = item.src;
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        assetViewerStage.appendChild(video);
+        return;
+      }
+      const frame = document.createElement("iframe");
+      frame.src = item.src;
+      frame.loading = "lazy";
+      frame.referrerPolicy = "no-referrer";
+      assetViewerStage.appendChild(frame);
+    }
+
+    function openAssetViewer(asset, format = "") {
+      assetViewerItems = assetViewerItemsFromValue(asset, format);
+      assetViewerIndex = 0;
+      renderAssetViewer();
+      assetViewerModal.classList.add("open");
+    }
+
+    function closeAssetViewer() {
+      assetViewerModal.classList.remove("open");
+      assetViewerStage.innerHTML = "";
+      assetViewerItems = [];
+      assetViewerIndex = 0;
     }
 
     function renderPed() {
@@ -8483,6 +8712,13 @@
     });
 
     pedCalendar.addEventListener("click", (event) => {
+      const assetButton = event.target.closest("[data-asset-open]");
+      if (assetButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        openAssetViewer(decodeURIComponent(assetButton.dataset.assetOpen || ""), assetButton.dataset.assetFormat || "");
+        return;
+      }
       const statusChip = event.target.closest(".ped-status-chip");
       if (!statusChip || suppressNextClick) return;
       const post = statusChip.closest(".ped-post");
@@ -8494,7 +8730,7 @@
 
     pedCalendar.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
-      if (event.target.closest(".ped-status-chip")) return;
+      if (event.target.closest(".ped-status-chip, .asset-open")) return;
       const post = event.target.closest(".ped-post");
       if (!post) return;
       event.preventDefault();
@@ -8515,7 +8751,7 @@
 
     pedCalendar.addEventListener("touchstart", (event) => {
       if (dragState || event.touches.length !== 1) return;
-      if (event.target.closest(".ped-status-chip")) return;
+      if (event.target.closest(".ped-status-chip, .asset-open")) return;
       const post = event.target.closest(".ped-post");
       if (!post) return;
       const touch = event.touches[0];
@@ -8629,6 +8865,17 @@
     document.getElementById("closePedPostModal").addEventListener("click", closePedPostEditor);
     document.getElementById("closePedToGanttModal").addEventListener("click", closePedToGanttDialog);
     document.getElementById("closePedToPedModal").addEventListener("click", closePedToPedDialog);
+    document.getElementById("closeAssetViewerModal").addEventListener("click", closeAssetViewer);
+    assetViewerPrev.addEventListener("click", () => {
+      if (!assetViewerItems.length) return;
+      assetViewerIndex = (assetViewerIndex - 1 + assetViewerItems.length) % assetViewerItems.length;
+      renderAssetViewer();
+    });
+    assetViewerNext.addEventListener("click", () => {
+      if (!assetViewerItems.length) return;
+      assetViewerIndex = (assetViewerIndex + 1) % assetViewerItems.length;
+      renderAssetViewer();
+    });
     document.getElementById("closeInfluencerToGanttModal").addEventListener("click", closeInfluencerToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
 
