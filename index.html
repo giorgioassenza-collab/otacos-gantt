@@ -1210,7 +1210,9 @@
     }
 
     .asset-viewer-stage.is-single {
-      padding: 18px;
+      height: min(72vh, 700px);
+      min-height: min(72vh, 700px);
+      padding: 0;
     }
 
     .asset-viewer-stage.is-coverflow {
@@ -1219,22 +1221,23 @@
 
     .asset-single-media {
       display: block;
-      max-width: 100%;
-      max-height: min(66vh, 640px);
-      width: auto;
-      height: auto;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
       object-fit: contain;
       border: 0;
-      border-radius: 18px;
-      background: #fff;
-      box-shadow: 0 24px 70px rgba(0,0,0,.38);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     .asset-single-media.is-frame,
     .asset-single-media.is-video {
-      width: min(100%, 980px);
-      height: min(64vh, 620px);
-      aspect-ratio: 16 / 9;
+      position: absolute;
+      inset: 0;
+      aspect-ratio: auto;
+      background: #000;
     }
 
     .asset-slide-track {
@@ -7119,6 +7122,23 @@
       assetViewerMoveRight.hidden = true;
     }
 
+    function renderDriveFolderFallback(folderId, original = "") {
+      assetViewerStage.classList.remove("is-single", "is-coverflow");
+      assetViewerStage.innerHTML = `
+        <div class="asset-folder-browser">
+          <iframe src="https://drive.google.com/embeddedfolderview?id=${escapeHtml(encodeURIComponent(folderId))}#grid" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          ${original ? `<a href="${escapeHtml(original)}" target="_blank" rel="noopener noreferrer">Open in Drive</a>` : ""}
+        </div>
+      `;
+      assetViewerCount.textContent = "Drive folder";
+      assetViewerPrev.disabled = true;
+      assetViewerNext.disabled = true;
+      assetViewerMoveLeft.disabled = true;
+      assetViewerMoveRight.disabled = true;
+      assetViewerMoveLeft.hidden = true;
+      assetViewerMoveRight.hidden = true;
+    }
+
     function renderSingleAssetViewer(item) {
       assetViewerStage.classList.remove("is-coverflow");
       assetViewerStage.classList.add("is-single");
@@ -7147,7 +7167,7 @@
       assetViewerMoveLeft.hidden = !canReorder;
       assetViewerMoveRight.hidden = !canReorder;
       if (item.type === "folder") {
-        renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
+        renderDriveFolderFallback(item.folderId || driveFolderId(item.original || item.src), item.original || item.src);
         return;
       }
       if (assetViewerItems.length === 1) {
@@ -7220,7 +7240,7 @@
         setTimeout(() => {
           if (!assetViewerModal.classList.contains("open")) return;
           if (assetViewerStage.dataset.loadingToken !== loadingToken) return;
-          renderAssetViewerNotice("Carousel preview unavailable", "Drive is not returning the folder files. Add the image links one per line to use the in-app slider.");
+          renderDriveFolderFallback(folderId, asset);
         }, 4500);
         const folderItems = await Promise.race([
           loadDriveFolderItems(folderId, true),
@@ -7234,8 +7254,8 @@
           renderAssetViewer();
         } else {
           driveFolderPromises.delete(folderId);
-          assetViewerItems = [];
-          renderAssetViewerNotice("Carousel preview unavailable", "Drive is not returning the folder files. Add the image links one per line to use the in-app slider.");
+          assetViewerItems = [{ type: "folder", folderId, src: asset, original: asset, label: "Drive folder" }];
+          renderDriveFolderFallback(folderId, asset);
         }
         return;
       }
