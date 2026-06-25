@@ -6864,10 +6864,21 @@
 
     function driveFolderFileIdsFromHtml(html) {
       const ids = new Set();
-      const text = String(html || "");
+      const raw = String(html || "");
+      const text = [
+        raw,
+        raw.replace(/\\u003d/g, "=").replace(/\\u0026/g, "&").replace(/\\u002F/g, "/"),
+        raw.replace(/\\x3d/g, "=").replace(/\\x26/g, "&").replace(/\\x2F/g, "/")
+      ].join("\n");
       [
         /\/file\/d\/([a-zA-Z0-9_-]+)/g,
+        /\/d\/([a-zA-Z0-9_-]{20,})/g,
+        /thumbnail\?id=([a-zA-Z0-9_-]{20,})/g,
+        /\/thumbnail\/([a-zA-Z0-9_-]{20,})/g,
+        /open\?id=([a-zA-Z0-9_-]{20,})/g,
         /[?&]id=([a-zA-Z0-9_-]{20,})/g,
+        /"id"\s*:\s*"([a-zA-Z0-9_-]{20,})"/g,
+        /\["([a-zA-Z0-9_-]{20,})","[^"]+\.(?:jpg|jpeg|png|webp|gif)"/gi,
         /"([a-zA-Z0-9_-]{25,})"/g
       ].forEach((pattern) => {
         let match;
@@ -6887,10 +6898,15 @@
         `https://drive.google.com/drive/u/0/folders/${encodeURIComponent(folderId)}`
       ];
       const readers = [
+        (url) => fetchTextWithTimeout(url, 9000),
         (url) => fetchTextWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, 9000),
         (url) => fetchAllOriginsJson(url, 9000),
         (url) => fetchTextWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, 9000),
-        (url) => fetchTextWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`, 9000)
+        (url) => fetchTextWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`, 9000),
+        (url) => fetchTextWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`, 9000),
+        (url) => fetchTextWithTimeout(`https://cors.isomorphic-git.org/${url}`, 9000),
+        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://${url}`, 9000),
+        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://http://${url.replace(/^https?:\/\//, "")}`, 9000)
       ];
       for (const url of folderUrls) {
         for (const read of readers) {
