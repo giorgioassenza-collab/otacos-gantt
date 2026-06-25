@@ -957,12 +957,12 @@
     }
 
     .asset-video-preview {
-      width: min(42%, 240px);
+      width: 156px;
       aspect-ratio: 4 / 5;
-      min-height: 132px;
+      min-height: 0;
       margin-top: 5px;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
+      border: 1px solid rgba(255, 90, 20, .2);
+      border-radius: 18px;
       display: flex;
       align-items: flex-end;
       gap: 10px;
@@ -972,10 +972,11 @@
         linear-gradient(145deg, rgba(255, 90, 20, .9), rgba(255, 184, 77, .82)),
         radial-gradient(circle at 20% 18%, rgba(255,255,255,.5), transparent 28%);
       color: #18130f;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 950;
       overflow: hidden;
       position: relative;
+      box-shadow: 0 16px 34px rgba(24, 19, 15, .16);
     }
 
     .asset-video-play {
@@ -1003,13 +1004,13 @@
     }
 
     .asset-carousel-preview {
-      width: min(42%, 240px);
+      width: 156px;
       aspect-ratio: 4 / 5;
-      margin-top: 5px;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
+      margin: 7px 0 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 90, 20, .16);
       background: #fff;
-      box-shadow: 0 10px 24px rgba(24, 19, 15, .12);
+      box-shadow: 0 16px 34px rgba(24, 19, 15, .16);
       overflow: visible;
       position: relative;
     }
@@ -1019,7 +1020,7 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      border-radius: 12px;
+      border-radius: 18px;
     }
 
     .asset-carousel-preview::before,
@@ -1029,7 +1030,7 @@
       inset: 9px -9px auto auto;
       width: 82%;
       height: 82%;
-      border-radius: 12px;
+      border-radius: 18px;
       border: 1px solid rgba(24, 19, 15, .12);
       background: rgba(255,255,255,.82);
       transform: translate(12px, 10px);
@@ -1043,9 +1044,9 @@
 
     .asset-carousel-badge {
       position: absolute;
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
+      left: 9px;
+      right: 9px;
+      bottom: 9px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1057,6 +1058,70 @@
       box-shadow: 0 8px 22px rgba(24, 19, 15, .16);
       font-size: 10px;
       font-weight: 950;
+    }
+
+    .asset-folder-thumb {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      display: grid;
+      align-content: end;
+      gap: 10px;
+      padding: 12px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,.62), transparent 27%),
+        linear-gradient(145deg, #ff5a14, #ffb14a);
+      color: #18130f;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .asset-folder-thumb::before,
+    .asset-folder-thumb::after {
+      content: "";
+      position: absolute;
+      width: 72px;
+      height: 96px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.58);
+      right: -18px;
+      top: 22px;
+      transform: rotate(-8deg);
+      box-shadow: 0 12px 26px rgba(24, 19, 15, .12);
+    }
+
+    .asset-folder-thumb::after {
+      right: 18px;
+      top: 40px;
+      transform: rotate(5deg);
+      background: rgba(255,255,255,.78);
+    }
+
+    .asset-folder-symbol {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255,255,255,.92);
+      color: var(--orange);
+      box-shadow: 0 8px 18px rgba(24, 19, 15, .18);
+      z-index: 1;
+    }
+
+    .asset-folder-title {
+      display: grid;
+      gap: 2px;
+      font-size: 12px;
+      font-weight: 950;
+      z-index: 1;
+    }
+
+    .asset-folder-title small {
+      color: rgba(24, 19, 15, .72);
+      font-size: 10px;
+      font-weight: 850;
     }
 
     .asset-open {
@@ -1079,8 +1144,12 @@
     }
 
     .asset-viewer-modal {
-      width: min(1120px, calc(100vw - 32px));
-      max-height: calc(100vh - 96px);
+      width: min(1120px, calc(100vw - 32px)) !important;
+      max-width: min(1120px, calc(100vw - 32px)) !important;
+      max-height: calc(100vh - 56px) !important;
+      border-radius: 24px !important;
+      padding: 18px !important;
+      overflow: hidden !important;
     }
 
     .asset-viewer-head {
@@ -1096,16 +1165,18 @@
     }
 
     .asset-viewer-stage {
-      min-height: min(66vh, 660px);
+      min-height: min(68vh, 680px);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: linear-gradient(145deg, #1f1b17, #0f1115);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 90, 20, .22), transparent 34%),
+        linear-gradient(145deg, #201b17, #0f1115);
       position: relative;
-      padding: 28px 64px;
+      padding: 38px 72px;
     }
 
     .asset-slide-track {
@@ -1114,7 +1185,7 @@
       align-items: center;
       gap: 18px;
       width: 100%;
-      max-width: 920px;
+      max-width: 960px;
     }
 
     .asset-slide-track.is-single {
@@ -1124,7 +1195,7 @@
 
     .asset-slide-card {
       aspect-ratio: 4 / 5;
-      border-radius: 18px;
+      border-radius: 24px;
       overflow: hidden;
       background: #fff;
       box-shadow: 0 18px 46px rgba(0,0,0,.34);
@@ -1205,6 +1276,78 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .asset-folder-viewer {
+      width: min(520px, 100%);
+      aspect-ratio: 4 / 5;
+      border-radius: 28px;
+      padding: 22px;
+      box-sizing: border-box;
+      display: grid;
+      align-content: end;
+      gap: 16px;
+      color: #18130f;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,.62), transparent 26%),
+        linear-gradient(145deg, #ff5a14, #ffb14a);
+      box-shadow: 0 34px 84px rgba(0,0,0,.38);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .asset-folder-viewer::before,
+    .asset-folder-viewer::after {
+      content: "";
+      position: absolute;
+      width: 42%;
+      aspect-ratio: 4 / 5;
+      border-radius: 24px;
+      background: rgba(255,255,255,.62);
+      right: -6%;
+      top: 14%;
+      transform: rotate(-8deg);
+      box-shadow: 0 22px 54px rgba(24, 19, 15, .18);
+    }
+
+    .asset-folder-viewer::after {
+      right: 16%;
+      top: 24%;
+      transform: rotate(6deg);
+      background: rgba(255,255,255,.82);
+    }
+
+    .asset-folder-viewer h3,
+    .asset-folder-viewer p,
+    .asset-folder-viewer a {
+      position: relative;
+      z-index: 1;
+    }
+
+    .asset-folder-viewer h3 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .asset-folder-viewer p {
+      margin: 0;
+      max-width: 300px;
+      color: rgba(24, 19, 15, .76);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .asset-folder-viewer a {
+      width: fit-content;
+      padding: 11px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.94);
+      color: #18130f;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 950;
+      box-shadow: 0 12px 28px rgba(24, 19, 15, .18);
     }
 
     .ped-post small {
@@ -6554,6 +6697,15 @@
       `;
     }
 
+    function assetFolderThumbMarkup(label = "Drive carousel") {
+      return `
+        <div class="asset-folder-thumb" aria-label="${escapeHtml(label)}">
+          <span class="asset-folder-symbol">${pedFormatIconMarkup("Carousel")}</span>
+          <span class="asset-folder-title">${escapeHtml(label)}<small>Open preview</small></span>
+        </div>
+      `;
+    }
+
     function assetImageFallbackScript() {
       const fallback = videoAssetPreviewMarkup("Video preview").replace(/`/g, "\\`");
       return `this.insertAdjacentHTML('afterend', \`${fallback}\`); this.remove();`;
@@ -6619,12 +6771,7 @@
       }
       return `
         <div class="asset-carousel-preview">
-          <div class="asset-video-preview" style="width:100%;height:100%;min-height:0;margin:0;border:0;border-radius:12px;">
-            <span class="asset-video-play">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8v12.4c0 .8.9 1.3 1.6.9l9.8-6.2c.6-.4.6-1.4 0-1.8L9.6 4.9C8.9 4.5 8 5 8 5.8Z"/></svg>
-            </span>
-            <span>Open carousel<small>${escapeHtml(label)}</small></span>
-          </div>
+          ${assetFolderThumbMarkup("Drive carousel")}
           <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(label)}</span></span>
         </div>
       `;
@@ -6674,6 +6821,17 @@
     }
 
     function assetViewerMediaElement(item) {
+      if (item.type === "folder") {
+        const folder = document.createElement("div");
+        folder.className = "asset-folder-viewer";
+        folder.innerHTML = `
+          <span class="asset-folder-symbol">${pedFormatIconMarkup("Carousel")}</span>
+          <h3>Drive carousel</h3>
+          <p>Open the Drive folder to review the carousel files. For a true in-app slider, paste each slide link on a separate line.</p>
+          <a href="${escapeHtml(item.original || item.src)}" target="_blank" rel="noopener noreferrer">Open in Drive</a>
+        `;
+        return folder;
+      }
       if (item.type === "image") {
         const image = document.createElement("img");
         image.src = item.src;
@@ -6722,6 +6880,8 @@
       const canReorder = Boolean(assetViewerSource) && assetViewerItems.length > 1 && !assetViewerItems.some((entry) => entry.type === "folder");
       assetViewerMoveLeft.disabled = !canReorder;
       assetViewerMoveRight.disabled = !canReorder;
+      assetViewerMoveLeft.hidden = !canReorder;
+      assetViewerMoveRight.hidden = !canReorder;
       const track = document.createElement("div");
       track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : ""}`;
       const visibleIndexes = assetViewerItems.length === 1
@@ -6742,6 +6902,7 @@
         prev.type = "button";
         prev.className = "asset-viewer-arrow prev";
         prev.textContent = "‹";
+        prev.textContent = "<";
         prev.addEventListener("click", () => {
           assetViewerIndex = (assetViewerIndex - 1 + assetViewerItems.length) % assetViewerItems.length;
           renderAssetViewer();
@@ -6750,6 +6911,7 @@
         next.type = "button";
         next.className = "asset-viewer-arrow next";
         next.textContent = "›";
+        next.textContent = ">";
         next.addEventListener("click", () => {
           assetViewerIndex = (assetViewerIndex + 1) % assetViewerItems.length;
           renderAssetViewer();
