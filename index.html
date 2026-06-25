@@ -910,6 +910,29 @@
       line-height: 1.25;
     }
 
+    .ped-format-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 20px;
+      margin: 2px 0 3px;
+      padding: 2px 7px;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      background: #fffdf9;
+      color: #18130f;
+      font-size: 10px;
+      font-weight: 950;
+      line-height: 1;
+      width: fit-content;
+    }
+
+    .ped-format-chip svg {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 auto;
+    }
+
     .asset-preview {
       display: block;
       width: 50%;
@@ -3042,6 +3065,7 @@
       <label class="field">Status<select id="pedPostStatus" required></select></label>
       <label class="field">Who<div class="check-list" id="pedPostMembers"></div></label>
       <label class="field">Social<div class="check-list" id="pedPostSocials"></div></label>
+      <label class="field">FORMAT<select id="pedPostFormat" required></select></label>
       <label class="field">Asset<textarea id="pedPostAsset" placeholder="Link asset"></textarea></label>
       <label class="field">Copy<textarea id="pedPostCopy" placeholder="Copy"></textarea></label>
       <button class="primary-btn" type="submit">Add post</button>
@@ -3264,6 +3288,7 @@
         <label class="field">Status<select id="editPedPostStatus" required></select></label>
         <label class="field">Who<div class="check-list" id="editPedPostMembers"></div></label>
         <label class="field">Social<div class="check-list" id="editPedPostSocials"></div></label>
+        <label class="field">FORMAT<select id="editPedPostFormat" required></select></label>
         <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
         <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
         <section class="subtasks">
@@ -3425,11 +3450,13 @@
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
     const pedPostProject = document.getElementById("pedPostProject");
+    const pedPostFormat = document.getElementById("pedPostFormat");
     const pedPostTime = document.getElementById("pedPostTime");
     const editPedPostMembers = document.getElementById("editPedPostMembers");
     const editPedPostStatus = document.getElementById("editPedPostStatus");
     const editPedPostSocials = document.getElementById("editPedPostSocials");
     const editPedPostProject = document.getElementById("editPedPostProject");
+    const editPedPostFormat = document.getElementById("editPedPostFormat");
     const editPedPostTime = document.getElementById("editPedPostTime");
     const pedPostModal = document.getElementById("pedPostModal");
     const pedToGanttModal = document.getElementById("pedToGanttModal");
@@ -3484,6 +3511,7 @@
     const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
     const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
     const budgetSheetNames = ["JUNE26", "MAY26", "APR26", "MAR26", "FEB26", "GEN26", "DIC25", "NOV25", "OCT25", "SEP25", "AUG25", "JUL25"];
+    const pedFormatOptions = ["Video", "Static", "Carousel"];
     const influencerColumns = [
       { key: "name", label: "NAME" },
       { key: "city", label: "CITY" },
@@ -3506,7 +3534,7 @@
       creatorStatuses: ["Scheduled", "Waiting", "Published"],
       creatorStores: ["GIGA TACOS"],
       labels: ["creator", "Contattare", "Ask Ok", "Mandare contratto", "Avvisare Giorgia", "Video in store", "Pubblicazione"],
-      formats: ["Post", "Reel", "Story"],
+      formats: ["Video", "Static", "Carousel"],
       socials: [
         { id: "instagram", label: "Instagram", short: "IG", color: "#e1306c" },
         { id: "tiktok", label: "TikTok", short: "TT", color: "#111827" }
@@ -3776,6 +3804,14 @@
 
     function collectionById(items = []) {
       return new Map((items || []).filter((item) => item?.id).map((item) => [item.id, item]));
+    }
+
+    function normalizePedFormat(value) {
+      const text = String(value || "").trim().toLowerCase();
+      if (text === "video" || text === "reel") return "Video";
+      if (text === "carousel" || text === "carosello") return "Carousel";
+      if (text === "static" || text === "statica" || text === "post" || text === "story") return "Static";
+      return pedFormatOptions[0];
     }
 
     function stampChangedItems(items = [], previousItems = []) {
@@ -4765,7 +4801,7 @@
       normalized.creatorStatuses = normalizeStatusList(normalized.creatorStatuses, starterData.creatorStatuses, ["#dbeafe", "#fef3c7", "#dcfce7", "#fee2e2"]);
       normalized.creatorStores = normalized.creatorStores && normalized.creatorStores.length ? normalized.creatorStores : structuredClone(starterData.creatorStores);
       normalized.labels = [...new Set(normalized.labels || starterData.labels)].filter((label) => String(label).trim().toLowerCase() !== "brief");
-      normalized.formats = normalized.formats && normalized.formats.length ? normalized.formats : structuredClone(starterData.formats);
+      normalized.formats = structuredClone(pedFormatOptions);
       normalized.projects = ensureProjectDefaults(normalized.projects || structuredClone(starterData.projects));
       normalized.settingsUpdatedAt = settingMergeKeys.reduce((result, key) => {
         result[key] = Number(normalized.settingsUpdatedAt?.[key] || 0);
@@ -4829,7 +4865,7 @@
         time: normalizeHour(post.time),
         status: post.status || (normalized.pedStatuses[0] ? statusName(normalized.pedStatuses[0]) : ""),
         members: Array.isArray(post.members) ? post.members : [],
-        format: post.format || normalized.formats[0] || "",
+        format: normalizePedFormat(post.format),
         social: Array.isArray(post.social)
           ? post.social.map((item) => item === "tiktok" ? "tiktok" : item === "instagram" ? "instagram" : item)
           : [],
@@ -5984,9 +6020,15 @@
     function renderPedProjectOptions() {
       pedPostProject.innerHTML = "";
       editPedPostProject.innerHTML = "";
+      pedPostFormat.innerHTML = "";
+      editPedPostFormat.innerHTML = "";
       data.projects.forEach((project) => {
         pedPostProject.appendChild(option(project.id, project.name));
         editPedPostProject.appendChild(option(project.id, project.name));
+      });
+      pedFormatOptions.forEach((format) => {
+        pedPostFormat.appendChild(option(format, format));
+        editPedPostFormat.appendChild(option(format, format));
       });
       pedPostProject.disabled = data.projects.length === 0;
       editPedPostProject.disabled = data.projects.length === 0;
@@ -6014,7 +6056,7 @@
           status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
           members: task.members || [],
           social: [],
-          format: data.formats[0] || "",
+          format: pedFormatOptions[0],
           asset: "",
           copy: "",
           subtasks: [],
@@ -6112,7 +6154,7 @@
             status: linkedPost?.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status),
             members: linkedPost?.members || task.members || [],
             social: linkedPost?.social || [],
-            format: linkedPost?.format || data.formats[0] || "",
+            format: normalizePedFormat(linkedPost?.format),
             asset: linkedPost?.asset || "",
             copy: linkedPost?.copy || "",
             subtasks: linkedPost?.subtasks || task.subtasks || [],
@@ -6142,6 +6184,22 @@
         const label = socialItem ? socialItem.label : item;
         return `<span class="social-badge" title="${escapeHtml(label)}" style="background:${escapeHtml(color)}; color:${escapeHtml(readableTextColor(color))}">${escapeHtml(label)}</span>`;
       }).join("");
+    }
+
+    function pedFormatIconMarkup(format) {
+      const normalized = normalizePedFormat(format);
+      if (normalized === "Video") {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>`;
+      }
+      if (normalized === "Carousel") {
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="5" width="14" height="14" rx="2"/><path d="M3 9v8a2 2 0 0 0 2 2h8"/></svg>`;
+      }
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>`;
+    }
+
+    function pedFormatMarkup(format) {
+      const normalized = normalizePedFormat(format);
+      return `<div class="ped-format-chip">${pedFormatIconMarkup(normalized)}<span>${escapeHtml(normalized)}</span></div>`;
     }
 
     function normalizeHour(value) {
@@ -6261,6 +6319,7 @@
         return `
           <div class="ped-social-row">${socialMarkup(item.social)}</div>
           <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+          ${pedFormatMarkup(item.format)}
           <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
           <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
           <div class="ped-preview-line">Copy: ${escapeHtml(previewName(item.copy || "-"))}</div>
@@ -6269,6 +6328,7 @@
       return `
         <div class="ped-social-row">${socialMarkup(item.social)}</div>
         <div class="ped-post-title"><span>${escapeHtml(`${item.title}${item.project ? ` - ${item.project}` : ""}`)}</span></div>
+        ${pedFormatMarkup(item.format)}
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
@@ -6957,6 +7017,7 @@
       [...editPedPostSocials.querySelectorAll("input[type='checkbox']")].forEach((item) => {
         item.checked = (post.social || []).includes(item.value);
       });
+      editPedPostFormat.value = normalizePedFormat(post.format);
       document.getElementById("editPedPostAsset").value = post.asset || "";
       document.getElementById("editPedPostCopy").value = post.copy || "";
       document.getElementById("newPedSubtaskTitle").value = "";
@@ -7726,12 +7787,13 @@
       const status = pedPostStatus.value;
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
+      const format = normalizePedFormat(pedPostFormat.value);
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
       if (!title || !projectId || !date || !status) return;
       data.pedPosts = data.pedPosts || [];
       const createdAt = Date.now();
-      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format: "", asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
+      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
       await saveData();
       renderPed();
       event.currentTarget.reset();
@@ -7739,6 +7801,7 @@
       pedPostProject.value = data.projects[0]?.id || "";
       document.getElementById("pedPostDate").value = currentDateKey();
       pedPostTime.value = "11:00";
+      pedPostFormat.value = pedFormatOptions[0];
       document.getElementById("pedPostAsset").value = "";
       document.getElementById("pedPostCopy").value = "";
       pedPostSocials.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
@@ -8280,7 +8343,7 @@
           status: data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : task.status,
           members: task.members || [],
           social: [],
-          format: data.formats[0] || "",
+          format: pedFormatOptions[0],
           asset: "",
           copy: "",
           subtasks: task.subtasks || []
@@ -8350,7 +8413,7 @@
         status: sourcePost.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : ""),
         members: structuredClone(sourcePost.members || []),
         social: structuredClone(sourcePost.social || []),
-        format: sourcePost.format || data.formats[0] || "",
+        format: normalizePedFormat(sourcePost.format),
         asset: sourcePost.asset || "",
         copy: sourcePost.copy || "",
         subtasks: structuredClone(sourcePost.subtasks || []),
@@ -8736,6 +8799,7 @@
       const status = editPedPostStatus.value;
       const members = selectedMembers(editPedPostMembers);
       const social = selectedValues(editPedPostSocials);
+      const format = normalizePedFormat(editPedPostFormat.value);
       if (!title || !projectId || !date || !status) return;
       post.title = title;
       post.projectId = projectId;
@@ -8754,6 +8818,7 @@
       post.status = status;
       post.members = members;
       post.social = social;
+      post.format = format;
       post.asset = document.getElementById("editPedPostAsset").value.trim();
       post.copy = document.getElementById("editPedPostCopy").value.trim();
       touchItem(post);
