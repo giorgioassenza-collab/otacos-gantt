@@ -6868,6 +6868,28 @@
         .then((payload) => payload?.contents || "");
     }
 
+    function firstNonEmptyResult(promises) {
+      return new Promise((resolve) => {
+        let pending = promises.length;
+        let resolved = false;
+        const finishEmpty = () => {
+          pending -= 1;
+          if (!resolved && pending <= 0) resolve([]);
+        };
+        promises.forEach((promise) => {
+          Promise.resolve(promise)
+            .then((items) => {
+              if (!resolved && Array.isArray(items) && items.length) {
+                resolved = true;
+                resolve(items);
+              }
+            })
+            .catch((error) => console.warn("Drive carousel source unavailable", error))
+            .finally(finishEmpty);
+        });
+      });
+    }
+
     function driveFilePreviewItem(file) {
       const isVideo = String(file.mimeType || "").startsWith("video/");
       return {
@@ -6938,15 +6960,16 @@
         `https://drive.google.com/drive/u/0/folders/${encodeURIComponent(folderId)}`
       ];
       const readers = [
+        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://${url}`, 12000),
+        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://${url.replace(/^https?:\/\//, "https://")}`, 12000),
         (url) => fetchTextWithTimeout(url, 9000),
         (url) => fetchTextWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, 9000),
         (url) => fetchAllOriginsJson(url, 9000),
+        (url) => fetchTextWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${url}`, 9000),
         (url) => fetchTextWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, 9000),
         (url) => fetchTextWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`, 9000),
         (url) => fetchTextWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`, 9000),
-        (url) => fetchTextWithTimeout(`https://cors.isomorphic-git.org/${url}`, 9000),
-        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://${url}`, 9000),
-        (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://http://${url.replace(/^https?:\/\//, "")}`, 9000)
+        (url) => fetchTextWithTimeout(`https://cors.isomorphic-git.org/${url}`, 9000)
       ];
       for (const url of folderUrls) {
         for (const read of readers) {
@@ -6970,6 +6993,13 @@
       return [];
     }
 
+    function loadDriveFolderItemsFromApi(folderId) {
+      return fetchJsonWithTimeout(driveFolderFilesUrl(folderId), 8500)
+        .then((payload) => (payload.files || [])
+          .filter((file) => /^image\/|^video\//.test(String(file.mimeType || "")))
+          .map(driveFilePreviewItem));
+    }
+
     async function loadDriveFolderItems(folderId, force = false) {
       if (!folderId) return [];
       const knownItems = knownDriveFolderItems(folderId);
@@ -6981,18 +7011,10 @@
       if (!force && driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
       if (force) driveFolderPromises.delete(folderId);
       if (!force && driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
-      const promise = fetchJsonWithTimeout(driveFolderFilesUrl(folderId))
-        .then((payload) => (payload.files || [])
-          .filter((file) => /^image\/|^video\//.test(String(file.mimeType || "")))
-          .map(driveFilePreviewItem))
-        .catch((error) => {
-          console.warn("Drive folder preview unavailable", error);
-          return loadDriveFolderItemsFromPublicPage(folderId);
-        })
-        .then(async (items) => {
-          if (items.length) return items;
-          return loadDriveFolderItemsFromPublicPage(folderId);
-        })
+      const promise = firstNonEmptyResult([
+        loadDriveFolderItemsFromApi(folderId),
+        loadDriveFolderItemsFromPublicPage(folderId)
+      ])
         .then((items) => {
           driveFolderCache.set(folderId, items);
           driveFolderPromises.delete(folderId);
@@ -7438,12 +7460,12 @@
           renderAssetViewer();
           return;
         }
-        renderDriveFolderFallback(folderId, asset);
+        renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
         const loadingToken = `${folderId}-${Date.now()}`;
         assetViewerStage.dataset.loadingToken = loadingToken;
         const folderItems = await Promise.race([
           loadDriveFolderItems(folderId, true),
-          timeoutValue(12000, [])
+          timeoutValue(22000, [])
         ]);
         if (!assetViewerModal.classList.contains("open")) return;
         if (assetViewerStage.dataset.loadingToken === loadingToken) delete assetViewerStage.dataset.loadingToken;
@@ -7455,7 +7477,10 @@
         } else {
           driveFolderPromises.delete(folderId);
           assetViewerItems = [{ type: "folder", folderId, src: asset, original: asset, label: "Drive folder" }];
-          renderDriveFolderFallback(folderId, asset);
+          renderAssetViewerNotice(
+            "Carousel preview unavailable",
+            "Drive is not returning the folder images. Open Drive once, or paste each slide link on a separate line."
+          );
         }
         return;
       }
