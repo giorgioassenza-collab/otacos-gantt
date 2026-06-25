@@ -1209,6 +1209,34 @@
       padding: 38px 72px;
     }
 
+    .asset-viewer-stage.is-single {
+      padding: 18px;
+    }
+
+    .asset-viewer-stage.is-coverflow {
+      padding: 38px 72px;
+    }
+
+    .asset-single-media {
+      display: block;
+      max-width: 100%;
+      max-height: min(66vh, 640px);
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border: 0;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(0,0,0,.38);
+    }
+
+    .asset-single-media.is-frame,
+    .asset-single-media.is-video {
+      width: min(100%, 980px);
+      height: min(64vh, 620px);
+      aspect-ratio: 16 / 9;
+    }
+
     .asset-slide-track {
       display: flex;
       align-items: center;
@@ -7075,6 +7103,7 @@
     }
 
     function renderAssetViewerNotice(title, body = "") {
+      assetViewerStage.classList.remove("is-single", "is-coverflow");
       assetViewerStage.innerHTML = `
         <div class="asset-viewer-empty">
           <strong>${escapeHtml(title)}</strong>
@@ -7090,8 +7119,19 @@
       assetViewerMoveRight.hidden = true;
     }
 
+    function renderSingleAssetViewer(item) {
+      assetViewerStage.classList.remove("is-coverflow");
+      assetViewerStage.classList.add("is-single");
+      const media = assetViewerMediaElement(item);
+      media.classList.add("asset-single-media");
+      if (item.type === "iframe") media.classList.add("is-frame");
+      if (item.type === "video") media.classList.add("is-video");
+      assetViewerStage.appendChild(media);
+    }
+
     function renderAssetViewer() {
       const item = assetViewerItems[assetViewerIndex];
+      assetViewerStage.classList.remove("is-single", "is-coverflow");
       assetViewerStage.innerHTML = "";
       if (!item) {
         renderAssetViewerNotice("No asset available.");
@@ -7110,9 +7150,14 @@
         renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
         return;
       }
+      if (assetViewerItems.length === 1) {
+        renderSingleAssetViewer(item);
+        return;
+      }
+      assetViewerStage.classList.add("is-coverflow");
       const track = document.createElement("div");
-      track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : "is-coverflow"}`;
-      const offsets = assetViewerItems.length === 1 ? [0] : [-2, -1, 0, 1, 2];
+      track.className = "asset-slide-track is-coverflow";
+      const offsets = [-2, -1, 0, 1, 2];
       const visibleIndexes = [];
       const visibleOffsets = [];
       offsets.forEach((offset) => {
