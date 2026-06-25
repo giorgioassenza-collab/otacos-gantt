@@ -4897,13 +4897,13 @@
     }
 
     function budgetMonthKey(value, fallbackTitle = "") {
+      const titleMatch = String(fallbackTitle || "").match(/([A-Z]{3})(\d{2})/i);
+      if (titleMatch) return `${titleMatch[1].slice(0, 1).toUpperCase()}${titleMatch[1].slice(1).toLowerCase()} 20${titleMatch[2]}`;
       const text = String(value || "").trim();
       const direct = new Date(text);
       if (!Number.isNaN(direct.getTime())) {
         return direct.toLocaleDateString("en-US", { month: "short", year: "numeric" });
       }
-      const titleMatch = String(fallbackTitle || "").match(/([A-Z]{3})(\d{2})/i);
-      if (titleMatch) return `${titleMatch[1].slice(0, 1).toUpperCase()}${titleMatch[1].slice(1).toLowerCase()} 20${titleMatch[2]}`;
       return "No date";
     }
 
