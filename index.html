@@ -8880,22 +8880,26 @@
     document.getElementById("pedPostForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       await runWithSavingButton(event, async () => {
-      const title = document.getElementById("pedPostTitle").value.trim();
-      const projectId = pedPostProject.value;
-      const date = document.getElementById("pedPostDate").value;
+      const title = document.getElementById("pedPostTitle").value.trim() || "New post";
+      const projectId = pedPostProject.value || data.projects[0]?.id || "";
+      const date = document.getElementById("pedPostDate").value || currentDateKey();
       const time = normalizeHour(pedPostTime.value);
-      const status = pedPostStatus.value;
+      const status = pedPostStatus.value || statusName(data.pedStatuses?.[0]) || "Draft";
       const members = selectedMembers(pedPostMembers);
       const social = selectedValues(pedPostSocials);
-      const format = normalizePedFormat(pedPostFormat.value);
+      const format = normalizePedFormat(pedPostFormat.value || pedFormatOptions[0]);
       const asset = document.getElementById("pedPostAsset").value.trim();
       const copy = document.getElementById("pedPostCopy").value.trim();
-      if (!title || !projectId || !date || !status) return;
+      if (!projectId) {
+        alert("Create or select a project before adding a PED post.");
+        return;
+      }
       data.pedPosts = data.pedPosts || [];
       const createdAt = Date.now();
       data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
       await saveData();
       renderPed();
+      closePanels();
       event.currentTarget.reset();
       document.getElementById("pedPostTitle").value = "New post";
       pedPostProject.value = data.projects[0]?.id || "";
