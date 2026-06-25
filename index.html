@@ -1513,6 +1513,40 @@
       text-transform: uppercase;
     }
 
+    .budget-overview summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .budget-overview summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .budget-overview summary::after {
+      content: "+";
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 950;
+    }
+
+    .budget-overview[open] summary::after {
+      content: "-";
+    }
+
+    .budget-overview summary h3 {
+      margin: 0;
+    }
+
     .budget-bars {
       display: grid;
       gap: 10px;
@@ -4897,8 +4931,8 @@
     }
 
     function budgetMonthKey(value, fallbackTitle = "") {
-      const titleMatch = String(fallbackTitle || "").match(/([A-Z]{3})(\d{2})/i);
-      if (titleMatch) return `${titleMatch[1].slice(0, 1).toUpperCase()}${titleMatch[1].slice(1).toLowerCase()} 20${titleMatch[2]}`;
+      const titleMonth = budgetMonthLabelFromSheetName(fallbackTitle);
+      if (titleMonth) return titleMonth;
       const text = String(value || "").trim();
       const direct = new Date(text);
       if (!Number.isNaN(direct.getTime())) {
@@ -4913,6 +4947,31 @@
       if (!match) return 999999;
       const monthMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dic: 11, dec: 11, gen: 0 };
       return Number(match[2]) * 12 + (monthMap[match[1].toLowerCase()] ?? 0);
+    }
+
+    function budgetMonthLabelFromSheetName(value) {
+      const text = String(value || "").toUpperCase();
+      const match = text.match(/\b(JUNE|JUN|GEN|JAN|FEB|MAR|APR|MAY|GIU|JUL|AUG|SEP|OCT|NOV|DIC|DEC)(\d{2})\b/);
+      if (!match) return "";
+      const labelMap = {
+        JUNE: "Jun",
+        JUN: "Jun",
+        GIU: "Jun",
+        GEN: "Jan",
+        JAN: "Jan",
+        FEB: "Feb",
+        MAR: "Mar",
+        APR: "Apr",
+        MAY: "May",
+        JUL: "Jul",
+        AUG: "Aug",
+        SEP: "Sep",
+        OCT: "Oct",
+        NOV: "Nov",
+        DIC: "Dec",
+        DEC: "Dec"
+      };
+      return `${labelMap[match[1]]} 20${match[2]}`;
     }
 
     function budgetMonthLabelFromName(monthName) {
@@ -5279,10 +5338,17 @@
       const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const byCategory = aggregateBudget(filteredRows, "category");
       const byMonth = aggregateBudget(filteredRows, "month");
-      const pieItems = [
+      const selectedMonthSummary = monthFilter === "all" ? null : (summary.monthRows || []).find((month) => month.month === monthFilter);
+      const monthPieItems = (selectedMonthSummary?.categories || byCategory)
+        .filter((item) => categoryFilter === "all" || item.name === categoryFilter)
+        .filter((item) => item.amount);
+      const totalPieItems = [
         ...(summary.categoryTotals || aggregateBudget(rows, "category")),
         { name: "Remaining operating budget", amount: remaining }
-      ].filter((item) => item.amount);
+      ].filter((item) => categoryFilter === "all" || item.name === categoryFilter || item.name === "Remaining operating budget").filter((item) => item.amount);
+      const pieItems = monthFilter === "all" ? totalPieItems : monthPieItems;
+      const pieTotal = monthFilter === "all" ? workingBudget : monthPieItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const pieTitle = monthFilter === "all" ? "Operating budget split" : `${monthFilter} split`;
       budgetShell.innerHTML = `
         <section class="budget-hero">
           <div class="budget-title">
@@ -5301,17 +5367,13 @@
         </section>
         <section class="budget-grid">
           <div class="budget-panel">
-            <h3>Operating budget split</h3>
-            ${budgetPieMarkup(pieItems, workingBudget)}
+            <h3>${escapeHtml(pieTitle)}</h3>
+            ${budgetPieMarkup(pieItems, pieTotal)}
           </div>
           <div class="budget-panel">
             <h3>Selected month by category</h3>
             ${budgetBarsMarkup(byCategory, selectedSpent)}
           </div>
-        </section>
-        <section class="budget-panel">
-          <h3>Month matrix</h3>
-          ${budgetMonthMatrixMarkup(summary.monthRows || byMonth.map((item) => ({ month: item.name, total: item.amount, categories: [] })))}
         </section>
         <section class="budget-grid">
           <div class="budget-panel">
@@ -5343,6 +5405,10 @@
             </table>
           </div>
         </section>
+        <details class="budget-panel budget-overview">
+          <summary><h3>Overview</h3></summary>
+          ${budgetMonthMatrixMarkup(summary.monthRows || byMonth.map((item) => ({ month: item.name, total: item.amount, categories: [] })))}
+        </details>
       `;
     }
 
