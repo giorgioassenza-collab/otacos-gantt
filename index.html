@@ -6840,6 +6840,11 @@
         .then((response) => response.ok ? response.text() : Promise.reject(new Error(`Fetch ${response.status}`)));
     }
 
+    function fetchAllOriginsJson(url, timeoutMs = 8500) {
+      return fetchJsonWithTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, timeoutMs)
+        .then((payload) => payload?.contents || "");
+    }
+
     function driveFilePreviewItem(file) {
       const isVideo = String(file.mimeType || "").startsWith("video/");
       return {
@@ -6876,23 +6881,37 @@
 
     async function loadDriveFolderItemsFromPublicPage(folderId) {
       if (!folderId) return [];
-      const folderUrl = `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(folderUrl)}`;
-      try {
-        const html = await fetchTextWithTimeout(proxyUrl, 9000);
-        return driveFolderFileIdsFromHtml(html)
-          .filter((id) => id !== folderId)
-          .map((id, index) => ({
-            type: "image",
-            src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
-            fallback: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
-            original: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
-            label: `Slide ${index + 1}`
-          }));
-      } catch (error) {
-        console.warn("Drive public folder scrape unavailable", error);
-        return [];
+      const folderUrls = [
+        `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
+        `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`,
+        `https://drive.google.com/drive/u/0/folders/${encodeURIComponent(folderId)}`
+      ];
+      const readers = [
+        (url) => fetchTextWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, 9000),
+        (url) => fetchAllOriginsJson(url, 9000),
+        (url) => fetchTextWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, 9000),
+        (url) => fetchTextWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`, 9000)
+      ];
+      for (const url of folderUrls) {
+        for (const read of readers) {
+          try {
+            const html = await read(url);
+            const ids = driveFolderFileIdsFromHtml(html).filter((id) => id !== folderId);
+            if (ids.length) {
+              return ids.map((id, index) => ({
+                type: "image",
+                src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
+                fallback: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
+                original: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
+                label: `Slide ${index + 1}`
+              }));
+            }
+          } catch (error) {
+            console.warn("Drive public folder scrape attempt unavailable", error);
+          }
+        }
       }
+      return [];
     }
 
     async function loadDriveFolderItems(folderId, force = false) {
@@ -7289,7 +7308,7 @@
         assetViewerStage.dataset.loadingToken = loadingToken;
         const folderItems = await Promise.race([
           loadDriveFolderItems(folderId, true),
-          timeoutValue(5000, [])
+          timeoutValue(12000, [])
         ]);
         if (!assetViewerModal.classList.contains("open")) return;
         if (assetViewerStage.dataset.loadingToken === loadingToken) delete assetViewerStage.dataset.loadingToken;
