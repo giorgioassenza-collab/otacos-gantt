@@ -3646,6 +3646,46 @@
       stampChangedItems(currentData.influencers, previousData.influencers);
     }
 
+    function changedCollectionIds(currentItems = [], previousItems = []) {
+      const previous = collectionById(previousItems);
+      return new Set((currentItems || [])
+        .filter((item) => {
+          if (!item?.id) return false;
+          const previousItem = previous.get(item.id);
+          return !previousItem || stableDataString(item) !== stableDataString(previousItem);
+        })
+        .map((item) => item.id));
+    }
+
+    function dirtyIdsForSave(currentData = {}, previousData = {}) {
+      return {
+        tasks: changedCollectionIds(currentData.tasks || [], previousData.tasks || []),
+        pedPosts: changedCollectionIds(currentData.pedPosts || [], previousData.pedPosts || []),
+        influencers: changedCollectionIds(currentData.influencers || [], previousData.influencers || [])
+      };
+    }
+
+    function applyDirtyLocalItems(mergedData, localData, dirtyIds = {}) {
+      const next = normalizeData(mergedData);
+      ["tasks", "pedPosts", "influencers"].forEach((kind) => {
+        const ids = dirtyIds[kind];
+        if (!ids?.size) return;
+        const localById = collectionById(localData?.[kind] || []);
+        const seen = new Set();
+        next[kind] = (next[kind] || []).map((item) => {
+          if (ids.has(item.id) && localById.has(item.id)) {
+            seen.add(item.id);
+            return localById.get(item.id);
+          }
+          return item;
+        });
+        ids.forEach((id) => {
+          if (!seen.has(id) && localById.has(id)) next[kind].push(localById.get(id));
+        });
+      });
+      return normalizeData(next);
+    }
+
     function mergeById(localItems = [], remoteItems = []) {
       const merged = new Map();
       remoteItems.forEach((item) => {
@@ -4073,17 +4113,18 @@
 
     async function saveData(skipUndo = false) {
       stampChangedData(data, committedData);
+      const dirtyIds = dirtyIdsForSave(data, committedData);
       const localRevision = Math.max(dataVersion + 1, Date.now());
       dataVersion = localRevision;
       const saveSnapshotData = cleanForFirestore(data);
       pendingLocalData = saveSnapshotData;
       pendingLocalRevision = localRevision;
       saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
-      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(saveSnapshotData, localRevision, skipUndo));
+      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(saveSnapshotData, localRevision, skipUndo, dirtyIds));
       return saveQueue;
     }
 
-    async function commitBoardData(localData, localHistory, revision) {
+    async function commitBoardData(localData, localHistory, revision, dirtyIds = {}) {
       if (!boardRef || !boardDb) {
         return {
           data: normalizeData(localData),
@@ -4098,6 +4139,7 @@
           const latestDoc = latestSnapshot.data();
           if (latestDoc.data) commitData = mergeBoardData(commitData, normalizeData(latestDoc.data));
         }
+        commitData = applyDirtyLocalItems(commitData, localData, dirtyIds);
         const commitRevision = Math.max(revision, Number(latestSnapshot.data()?.revision || 0) + 1, Date.now());
         transaction.set(boardRef, {
           data: cleanForFirestore(commitData),
@@ -4109,7 +4151,7 @@
       });
     }
 
-    async function performSaveData(saveSnapshotData, saveRevision, skipUndo = false) {
+    async function performSaveData(saveSnapshotData, saveRevision, skipUndo = false, dirtyIds = {}) {
       try {
         setSyncMessage("Salvataggio...");
         const snapshotData = normalizeData(saveSnapshotData || data);
@@ -4130,7 +4172,7 @@
           }
           saveLocalSnapshot(pendingLocalData || snapshotData, historyEntries, Math.max(pendingLocalRevision || 0, nextRevision));
           applyingRemoteUpdate = true;
-          const committed = await commitBoardData(snapshotData, historyEntries, nextRevision);
+          const committed = await commitBoardData(snapshotData, historyEntries, nextRevision, dirtyIds);
           const committedClean = cleanForFirestore(committed.data);
           const hasNewerPending = pendingLocalRevision && pendingLocalRevision > nextRevision && !sameData(pendingLocalData, committedClean);
           if (!hasNewerPending) {
@@ -7453,10 +7495,11 @@
           syncAutomaticPedPostsForTasks([task]);
         }
         touchItem(task);
+        const savePromise = saveData();
         renderBoard();
         renderPed();
         renderCreatorCalendar();
-        await saveData();
+        await savePromise;
         return;
       }
       if (state.type === "ped") {
@@ -7484,8 +7527,9 @@
             touchItem(post);
           }
         }
+        const savePromise = saveData();
         renderPed();
-        await saveData();
+        await savePromise;
       }
     }
 
@@ -7831,9 +7875,31 @@
     }
 
     async function addPedItemToPed(taskId, postId, selectedDate, selectedTime) {
-      if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
+      if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return false;
+      if (taskId && !postId) {
+        const task = data.tasks.find((item) => item.id === taskId);
+        if (!task) return false;
+        task.pedEnabled = true;
+        task.pedAutoDismissed = false;
+        task.pedDate = selectedDate;
+        task.pedTime = normalizeHour(selectedTime || "12:00");
+        touchItem(task);
+        const post = ensurePedPostForTask(task, { syncFromTask: true });
+        if (post) {
+          post.date = selectedDate;
+          post.time = normalizeHour(selectedTime || task.pedTime || "12:00");
+          touchItem(post);
+        }
+        const savePromise = saveData();
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        closePedToPedDialog();
+        await savePromise;
+        return true;
+      }
       const sourcePost = pedPostSourceFromContext(taskId, postId);
-      if (!sourcePost) return;
+      if (!sourcePost) return false;
       const createdAt = Date.now();
       data.pedPosts = data.pedPosts || [];
       data.pedPosts.push({
@@ -7853,8 +7919,11 @@
         createdAt,
         updatedAt: createdAt
       });
-      await saveData();
+      const savePromise = saveData();
       renderPed();
+      closePedToPedDialog();
+      await savePromise;
+      return true;
     }
 
     async function addPedItemToGantt(taskId, postId, selectedDate) {
@@ -8277,7 +8346,6 @@
         document.getElementById("pedToPedDate").value,
         document.getElementById("pedToPedTime").value
       ));
-      closePedToPedDialog();
     });
 
     document.getElementById("creatorCalendarForm").addEventListener("submit", async (event) => {
