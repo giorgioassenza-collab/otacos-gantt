@@ -5068,7 +5068,7 @@
       });
       if (!totalYearRow) totalYearRow = rows.find((row) => /^TOTAL YEAR$/i.test(String(row[0] || "").trim()));
       const totalExpenses = budgetNumberFromCell(totalYearRow?.[indexes.expenses]);
-      const totalBudget = 75000;
+      const totalBudget = 90000;
       const workingBudget = totalBudget;
       const remaining = Math.max(0, totalBudget - totalExpenses);
       const totalSpent = totalExpenses;
@@ -5351,7 +5351,7 @@
         return true;
       });
       const summary = budgetState.summary || {};
-      const totalBudget = summary.totalBudget || 75000;
+      const totalBudget = summary.totalBudget || 90000;
       const totalExpenses = summary.totalExpenses || rows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const totalSpent = summary.totalSpent || totalExpenses;
       const remaining = summary.remaining ?? Math.max(0, totalBudget - totalSpent);
