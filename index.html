@@ -6863,13 +6863,30 @@
     }
 
     function driveFolderFileIdsFromHtml(html) {
-      const ids = new Set();
+      const ids = new Map();
       const raw = String(html || "");
       const text = [
         raw,
         raw.replace(/\\u003d/g, "=").replace(/\\u0026/g, "&").replace(/\\u002F/g, "/"),
         raw.replace(/\\x3d/g, "=").replace(/\\x26/g, "&").replace(/\\x2F/g, "/")
       ].join("\n");
+      [
+        /data-id="([a-zA-Z0-9_-]{20,})"[^>]*data-tooltip="([^"]+\.(?:jpg|jpeg|png|webp|gif))\s+Image"/gi,
+        /data-tooltip="([^"]+\.(?:jpg|jpeg|png|webp|gif))\s+Image"[\s\S]{0,420}?data-id="([a-zA-Z0-9_-]{20,})"/gi,
+        /aria-label="([^"]+\.(?:jpg|jpeg|png|webp|gif))\s+Image"[\s\S]{0,720}?data-id="([a-zA-Z0-9_-]{20,})"/gi
+      ].forEach((pattern) => {
+        let match;
+        while ((match = pattern.exec(text))) {
+          const first = match[1] || "";
+          const second = match[2] || "";
+          const id = first.includes(".") ? second : first;
+          const name = first.includes(".") ? first : second;
+          if (id && id.length >= 20) ids.set(id, name || `Slide ${ids.size + 1}`);
+        }
+      });
+      if (ids.size) {
+        return [...ids].map(([id, name]) => ({ id, name }));
+      }
       [
         /\/file\/d\/([a-zA-Z0-9_-]+)/g,
         /\/d\/([a-zA-Z0-9_-]{20,})/g,
@@ -6884,10 +6901,10 @@
         let match;
         while ((match = pattern.exec(text))) {
           const id = match[1];
-          if (id && id.length >= 20) ids.add(id);
+          if (id && id.length >= 20) ids.set(id, `Slide ${ids.size + 1}`);
         }
       });
-      return [...ids];
+      return [...ids].map(([id, name]) => ({ id, name }));
     }
 
     async function loadDriveFolderItemsFromPublicPage(folderId) {
@@ -6912,14 +6929,14 @@
         for (const read of readers) {
           try {
             const html = await read(url);
-            const ids = driveFolderFileIdsFromHtml(html).filter((id) => id !== folderId);
-            if (ids.length) {
-              return ids.map((id, index) => ({
+            const files = driveFolderFileIdsFromHtml(html).filter((file) => file.id !== folderId);
+            if (files.length) {
+              return files.map((file, index) => ({
                 type: "image",
-                src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
-                fallback: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
-                original: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
-                label: `Slide ${index + 1}`
+                src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w1200`,
+                fallback: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
+                original: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
+                label: file.name || `Slide ${index + 1}`
               }));
             }
           } catch (error) {
