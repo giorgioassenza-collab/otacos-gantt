@@ -6814,10 +6814,15 @@
       };
     }
 
-    async function loadDriveFolderItems(folderId) {
+    function timeoutValue(ms, value = []) {
+      return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+    }
+
+    async function loadDriveFolderItems(folderId, force = false) {
       if (!folderId) return [];
-      if (driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
-      if (driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
+      if (!force && driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
+      if (force) driveFolderPromises.delete(folderId);
+      if (!force && driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
       const promise = fetchJsonWithTimeout(driveFolderFilesUrl(folderId))
         .then((payload) => (payload.files || [])
           .filter((file) => /^image\/|^video\//.test(String(file.mimeType || "")))
@@ -7165,13 +7170,25 @@
           return;
         }
         renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
-        const folderItems = await loadDriveFolderItems(folderId);
+        const loadingToken = `${folderId}-${Date.now()}`;
+        assetViewerStage.dataset.loadingToken = loadingToken;
+        setTimeout(() => {
+          if (!assetViewerModal.classList.contains("open")) return;
+          if (assetViewerStage.dataset.loadingToken !== loadingToken) return;
+          renderAssetViewerNotice("Carousel preview unavailable", "Drive is not returning the folder files. Add the image links one per line to use the in-app slider.");
+        }, 4500);
+        const folderItems = await Promise.race([
+          loadDriveFolderItems(folderId, true),
+          timeoutValue(5000, [])
+        ]);
         if (!assetViewerModal.classList.contains("open")) return;
+        if (assetViewerStage.dataset.loadingToken === loadingToken) delete assetViewerStage.dataset.loadingToken;
         if (folderItems.length) {
           assetViewerItems = folderItems;
           assetViewerIndex = 0;
           renderAssetViewer();
         } else {
+          driveFolderPromises.delete(folderId);
           assetViewerItems = [];
           renderAssetViewerNotice("Carousel preview unavailable", "Drive is not returning the folder files. Add the image links one per line to use the in-app slider.");
         }
