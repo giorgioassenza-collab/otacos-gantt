@@ -1004,6 +1004,7 @@
       font-weight: 900;
       line-height: 1.1;
       text-align: right;
+      cursor: pointer;
     }
 
     .creator-status-swatch {
@@ -6137,7 +6138,7 @@
             card.style.width = "calc(var(--day) - 12px)";
             card.style.borderColor = item.color;
             card.innerHTML = `
-              <div class="creator-status-badge"><span class="creator-status-swatch" style="background:${escapeHtml(creatorStatusColor(item.status))}"></span><span>${escapeHtml(item.status || "-")}</span></div>
+              <div class="creator-status-badge" data-creator-status-trigger="${escapeHtml(item.id)}"><span class="creator-status-swatch" style="background:${escapeHtml(creatorStatusColor(item.status))}"></span><span>${escapeHtml(item.status || "-")}</span></div>
               <div class="creator-card-title">${homeIconMarkup()}<span>${escapeHtml(previewName(item.title))}</span></div>
               <div class="creator-card-line">${escapeHtml(item.project || "-")}</div>
               <div class="creator-card-line">Store: ${escapeHtml(item.store || "-")}</div>
@@ -7366,6 +7367,7 @@
       delete statusMenu.dataset.taskId;
       delete statusMenu.dataset.pedTaskId;
       delete statusMenu.dataset.pedPostId;
+      delete statusMenu.dataset.creatorTaskId;
       delete influencerInlineMenu.dataset.influencerId;
       delete influencerInlineMenu.dataset.influencerKey;
       delete taskContextMenu.dataset.taskId;
@@ -7607,6 +7609,7 @@
     function showPedStatusMenu(postNode, x, y) {
       statusMenu.innerHTML = "";
       delete statusMenu.dataset.taskId;
+      delete statusMenu.dataset.creatorTaskId;
       if (postNode.dataset.taskId) statusMenu.dataset.pedTaskId = postNode.dataset.taskId;
       else delete statusMenu.dataset.pedTaskId;
       if (postNode.dataset.pedPostId) statusMenu.dataset.pedPostId = postNode.dataset.pedPostId;
@@ -7625,6 +7628,27 @@
       statusMenu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - menuHeight - 12))}px`;
       taskContextMenu.classList.remove("open");
       pedContextMenu.classList.remove("open");
+    }
+
+    function showCreatorStatusMenu(taskId, x, y) {
+      statusMenu.innerHTML = "";
+      delete statusMenu.dataset.taskId;
+      delete statusMenu.dataset.pedTaskId;
+      delete statusMenu.dataset.pedPostId;
+      statusMenu.dataset.creatorTaskId = taskId;
+      (data.creatorStatuses || []).forEach((status) => {
+        const name = statusName(status);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.statusValue = name;
+        button.innerHTML = `<span class="status-swatch" style="background:${escapeHtml(creatorStatusColor(name))}"></span>${escapeHtml(name)}`;
+        statusMenu.appendChild(button);
+      });
+      statusMenu.classList.add("open");
+      const menuHeight = Math.min(statusMenu.scrollHeight, window.innerHeight - 24);
+      statusMenu.style.left = `${Math.max(12, Math.min(x, window.innerWidth - 210))}px`;
+      statusMenu.style.top = `${Math.max(12, Math.min(y, window.innerHeight - menuHeight - 12))}px`;
+      creatorContextMenu.classList.remove("open");
     }
 
     bars.addEventListener("click", (event) => {
@@ -7673,6 +7697,18 @@
     statusMenu.addEventListener("click", (event) => {
       const button = event.target.closest("[data-status-value]");
       if (!button) return;
+      if (statusMenu.dataset.creatorTaskId) {
+        const task = data.tasks.find((item) => item.id === statusMenu.dataset.creatorTaskId);
+        if (!task) return;
+        task.creatorStatus = button.dataset.statusValue;
+        syncCreatorStatusToGantt(task);
+        touchItem(task);
+        saveData();
+        renderBoard();
+        renderCreatorCalendar();
+        hideTaskMenus();
+        return;
+      }
       if (statusMenu.dataset.pedTaskId || statusMenu.dataset.pedPostId) {
         let post = null;
         if (statusMenu.dataset.pedTaskId) {
@@ -8082,6 +8118,14 @@
         renderBoard();
         renderPed();
       }
+    });
+
+    creatorCalendar.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-creator-status-trigger]");
+      if (!trigger || suppressNextClick) return;
+      event.preventDefault();
+      event.stopPropagation();
+      showCreatorStatusMenu(trigger.dataset.creatorStatusTrigger, event.clientX, event.clientY);
     });
 
     creatorCalendar.addEventListener("contextmenu", (event) => {
