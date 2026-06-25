@@ -1332,6 +1332,23 @@
       text-align: center;
     }
 
+    .asset-viewer-empty strong,
+    .asset-viewer-empty span {
+      display: block;
+    }
+
+    .asset-viewer-empty strong {
+      margin-bottom: 8px;
+      font-size: 17px;
+      font-weight: 950;
+    }
+
+    .asset-viewer-empty span {
+      max-width: 360px;
+      color: rgba(255,255,255,.72);
+      line-height: 1.45;
+    }
+
     .asset-viewer-controls {
       display: flex;
       align-items: center;
@@ -5976,10 +5993,6 @@
             </div>
             ${budgetBarsMarkup(sortedByMonth, selectedSpent)}
           </div>
-          <div class="budget-panel">
-            <h3>Selected spent</h3>
-            <div class="budget-kpi"><span>Filtered total</span><strong>${escapeHtml(budgetCurrency(selectedSpent))}</strong></div>
-          </div>
         </section>
         <section class="budget-panel">
           <h3>Details by selected month</h3>
@@ -6871,6 +6884,7 @@
       if (folderId) {
         return {
           type: "folder",
+          folderId,
           src: `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
           original: url,
           label: "Drive folder"
@@ -7046,16 +7060,27 @@
       return frame;
     }
 
+    function renderAssetViewerNotice(title, body = "") {
+      assetViewerStage.innerHTML = `
+        <div class="asset-viewer-empty">
+          <strong>${escapeHtml(title)}</strong>
+          ${body ? `<span>${escapeHtml(body)}</span>` : ""}
+        </div>
+      `;
+      assetViewerCount.textContent = "";
+      assetViewerPrev.disabled = true;
+      assetViewerNext.disabled = true;
+      assetViewerMoveLeft.disabled = true;
+      assetViewerMoveRight.disabled = true;
+      assetViewerMoveLeft.hidden = true;
+      assetViewerMoveRight.hidden = true;
+    }
+
     function renderAssetViewer() {
       const item = assetViewerItems[assetViewerIndex];
       assetViewerStage.innerHTML = "";
       if (!item) {
-        assetViewerStage.innerHTML = `<div class="asset-viewer-empty">No asset available.</div>`;
-        assetViewerCount.textContent = "";
-        assetViewerPrev.disabled = true;
-        assetViewerNext.disabled = true;
-        assetViewerMoveLeft.disabled = true;
-        assetViewerMoveRight.disabled = true;
+        renderAssetViewerNotice("No asset available.");
         return;
       }
       assetViewerTitle.textContent = item.label || "Asset preview";
@@ -7068,14 +7093,7 @@
       assetViewerMoveLeft.hidden = !canReorder;
       assetViewerMoveRight.hidden = !canReorder;
       if (item.type === "folder") {
-        assetViewerPrev.disabled = true;
-        assetViewerNext.disabled = true;
-        assetViewerStage.innerHTML = `
-          <div class="asset-folder-browser">
-            <iframe src="${escapeHtml(item.src)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
-            <a href="${escapeHtml(item.original || item.src)}" target="_blank" rel="noopener noreferrer">Open in Drive</a>
-          </div>
-        `;
+        renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
         return;
       }
       const track = document.createElement("div");
@@ -7126,21 +7144,33 @@
     }
 
     async function openAssetViewer(asset, format = "", source = null) {
-      assetViewerItems = assetViewerItemsFromValue(asset, format);
+      const folderId = driveFolderId(asset);
       assetViewerIndex = 0;
       assetViewerSource = source;
+      if (folderId) {
+        assetViewerTitle.textContent = "Carousel";
+        assetViewerModal.classList.add("open");
+        assetViewerItems = driveFolderCache.get(folderId) || [];
+        if (assetViewerItems.length) {
+          renderAssetViewer();
+          return;
+        }
+        renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
+        const folderItems = await loadDriveFolderItems(folderId);
+        if (!assetViewerModal.classList.contains("open")) return;
+        if (folderItems.length) {
+          assetViewerItems = folderItems;
+          assetViewerIndex = 0;
+          renderAssetViewer();
+        } else {
+          assetViewerItems = [];
+          renderAssetViewerNotice("Carousel preview unavailable", "Drive is not returning the folder files. Add the image links one per line to use the in-app slider.");
+        }
+        return;
+      }
+      assetViewerItems = assetViewerItemsFromValue(asset, format);
       renderAssetViewer();
       assetViewerModal.classList.add("open");
-      const folderId = driveFolderId(asset);
-      if (!folderId) return;
-      assetViewerTitle.textContent = "Carousel";
-      const folderItems = await loadDriveFolderItems(folderId);
-      if (!assetViewerModal.classList.contains("open")) return;
-      if (folderItems.length) {
-        assetViewerItems = folderItems;
-        assetViewerIndex = 0;
-        renderAssetViewer();
-      }
     }
 
     function closeAssetViewer() {
