@@ -4114,6 +4114,7 @@
     let assetViewerSource = null;
     const driveFolderCache = new Map();
     const driveFolderPromises = new Map();
+    const driveFolderStorageKey = "otacosWorkflowDriveFolderSlides";
     let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -6862,6 +6863,34 @@
       }));
     }
 
+    function readStoredDriveFolders() {
+      try {
+        const saved = localStorage.getItem(driveFolderStorageKey);
+        if (!saved) return {};
+        const parsed = JSON.parse(saved);
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function storedDriveFolderItems(folderId) {
+      const folders = readStoredDriveFolders();
+      return serializableAssetItems(folders[folderId] || []);
+    }
+
+    function storeDriveFolderItems(folderId, items = []) {
+      const serializable = serializableAssetItems(items);
+      if (!folderId || !serializable.length) return;
+      const folders = readStoredDriveFolders();
+      folders[folderId] = serializable;
+      try {
+        localStorage.setItem(driveFolderStorageKey, JSON.stringify(folders));
+      } catch (error) {
+        console.warn("Drive folder slide cache unavailable", error);
+      }
+    }
+
     function fetchJsonWithTimeout(url, timeoutMs = 8500) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -7020,8 +7049,15 @@
       const knownItems = knownDriveFolderItems(folderId);
       if (knownItems.length) {
         driveFolderCache.set(folderId, knownItems);
+        storeDriveFolderItems(folderId, knownItems);
         driveFolderPromises.delete(folderId);
         return knownItems;
+      }
+      const storedItems = storedDriveFolderItems(folderId);
+      if (storedItems.length) {
+        driveFolderCache.set(folderId, storedItems);
+        driveFolderPromises.delete(folderId);
+        return storedItems;
       }
       if (!force && driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
       if (force) driveFolderPromises.delete(folderId);
@@ -7032,6 +7068,7 @@
       ])
         .then((items) => {
           driveFolderCache.set(folderId, items);
+          if (items.length) storeDriveFolderItems(folderId, items);
           driveFolderPromises.delete(folderId);
           return items;
         });
@@ -7456,6 +7493,13 @@
         assetViewerItems = cachedFolderItemsFromSource(folderId);
         if (assetViewerItems.length) {
           driveFolderCache.set(folderId, assetViewerItems);
+          renderAssetViewer();
+          return;
+        }
+        assetViewerItems = storedDriveFolderItems(folderId);
+        if (assetViewerItems.length) {
+          driveFolderCache.set(folderId, assetViewerItems);
+          persistFolderItemsForSource(folderId, assetViewerItems);
           renderAssetViewer();
           return;
         }
