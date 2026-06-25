@@ -6788,9 +6788,17 @@
     }
 
     function driveFolderFilesUrl(folderId) {
-      const query = `'${folderId}' in parents and trashed=false and (mimeType contains 'image/' or mimeType contains 'video/')`;
-      const fields = "files(id,name,mimeType,thumbnailLink,webViewLink)";
-      return `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=${encodeURIComponent("name")}&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+      const query = `'${folderId}' in parents and trashed=false`;
+      const fields = "files(id,name,mimeType,thumbnailLink,webViewLink,webContentLink)";
+      return `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=${encodeURIComponent("name")}&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    }
+
+    function fetchJsonWithTimeout(url, timeoutMs = 8500) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId))
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Drive ${response.status}`)));
     }
 
     function driveFilePreviewItem(file) {
@@ -6810,9 +6818,10 @@
       if (!folderId) return [];
       if (driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
       if (driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
-      const promise = fetch(driveFolderFilesUrl(folderId))
-        .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Drive ${response.status}`)))
-        .then((payload) => (payload.files || []).map(driveFilePreviewItem))
+      const promise = fetchJsonWithTimeout(driveFolderFilesUrl(folderId))
+        .then((payload) => (payload.files || [])
+          .filter((file) => /^image\/|^video\//.test(String(file.mimeType || "")))
+          .map(driveFilePreviewItem))
         .catch((error) => {
           console.warn("Drive folder preview unavailable", error);
           return [];
