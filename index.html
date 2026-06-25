@@ -6824,6 +6824,26 @@
       return `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=${encodeURIComponent("name")}&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
     }
 
+    function knownDriveFolderItems(folderId) {
+      const folders = {
+        "1Dg_bgRkdzoaUD8vSb4XuPaHN6ZxHZEf_": [
+          ["1zrXTo1wYGF_WpXWmTbua5aQBfY_srOzY", "12_4.3.5.jpg"],
+          ["17Ljs5IYB1mhzNr9aVDIx3M5x_x4tfXSz", "26_4.5.8.jpg"],
+          ["1w7MHTm1Az_7vP496f5lS3OWUrrI3YPDV", "32_4.5.14.jpg"],
+          ["1VDGQJ5fb2g2dGrjxPjwdjDTv2wa-wWug", "4_4.2.3.jpg"],
+          ["1TpTGe9AAORznaWgW08twSPk60JM8oiRd", "59_1.75.1.jpg"],
+          ["12XNfF2KO91dAjCes5_Wtb0fntYMYxSav", "62_1.79.1.jpg"]
+        ]
+      };
+      return (folders[folderId] || []).map(([id, name]) => ({
+        type: "image",
+        src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
+        fallback: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
+        original: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
+        label: name
+      }));
+    }
+
     function fetchJsonWithTimeout(url, timeoutMs = 8500) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -6949,6 +6969,12 @@
 
     async function loadDriveFolderItems(folderId, force = false) {
       if (!folderId) return [];
+      const knownItems = knownDriveFolderItems(folderId);
+      if (knownItems.length) {
+        driveFolderCache.set(folderId, knownItems);
+        driveFolderPromises.delete(folderId);
+        return knownItems;
+      }
       if (!force && driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
       if (force) driveFolderPromises.delete(folderId);
       if (!force && driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
@@ -7331,6 +7357,12 @@
       if (folderId) {
         assetViewerTitle.textContent = "Carousel";
         assetViewerModal.classList.add("open");
+        assetViewerItems = knownDriveFolderItems(folderId);
+        if (assetViewerItems.length) {
+          driveFolderCache.set(folderId, assetViewerItems);
+          renderAssetViewer();
+          return;
+        }
         assetViewerItems = driveFolderCache.get(folderId) || [];
         if (assetViewerItems.length) {
           renderAssetViewer();
