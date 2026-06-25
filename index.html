@@ -6832,6 +6832,14 @@
         .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Drive ${response.status}`)));
     }
 
+    function fetchTextWithTimeout(url, timeoutMs = 8500) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      return fetch(url, { signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId))
+        .then((response) => response.ok ? response.text() : Promise.reject(new Error(`Fetch ${response.status}`)));
+    }
+
     function driveFilePreviewItem(file) {
       const isVideo = String(file.mimeType || "").startsWith("video/");
       return {
@@ -6849,6 +6857,44 @@
       return new Promise((resolve) => setTimeout(() => resolve(value), ms));
     }
 
+    function driveFolderFileIdsFromHtml(html) {
+      const ids = new Set();
+      const text = String(html || "");
+      [
+        /\/file\/d\/([a-zA-Z0-9_-]+)/g,
+        /[?&]id=([a-zA-Z0-9_-]{20,})/g,
+        /"([a-zA-Z0-9_-]{25,})"/g
+      ].forEach((pattern) => {
+        let match;
+        while ((match = pattern.exec(text))) {
+          const id = match[1];
+          if (id && id.length >= 20) ids.add(id);
+        }
+      });
+      return [...ids];
+    }
+
+    async function loadDriveFolderItemsFromPublicPage(folderId) {
+      if (!folderId) return [];
+      const folderUrl = `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(folderUrl)}`;
+      try {
+        const html = await fetchTextWithTimeout(proxyUrl, 9000);
+        return driveFolderFileIdsFromHtml(html)
+          .filter((id) => id !== folderId)
+          .map((id, index) => ({
+            type: "image",
+            src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
+            fallback: `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`,
+            original: `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`,
+            label: `Slide ${index + 1}`
+          }));
+      } catch (error) {
+        console.warn("Drive public folder scrape unavailable", error);
+        return [];
+      }
+    }
+
     async function loadDriveFolderItems(folderId, force = false) {
       if (!folderId) return [];
       if (!force && driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
@@ -6860,7 +6906,11 @@
           .map(driveFilePreviewItem))
         .catch((error) => {
           console.warn("Drive folder preview unavailable", error);
-          return [];
+          return loadDriveFolderItemsFromPublicPage(folderId);
+        })
+        .then(async (items) => {
+          if (items.length) return items;
+          return loadDriveFolderItemsFromPublicPage(folderId);
         })
         .then((items) => {
           driveFolderCache.set(folderId, items);
@@ -7234,14 +7284,9 @@
           renderAssetViewer();
           return;
         }
-        renderAssetViewerNotice("Loading carousel...", "Reading the images from the Drive folder.");
+        renderDriveFolderFallback(folderId, asset);
         const loadingToken = `${folderId}-${Date.now()}`;
         assetViewerStage.dataset.loadingToken = loadingToken;
-        setTimeout(() => {
-          if (!assetViewerModal.classList.contains("open")) return;
-          if (assetViewerStage.dataset.loadingToken !== loadingToken) return;
-          renderDriveFolderFallback(folderId, asset);
-        }, 4500);
         const folderItems = await Promise.race([
           loadDriveFolderItems(folderId, true),
           timeoutValue(5000, [])
