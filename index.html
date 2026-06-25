@@ -957,34 +957,37 @@
     }
 
     .asset-video-preview {
-      width: min(50%, 360px);
-      min-height: 86px;
+      width: min(42%, 240px);
+      aspect-ratio: 4 / 5;
+      min-height: 132px;
       margin-top: 5px;
       border: 1px solid #e2e8f0;
-      border-radius: 6px;
+      border-radius: 12px;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 10px;
       padding: 12px;
       box-sizing: border-box;
       background:
-        radial-gradient(circle at 18% 18%, rgba(255, 90, 20, .16), transparent 32%),
-        linear-gradient(135deg, #fff8f1, #f8fafc);
+        linear-gradient(145deg, rgba(255, 90, 20, .9), rgba(255, 184, 77, .82)),
+        radial-gradient(circle at 20% 18%, rgba(255,255,255,.5), transparent 28%);
       color: #18130f;
       font-size: 11px;
       font-weight: 950;
+      overflow: hidden;
+      position: relative;
     }
 
     .asset-video-play {
-      width: 38px;
-      height: 38px;
+      width: 34px;
+      height: 34px;
       border-radius: 999px;
       display: grid;
       place-items: center;
       flex: 0 0 auto;
-      background: var(--orange);
-      color: #fff;
-      box-shadow: 0 8px 18px rgba(255, 90, 20, .24);
+      background: rgba(255,255,255,.92);
+      color: var(--orange);
+      box-shadow: 0 8px 20px rgba(24, 19, 15, .18);
     }
 
     .asset-video-preview span:last-child {
@@ -994,9 +997,66 @@
 
     .asset-video-preview small {
       margin: 0;
-      color: #766d64;
+      color: rgba(24, 19, 15, .72);
       font-size: 10px;
       font-weight: 850;
+    }
+
+    .asset-carousel-preview {
+      width: min(42%, 240px);
+      aspect-ratio: 4 / 5;
+      margin-top: 5px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(24, 19, 15, .12);
+      overflow: visible;
+      position: relative;
+    }
+
+    .asset-carousel-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
+    }
+
+    .asset-carousel-preview::before,
+    .asset-carousel-preview::after {
+      content: "";
+      position: absolute;
+      inset: 9px -9px auto auto;
+      width: 82%;
+      height: 82%;
+      border-radius: 12px;
+      border: 1px solid rgba(24, 19, 15, .12);
+      background: rgba(255,255,255,.82);
+      transform: translate(12px, 10px);
+      z-index: -1;
+    }
+
+    .asset-carousel-preview::after {
+      transform: translate(22px, 20px);
+      opacity: .65;
+    }
+
+    .asset-carousel-badge {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: 999px;
+      color: #18130f;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 8px 22px rgba(24, 19, 15, .16);
+      font-size: 10px;
+      font-weight: 950;
     }
 
     .asset-open {
@@ -1013,12 +1073,13 @@
     }
 
     .asset-open:hover .asset-preview,
-    .asset-open:hover .asset-video-preview {
+    .asset-open:hover .asset-video-preview,
+    .asset-open:hover .asset-carousel-preview {
       box-shadow: 0 0 0 3px rgba(255, 90, 20, .14);
     }
 
     .asset-viewer-modal {
-      width: min(980px, calc(100vw - 32px));
+      width: min(1120px, calc(100vw - 32px));
       max-height: calc(100vh - 96px);
     }
 
@@ -1035,30 +1096,87 @@
     }
 
     .asset-viewer-stage {
-      min-height: min(62vh, 620px);
-      display: grid;
-      place-items: center;
+      min-height: min(66vh, 660px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #111827;
+      background: linear-gradient(145deg, #1f1b17, #0f1115);
+      position: relative;
+      padding: 28px 64px;
     }
 
-    .asset-viewer-stage img,
-    .asset-viewer-stage video,
-    .asset-viewer-stage iframe {
+    .asset-slide-track {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+      max-width: 920px;
+    }
+
+    .asset-slide-track.is-single {
+      grid-template-columns: minmax(180px, 360px);
+      justify-content: center;
+    }
+
+    .asset-slide-card {
+      aspect-ratio: 4 / 5;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 18px 46px rgba(0,0,0,.34);
+      opacity: .58;
+      transform: scale(.86);
+      transition: transform .24s var(--ease-out), opacity .24s var(--ease-out);
+    }
+
+    .asset-slide-card.is-active {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 28px 68px rgba(0,0,0,.46), 0 0 0 4px rgba(255, 90, 20, .22);
+    }
+
+    .asset-slide-card img,
+    .asset-slide-card video,
+    .asset-slide-card iframe {
       display: block;
-      max-width: 100%;
-      max-height: min(62vh, 620px);
-      width: auto;
-      height: auto;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
       border: 0;
       background: #fff;
     }
 
-    .asset-viewer-stage iframe {
-      width: 100%;
-      height: min(62vh, 620px);
+    .asset-viewer-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      color: #18130f;
+      box-shadow: 0 12px 30px rgba(0,0,0,.28);
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: 950;
+    }
+
+    .asset-viewer-arrow:hover {
+      background: var(--orange);
+      color: #fff;
+    }
+
+    .asset-viewer-arrow.prev {
+      left: 16px;
+    }
+
+    .asset-viewer-arrow.next {
+      right: 16px;
     }
 
     .asset-viewer-empty {
@@ -1081,6 +1199,12 @@
       color: #766d64;
       font-size: 12px;
       font-weight: 900;
+    }
+
+    .asset-order-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .ped-post small {
@@ -3466,7 +3590,11 @@
       <div class="asset-viewer-stage" id="assetViewerStage"></div>
       <div class="asset-viewer-controls">
         <button class="secondary-btn" id="assetViewerPrev" type="button">Previous</button>
-        <span class="asset-viewer-count" id="assetViewerCount"></span>
+        <div class="asset-order-controls">
+          <button class="secondary-btn" id="assetViewerMoveLeft" type="button">Move left</button>
+          <span class="asset-viewer-count" id="assetViewerCount"></span>
+          <button class="secondary-btn" id="assetViewerMoveRight" type="button">Move right</button>
+        </div>
         <button class="secondary-btn" id="assetViewerNext" type="button">Next</button>
       </div>
     </div>
@@ -3566,6 +3694,8 @@
     const assetViewerCount = document.getElementById("assetViewerCount");
     const assetViewerPrev = document.getElementById("assetViewerPrev");
     const assetViewerNext = document.getElementById("assetViewerNext");
+    const assetViewerMoveLeft = document.getElementById("assetViewerMoveLeft");
+    const assetViewerMoveRight = document.getElementById("assetViewerMoveRight");
     const influencerToGanttModal = document.getElementById("influencerToGanttModal");
     const creatorCalendarModal = document.getElementById("creatorCalendarModal");
     const creatorCalendarStatus = document.getElementById("creatorCalendarStatus");
@@ -3672,6 +3802,7 @@
     let budgetMonthSortMode = "spend";
     let assetViewerItems = [];
     let assetViewerIndex = 0;
+    let assetViewerSource = null;
     let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -6311,7 +6442,9 @@
 
     function assetOpenButtonMarkup(item, content) {
       if (!String(item.asset || "").trim()) return content;
-      return `<button class="asset-open" type="button" data-asset-open="${escapeHtml(encodeURIComponent(item.asset || ""))}" data-asset-format="${escapeHtml(normalizePedFormat(item.format))}">${content}</button>`;
+      const sourceType = item.source === "Gantt" ? "task" : "post";
+      const sourceId = item.source === "Gantt" ? String(item.id || "").replace(/^task-/, "") : String(item.id || "");
+      return `<button class="asset-open" type="button" data-asset-open="${escapeHtml(encodeURIComponent(item.asset || ""))}" data-asset-format="${escapeHtml(normalizePedFormat(item.format))}" data-asset-source-type="${escapeHtml(sourceType)}" data-asset-source-id="${escapeHtml(sourceId)}">${content}</button>`;
     }
 
     function normalizeHour(value) {
@@ -6443,30 +6576,58 @@
         return {
           type: "folder",
           src: `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
+          original: url,
           label: "Drive folder"
         };
       }
       const fileId = driveFileId(url);
       if (fileId && normalizePedFormat(preferredFormat) === "Video") {
-        return { type: "iframe", src: url.replace("/view", "/preview"), label: "Drive video" };
+        return { type: "iframe", src: url.replace("/view", "/preview"), original: url, label: "Drive video" };
       }
       if (fileId) {
         return {
           type: "image",
           src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1200`,
           fallback: url.replace("/view", "/preview"),
+          original: url,
           label: "Drive asset"
         };
       }
-      if (isVideoAsset(url)) return { type: "video", src: url, label: "Video" };
-      if (isImageAsset(url)) return { type: "image", src: url, label: "Image" };
-      return { type: "iframe", src: url, label: "Asset" };
+      if (isVideoAsset(url)) return { type: "video", src: url, original: url, label: "Video" };
+      if (isImageAsset(url)) return { type: "image", src: url, original: url, label: "Image" };
+      return { type: "iframe", src: url, original: url, label: "Asset" };
     }
 
     function assetViewerItemsFromValue(value, preferredFormat = "") {
       const links = assetLinks(value);
       if (!links.length) return [];
       return links.map((link) => assetViewerItemFromLink(link, preferredFormat)).filter(Boolean);
+    }
+
+    function assetCarouselPreviewMarkup(value, preferredFormat = "") {
+      const items = assetViewerItemsFromValue(value, preferredFormat);
+      const firstImage = items.find((item) => item.type === "image");
+      const count = items.length || (driveFolderId(value) ? 1 : 0);
+      const label = count > 1 ? `${count} slides` : "Carousel";
+      if (firstImage) {
+        return `
+          <div class="asset-carousel-preview">
+            <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
+            <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(label)}</span></span>
+          </div>
+        `;
+      }
+      return `
+        <div class="asset-carousel-preview">
+          <div class="asset-video-preview" style="width:100%;height:100%;min-height:0;margin:0;border:0;border-radius:12px;">
+            <span class="asset-video-play">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.8v12.4c0 .8.9 1.3 1.6.9l9.8-6.2c.6-.4.6-1.4 0-1.8L9.6 4.9C8.9 4.5 8 5 8 5.8Z"/></svg>
+            </span>
+            <span>Open carousel<small>${escapeHtml(label)}</small></span>
+          </div>
+          <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(label)}</span></span>
+        </div>
+      `;
     }
 
     function pedSubtaskPreview(subtasks = []) {
@@ -6480,10 +6641,11 @@
     function pedPreviewMarkup(item) {
       const status = item.status || "";
       const statusColorValue = pedStatusColor(status);
-      const assetVideo = isVideoAsset(item.asset);
       const assetFolder = Boolean(driveFolderId(item.asset));
-      const assetPreview = assetVideo || assetFolder ? "" : drivePreviewUrl(item.asset);
-      const assetEmbed = assetVideo || assetPreview || assetFolder ? "" : assetEmbedUrl(item.asset);
+      const assetCarousel = normalizePedFormat(item.format) === "Carousel" || assetFolder || assetLinks(item.asset).length > 1;
+      const assetVideo = !assetCarousel && isVideoAsset(item.asset);
+      const assetPreview = assetVideo || assetFolder || assetCarousel ? "" : drivePreviewUrl(item.asset);
+      const assetEmbed = assetVideo || assetPreview || assetFolder || assetCarousel ? "" : assetEmbedUrl(item.asset);
       const fullPreview = zoomIndex > 3;
       if (!fullPreview) {
         return `
@@ -6502,13 +6664,43 @@
         <div class="ped-status-chip"><span class="ped-status-swatch" style="background:${escapeHtml(statusColorValue)}"></span><span>${escapeHtml(status || "-")}</span></div>
         <div class="ped-preview-line">Who: ${escapeHtml((item.members || []).join(", ") || "-")}</div>
         <div class="ped-subtask-preview">Subtasks: ${escapeHtml(pedSubtaskPreview(item.subtasks || []))}</div>
-        ${assetVideo || assetPreview || assetEmbed || assetFolder ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
-        ${assetFolder ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Open carousel")) : ""}
+        ${assetVideo || assetPreview || assetEmbed || assetFolder || assetCarousel ? `<div class="ped-preview-line">Asset preview:</div>` : `<div class="ped-preview-line">Asset: ${escapeHtml(item.asset || "-")}</div>`}
+        ${assetCarousel ? assetOpenButtonMarkup(item, assetCarouselPreviewMarkup(item.asset, item.format)) : ""}
         ${assetVideo ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Video preview")) : ""}
         ${assetPreview ? assetOpenButtonMarkup(item, `<img class="asset-preview" src="${escapeHtml(assetPreview)}" alt="Asset preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`) : ""}
         ${assetEmbed ? assetOpenButtonMarkup(item, videoAssetPreviewMarkup("Open asset")) : ""}
         <div class="ped-preview-line">Copy: ${escapeHtml(item.copy || "-")}</div>
       `;
+    }
+
+    function assetViewerMediaElement(item) {
+      if (item.type === "image") {
+        const image = document.createElement("img");
+        image.src = item.src;
+        image.alt = item.label || "Asset preview";
+        image.onerror = () => {
+          if (!item.fallback) return;
+          const frame = document.createElement("iframe");
+          frame.src = item.fallback;
+          frame.loading = "lazy";
+          frame.referrerPolicy = "no-referrer";
+          image.replaceWith(frame);
+        };
+        return image;
+      }
+      if (item.type === "video") {
+        const video = document.createElement("video");
+        video.src = item.src;
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        return video;
+      }
+      const frame = document.createElement("iframe");
+      frame.src = item.src;
+      frame.loading = "lazy";
+      frame.referrerPolicy = "no-referrer";
+      return frame;
     }
 
     function renderAssetViewer() {
@@ -6519,45 +6711,58 @@
         assetViewerCount.textContent = "";
         assetViewerPrev.disabled = true;
         assetViewerNext.disabled = true;
+        assetViewerMoveLeft.disabled = true;
+        assetViewerMoveRight.disabled = true;
         return;
       }
       assetViewerTitle.textContent = item.label || "Asset preview";
-      assetViewerCount.textContent = assetViewerItems.length > 1 ? `${assetViewerIndex + 1} / ${assetViewerItems.length}` : "";
+      assetViewerCount.textContent = assetViewerItems.length > 1 ? `${assetViewerIndex + 1} / ${assetViewerItems.length}` : "1 / 1";
       assetViewerPrev.disabled = assetViewerItems.length <= 1;
       assetViewerNext.disabled = assetViewerItems.length <= 1;
-      if (item.type === "image") {
-        const image = document.createElement("img");
-        image.src = item.src;
-        image.alt = item.label || "Asset preview";
-        image.onerror = () => {
-          if (item.fallback) {
-            assetViewerStage.innerHTML = `<iframe src="${escapeHtml(item.fallback)}" loading="lazy" referrerpolicy="no-referrer"></iframe>`;
-          } else {
-            assetViewerStage.innerHTML = `<div class="asset-viewer-empty">Preview not available.</div>`;
-          }
-        };
-        assetViewerStage.appendChild(image);
-        return;
+      const canReorder = Boolean(assetViewerSource) && assetViewerItems.length > 1 && !assetViewerItems.some((entry) => entry.type === "folder");
+      assetViewerMoveLeft.disabled = !canReorder;
+      assetViewerMoveRight.disabled = !canReorder;
+      const track = document.createElement("div");
+      track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : ""}`;
+      const visibleIndexes = assetViewerItems.length === 1
+        ? [assetViewerIndex]
+        : [
+          (assetViewerIndex - 1 + assetViewerItems.length) % assetViewerItems.length,
+          assetViewerIndex,
+          (assetViewerIndex + 1) % assetViewerItems.length
+        ];
+      visibleIndexes.forEach((index, position) => {
+        const card = document.createElement("div");
+        card.className = `asset-slide-card ${position === 1 || assetViewerItems.length === 1 ? "is-active" : ""}`;
+        card.appendChild(assetViewerMediaElement(assetViewerItems[index]));
+        track.appendChild(card);
+      });
+      if (assetViewerItems.length > 1) {
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.className = "asset-viewer-arrow prev";
+        prev.textContent = "‹";
+        prev.addEventListener("click", () => {
+          assetViewerIndex = (assetViewerIndex - 1 + assetViewerItems.length) % assetViewerItems.length;
+          renderAssetViewer();
+        });
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "asset-viewer-arrow next";
+        next.textContent = "›";
+        next.addEventListener("click", () => {
+          assetViewerIndex = (assetViewerIndex + 1) % assetViewerItems.length;
+          renderAssetViewer();
+        });
+        assetViewerStage.append(prev, next);
       }
-      if (item.type === "video") {
-        const video = document.createElement("video");
-        video.src = item.src;
-        video.controls = true;
-        video.playsInline = true;
-        video.preload = "metadata";
-        assetViewerStage.appendChild(video);
-        return;
-      }
-      const frame = document.createElement("iframe");
-      frame.src = item.src;
-      frame.loading = "lazy";
-      frame.referrerPolicy = "no-referrer";
-      assetViewerStage.appendChild(frame);
+      assetViewerStage.appendChild(track);
     }
 
-    function openAssetViewer(asset, format = "") {
+    function openAssetViewer(asset, format = "", source = null) {
       assetViewerItems = assetViewerItemsFromValue(asset, format);
       assetViewerIndex = 0;
+      assetViewerSource = source;
       renderAssetViewer();
       assetViewerModal.classList.add("open");
     }
@@ -6567,6 +6772,44 @@
       assetViewerStage.innerHTML = "";
       assetViewerItems = [];
       assetViewerIndex = 0;
+      assetViewerSource = null;
+    }
+
+    function sourceAssetRecord() {
+      if (!assetViewerSource?.id) return null;
+      if (assetViewerSource.type === "task") return (data.tasks || []).find((task) => task.id === assetViewerSource.id) || null;
+      return (data.pedPosts || []).find((post) => post.id === assetViewerSource.id) || null;
+    }
+
+    async function saveAssetViewerOrder() {
+      const record = sourceAssetRecord();
+      if (!record) return;
+      const nextAsset = assetViewerItems.map((item) => item.original || item.src).join("\n");
+      if (assetViewerSource.type === "task") {
+        record.pedAsset = nextAsset;
+        const linkedPost = (data.pedPosts || []).find((post) => post.sourceTaskId === record.id);
+        if (linkedPost) {
+          linkedPost.asset = nextAsset;
+          touchItem(linkedPost);
+        }
+      } else {
+        record.asset = nextAsset;
+      }
+      touchItem(record);
+      const savePromise = saveData();
+      renderPed();
+      await savePromise;
+    }
+
+    async function moveAssetViewerItem(direction) {
+      if (assetViewerItems.length <= 1) return;
+      const targetIndex = assetViewerIndex + direction;
+      if (targetIndex < 0 || targetIndex >= assetViewerItems.length) return;
+      const [item] = assetViewerItems.splice(assetViewerIndex, 1);
+      assetViewerItems.splice(targetIndex, 0, item);
+      assetViewerIndex = targetIndex;
+      renderAssetViewer();
+      await saveAssetViewerOrder();
     }
 
     function renderPed() {
@@ -8716,7 +8959,14 @@
       if (assetButton) {
         event.preventDefault();
         event.stopPropagation();
-        openAssetViewer(decodeURIComponent(assetButton.dataset.assetOpen || ""), assetButton.dataset.assetFormat || "");
+        openAssetViewer(
+          decodeURIComponent(assetButton.dataset.assetOpen || ""),
+          assetButton.dataset.assetFormat || "",
+          {
+            type: assetButton.dataset.assetSourceType || "",
+            id: assetButton.dataset.assetSourceId || ""
+          }
+        );
         return;
       }
       const statusChip = event.target.closest(".ped-status-chip");
@@ -8875,6 +9125,12 @@
       if (!assetViewerItems.length) return;
       assetViewerIndex = (assetViewerIndex + 1) % assetViewerItems.length;
       renderAssetViewer();
+    });
+    assetViewerMoveLeft.addEventListener("click", () => {
+      moveAssetViewerItem(-1);
+    });
+    assetViewerMoveRight.addEventListener("click", () => {
+      moveAssetViewerItem(1);
     });
     document.getElementById("closeInfluencerToGanttModal").addEventListener("click", closeInfluencerToGanttDialog);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
