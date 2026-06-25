@@ -5375,6 +5375,7 @@
           pedTitle: task.pedTitle || "",
           pedSocial: Array.isArray(task.pedSocial) ? task.pedSocial : [],
           pedAsset: task.pedAsset || "",
+          pedAssetItems: Array.isArray(task.pedAssetItems) ? task.pedAssetItems : [],
           pedCopy: task.pedCopy || "",
           creatorStatus: task.creatorStatus || (normalized.creatorStatuses[0] ? statusName(normalized.creatorStatuses[0]) : ""),
           creatorStore: task.creatorStore || "",
@@ -5404,6 +5405,7 @@
           ? post.social.map((item) => item === "tiktok" ? "tiktok" : item === "instagram" ? "instagram" : item)
           : [],
         asset: post.asset || post.link || "",
+        assetItems: Array.isArray(post.assetItems) ? post.assetItems : [],
         copy: post.copy || "",
         subtasks: (post.subtasks || []).map((subtask) => ({
           id: subtask.id || `ps${Date.now()}${Math.random()}`,
@@ -6686,6 +6688,7 @@
             social: linkedPost?.social || [],
             format: normalizePedFormat(linkedPost?.format),
             asset: linkedPost?.asset || "",
+            assetItems: linkedPost?.assetItems || task.pedAssetItems || [],
             copy: linkedPost?.copy || "",
             subtasks: linkedPost?.subtasks || task.subtasks || [],
             project: project?.name || "",
@@ -7087,6 +7090,63 @@
       return links.map((link) => assetViewerItemFromLink(link, preferredFormat)).filter(Boolean);
     }
 
+    function serializableAssetItems(items = []) {
+      return (items || [])
+        .filter((item) => item && item.type !== "folder")
+        .map((item) => ({
+          type: item.type || "image",
+          src: item.src || "",
+          fallback: item.fallback || "",
+          original: item.original || item.src || "",
+          label: item.label || ""
+        }))
+        .filter((item) => item.src || item.original);
+    }
+
+    function cachedFolderItemsFromRecord(record, folderId) {
+      const items = serializableAssetItems(record?.assetItems || record?.pedAssetItems || []);
+      if (!items.length) return [];
+      const assetValue = record?.asset || record?.pedAsset || "";
+      const recordFolderId = driveFolderId(assetValue);
+      return !recordFolderId || recordFolderId === folderId ? items : [];
+    }
+
+    function cachedFolderItemsFromSource(folderId) {
+      const record = sourceAssetRecord();
+      let items = cachedFolderItemsFromRecord(record, folderId);
+      if (items.length) return items;
+      if (assetViewerSource?.type === "task" && record?.id) {
+        const linkedPost = (data.pedPosts || []).find((post) => post.sourceTaskId === record.id);
+        items = cachedFolderItemsFromRecord(linkedPost, folderId);
+      }
+      return items;
+    }
+
+    async function persistFolderItemsForSource(folderId, items = []) {
+      const serializable = serializableAssetItems(items);
+      if (!folderId || !serializable.length || !assetViewerSource?.id) return;
+      const record = sourceAssetRecord();
+      let changed = false;
+      if (assetViewerSource.type === "task" && record) {
+        record.pedAssetItems = serializable;
+        touchItem(record);
+        changed = true;
+        const linkedPost = (data.pedPosts || []).find((post) => post.sourceTaskId === record.id);
+        if (linkedPost) {
+          linkedPost.assetItems = serializable;
+          touchItem(linkedPost);
+        }
+      } else if (record) {
+        record.assetItems = serializable;
+        touchItem(record);
+        changed = true;
+      }
+      if (!changed) return;
+      driveFolderCache.set(folderId, serializable);
+      renderPed();
+      await saveData(true);
+    }
+
     function driveFolderCoverMarkup(folderId) {
       const cachedItems = driveFolderCache.get(folderId) || [];
       const firstImage = cachedItems.find((item) => item.type === "image");
@@ -7165,6 +7225,9 @@
       const assetVideo = !assetCarousel && isVideoAsset(item.asset);
       const assetPreview = assetVideo || assetFolder || assetCarousel ? "" : drivePreviewUrl(item.asset);
       const assetEmbed = assetVideo || assetPreview || assetFolder || assetCarousel ? "" : assetEmbedUrl(item.asset);
+      if (assetFolder && item.assetItems?.length) {
+        driveFolderCache.set(driveFolderId(item.asset), serializableAssetItems(item.assetItems));
+      }
       const fullPreview = zoomIndex > 3;
       if (!fullPreview) {
         return `
@@ -7357,9 +7420,16 @@
       if (folderId) {
         assetViewerTitle.textContent = "Carousel";
         assetViewerModal.classList.add("open");
+        assetViewerItems = cachedFolderItemsFromSource(folderId);
+        if (assetViewerItems.length) {
+          driveFolderCache.set(folderId, assetViewerItems);
+          renderAssetViewer();
+          return;
+        }
         assetViewerItems = knownDriveFolderItems(folderId);
         if (assetViewerItems.length) {
           driveFolderCache.set(folderId, assetViewerItems);
+          persistFolderItemsForSource(folderId, assetViewerItems);
           renderAssetViewer();
           return;
         }
@@ -7381,6 +7451,7 @@
           assetViewerItems = folderItems;
           assetViewerIndex = 0;
           renderAssetViewer();
+          persistFolderItemsForSource(folderId, folderItems);
         } else {
           driveFolderPromises.delete(folderId);
           assetViewerItems = [{ type: "folder", folderId, src: asset, original: asset, label: "Drive folder" }];
@@ -8896,7 +8967,7 @@
       }
       data.pedPosts = data.pedPosts || [];
       const createdAt = Date.now();
-      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, copy, subtasks: [], createdAt, updatedAt: createdAt });
+      data.pedPosts.push({ id: `ped${createdAt}`, title, projectId, date, time, status, members, social, format, asset, assetItems: [], copy, subtasks: [], createdAt, updatedAt: createdAt });
       await saveData();
       renderPed();
       closePanels();
@@ -9449,6 +9520,7 @@
           social: [],
           format: pedFormatOptions[0],
           asset: "",
+          assetItems: [],
           copy: "",
           subtasks: task.subtasks || []
         };
