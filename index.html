@@ -1350,6 +1350,35 @@
       box-shadow: 0 12px 28px rgba(24, 19, 15, .18);
     }
 
+    .asset-folder-browser {
+      width: 100%;
+      height: min(68vh, 680px);
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 12px;
+    }
+
+    .asset-folder-browser iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 22px 60px rgba(0,0,0,.28);
+    }
+
+    .asset-folder-browser a {
+      justify-self: center;
+      padding: 11px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.94);
+      color: #18130f;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 950;
+      box-shadow: 0 12px 28px rgba(0,0,0,.2);
+    }
+
     .ped-post small {
       display: block;
       margin-top: 4px;
@@ -6882,6 +6911,17 @@
       assetViewerMoveRight.disabled = !canReorder;
       assetViewerMoveLeft.hidden = !canReorder;
       assetViewerMoveRight.hidden = !canReorder;
+      if (item.type === "folder") {
+        assetViewerPrev.disabled = true;
+        assetViewerNext.disabled = true;
+        assetViewerStage.innerHTML = `
+          <div class="asset-folder-browser">
+            <iframe src="${escapeHtml(item.src)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
+            <a href="${escapeHtml(item.original || item.src)}" target="_blank" rel="noopener noreferrer">Open in Drive</a>
+          </div>
+        `;
+        return;
+      }
       const track = document.createElement("div");
       track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : ""}`;
       const visibleIndexes = assetViewerItems.length === 1
