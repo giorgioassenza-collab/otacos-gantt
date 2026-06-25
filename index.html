@@ -1380,6 +1380,21 @@
       line-height: 1.45;
     }
 
+    .asset-drive-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+      padding: 11px 15px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.94);
+      color: #18130f;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 950;
+      box-shadow: 0 16px 34px rgba(0,0,0,.24);
+    }
+
     .asset-viewer-controls {
       display: flex;
       align-items: center;
@@ -7083,7 +7098,7 @@
         return {
           type: "folder",
           folderId,
-          src: `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
+          src: url,
           original: url,
           label: "Drive folder"
         };
@@ -7183,10 +7198,8 @@
       }
       return `
         <div class="asset-carousel-preview is-loading" data-drive-folder-cover="${escapeHtml(folderId)}">
-          <div class="asset-folder-cover-frame">
-            <iframe src="https://drive.google.com/embeddedfolderview?id=${escapeHtml(encodeURIComponent(folderId))}#grid" loading="lazy" referrerpolicy="no-referrer"></iframe>
-          </div>
-          <span class="asset-carousel-badge"><span>Carousel</span><span>Drive folder</span></span>
+          ${assetFolderThumbMarkup("Loading carousel")}
+          <span class="asset-carousel-badge"><span>Carousel</span><span>Loading</span></span>
         </div>
       `;
     }
@@ -7336,20 +7349,18 @@
     }
 
     function renderDriveFolderFallback(folderId, original = "") {
-      assetViewerStage.classList.remove("is-single", "is-coverflow");
-      assetViewerStage.innerHTML = `
-        <div class="asset-folder-browser">
-          <iframe src="https://drive.google.com/embeddedfolderview?id=${escapeHtml(encodeURIComponent(folderId))}#grid" loading="lazy" referrerpolicy="no-referrer"></iframe>
-          ${original ? `<a href="${escapeHtml(original)}" target="_blank" rel="noopener noreferrer">Open in Drive</a>` : ""}
-        </div>
-      `;
-      assetViewerCount.textContent = "Drive folder";
-      assetViewerPrev.disabled = true;
-      assetViewerNext.disabled = true;
-      assetViewerMoveLeft.disabled = true;
-      assetViewerMoveRight.disabled = true;
-      assetViewerMoveLeft.hidden = true;
-      assetViewerMoveRight.hidden = true;
+      renderAssetViewerNotice(
+        "Carousel preview unavailable",
+        "Drive did not return the folder images for the in-app slider."
+      );
+      if (!original) return;
+      const link = document.createElement("a");
+      link.href = original;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "asset-drive-link";
+      link.textContent = "Open in Drive";
+      assetViewerStage.querySelector(".asset-viewer-empty")?.appendChild(link);
     }
 
     function renderSingleAssetViewer(item) {
