@@ -1374,7 +1374,7 @@
 
     .budget-hero {
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) repeat(4, minmax(140px, 180px));
+      grid-template-columns: minmax(220px, 1fr) repeat(3, minmax(140px, 180px));
       gap: 12px;
       padding: 16px;
       align-items: stretch;
@@ -1511,6 +1511,30 @@
       font-weight: 950;
       letter-spacing: .06em;
       text-transform: uppercase;
+    }
+
+    .budget-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .budget-panel-head h3 {
+      margin: 0;
+    }
+
+    .budget-sort-select {
+      height: 30px;
+      min-width: 150px;
+      border: 1px solid #d9d2c8;
+      border-radius: 999px;
+      padding: 0 10px;
+      color: var(--ink);
+      background: #fffaf4;
+      font-size: 11px;
+      font-weight: 900;
     }
 
     .budget-overview summary {
@@ -3469,6 +3493,7 @@
     let pendingLocalData = null;
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], summary: null, error: "" };
+    let budgetMonthSortMode = "spend";
     let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -5043,12 +5068,10 @@
       });
       if (!totalYearRow) totalYearRow = rows.find((row) => /^TOTAL YEAR$/i.test(String(row[0] || "").trim()));
       const totalExpenses = budgetNumberFromCell(totalYearRow?.[indexes.expenses]);
-      const totalBudget = budgetNumberFromCell(totalYearRow?.[indexes.invoiced]) || 150000;
-      const feeCandidates = (totalYearRow || []).slice(Math.max(indexes.fee, 0)).map(budgetNumberFromCell).filter((value) => value > 0);
-      const fee = feeCandidates.length ? feeCandidates[feeCandidates.length - 1] : 60000;
-      const workingBudget = Math.max(0, totalBudget - fee);
-      const remaining = Math.max(0, totalBudget - fee - totalExpenses);
-      const totalSpent = totalExpenses + fee;
+      const totalBudget = 75000;
+      const workingBudget = totalBudget;
+      const remaining = Math.max(0, totalBudget - totalExpenses);
+      const totalSpent = totalExpenses;
       const categoryTotals = categoryKeys
         .map((category) => ({
           name: category.label,
@@ -5057,7 +5080,6 @@
         .filter((category) => category.amount);
       return {
         totalBudget,
-        fee,
         workingBudget,
         totalExpenses,
         totalSpent,
@@ -5329,15 +5351,19 @@
         return true;
       });
       const summary = budgetState.summary || {};
-      const totalBudget = summary.totalBudget || 150000;
-      const fee = summary.fee || 60000;
+      const totalBudget = summary.totalBudget || 75000;
       const totalExpenses = summary.totalExpenses || rows.reduce((sum, item) => sum + (item.amount || 0), 0);
-      const totalSpent = summary.totalSpent || totalExpenses + fee;
+      const totalSpent = summary.totalSpent || totalExpenses;
       const remaining = summary.remaining ?? Math.max(0, totalBudget - totalSpent);
-      const workingBudget = summary.workingBudget || Math.max(0, totalBudget - fee);
+      const workingBudget = summary.workingBudget || totalBudget;
       const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const byCategory = aggregateBudget(filteredRows, "category");
       const byMonth = aggregateBudget(filteredRows, "month");
+      const sortedByMonth = [...byMonth].sort((left, right) => (
+        budgetMonthSortMode === "chronological"
+          ? budgetMonthSortValue(left.name) - budgetMonthSortValue(right.name)
+          : right.amount - left.amount
+      ));
       const selectedMonthSummary = monthFilter === "all" ? null : (summary.monthRows || []).find((month) => month.month === monthFilter);
       const monthPieItems = (selectedMonthSummary?.categories || byCategory)
         .filter((item) => categoryFilter === "all" || item.name === categoryFilter)
@@ -5356,7 +5382,6 @@
             <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
           </div>
           <div class="budget-kpi"><span>Total budget</span><strong>${escapeHtml(budgetCurrency(totalBudget))}</strong></div>
-          <div class="budget-kpi"><span>Fee</span><strong>${escapeHtml(budgetCurrency(fee))}</strong></div>
           <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
           <div class="budget-kpi"><span>Remaining</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
         </section>
@@ -5377,8 +5402,14 @@
         </section>
         <section class="budget-grid">
           <div class="budget-panel">
-            <h3>By month</h3>
-            ${budgetBarsMarkup(byMonth, selectedSpent)}
+            <div class="budget-panel-head">
+              <h3>By month</h3>
+              <select class="budget-sort-select" data-budget-month-sort>
+                <option value="chronological" ${budgetMonthSortMode === "chronological" ? "selected" : ""}>Ordine cronologico</option>
+                <option value="spend" ${budgetMonthSortMode === "spend" ? "selected" : ""}>Ordine di spesa</option>
+              </select>
+            </div>
+            ${budgetBarsMarkup(sortedByMonth, selectedSpent)}
           </div>
           <div class="budget-panel">
             <h3>Selected spent</h3>
@@ -9204,6 +9235,12 @@
     creatorCalendarView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     influencerView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     budgetShell.addEventListener("change", (event) => {
+      const monthSort = event.target.closest("[data-budget-month-sort]");
+      if (monthSort) {
+        budgetMonthSortMode = monthSort.value === "chronological" ? "chronological" : "spend";
+        renderBudget();
+        return;
+      }
       if (!event.target.closest("[data-budget-filter]")) return;
       renderBudget();
     });
