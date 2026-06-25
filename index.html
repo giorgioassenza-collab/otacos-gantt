@@ -5338,17 +5338,25 @@
 
     function creatorDuplicateTasksFromControls(baseTask, createdAt, controls) {
       if (!isCreatorLabel(baseTask.label)) return [];
+      const parentId = baseTask.id || `t${createdAt}`;
+      const childTask = (action, taskFields) => ({
+        ...baseTask,
+        ...taskFields,
+        id: `${parentId}-creator-${action}`,
+        creatorParentId: parentId,
+        creatorAction: action,
+        createdAt,
+        updatedAt: Date.now()
+      });
       const sameDayTasks = [
-        { checked: controls.contact.checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
-        { checked: controls.askOk.checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
-        { checked: controls.contract.checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
-        { checked: controls.brief.checked, name: `Brief ${baseTask.name}`, label: "Brief" },
-        { checked: controls.giorgia.checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
+        { action: "contact", checked: controls.contact.checked, name: `Contattare ${baseTask.name}`, label: "Contattare" },
+        { action: "ask-ok", checked: controls.askOk.checked, name: `Ask Ok Alice ${baseTask.name}`, label: "Ask Ok Alice" },
+        { action: "contract", checked: controls.contract.checked, name: `Mandare contratto ${baseTask.name}`, label: "Mandare contratto" },
+        { action: "brief", checked: controls.brief.checked, name: `Brief ${baseTask.name}`, label: "Brief" },
+        { action: "giorgia", checked: controls.giorgia.checked, name: `Avvisare Giorgia ${baseTask.name}`, label: "Avvisare Giorgia", status: "Notify Giorgia" }
       ]
         .filter((item) => item.checked)
-        .map((item, index) => ({
-          ...baseTask,
-          id: `t${createdAt}-creator-${index}`,
+        .map((item) => childTask(item.action, {
           name: item.name,
           nameEn: item.name,
           start: baseTask.start,
@@ -5357,16 +5365,13 @@
           info: "",
           label: item.label,
           pedEnabled: false,
-          pedDate: "",
-          updatedAt: createdAt
+          pedDate: ""
         }));
 
       const datedTasks = [];
       if (controls.video.checked) {
         const videoDate = controls.videoDate.value || baseTask.start;
-        datedTasks.push({
-          ...baseTask,
-          id: `t${createdAt}-creator-video`,
+        datedTasks.push(childTask("video", {
           name: baseTask.name,
           nameEn: baseTask.nameEn,
           start: videoDate,
@@ -5374,15 +5379,12 @@
           info: "",
           label: "Video in store",
           pedEnabled: false,
-          pedDate: "",
-          updatedAt: createdAt
-        });
+          pedDate: ""
+        }));
       }
       if (controls.sendVideoAlice.checked) {
         const sendVideoAliceDate = controls.sendVideoAliceDate.value || baseTask.start;
-        datedTasks.push({
-          ...baseTask,
-          id: `t${createdAt}-creator-send-video-alice`,
+        datedTasks.push(childTask("send-video-alice", {
           name: `Mandare video ad Alice ${baseTask.name}`,
           nameEn: `Send video to Alice ${baseTask.nameEn || baseTask.name}`,
           start: sendVideoAliceDate,
@@ -5390,15 +5392,12 @@
           info: "",
           label: "Mandare video ad Alice",
           pedEnabled: false,
-          pedDate: "",
-          updatedAt: createdAt
-        });
+          pedDate: ""
+        }));
       }
       if (controls.publish.checked) {
         const publishDate = controls.publishDate.value || baseTask.start;
-        datedTasks.push({
-          ...baseTask,
-          id: `t${createdAt}-creator-publish`,
+        datedTasks.push(childTask("publish", {
           name: baseTask.name,
           nameEn: baseTask.nameEn,
           start: publishDate,
@@ -5407,11 +5406,19 @@
           label: "Pubblicazione",
           pedEnabled: false,
           pedAutoDismissed: false,
-          pedDate: "",
-          updatedAt: createdAt
-        });
+          pedDate: ""
+        }));
       }
       return [...sameDayTasks, ...datedTasks];
+    }
+
+    function upsertCreatorGeneratedTasks(generatedTasks = []) {
+      data.tasks = data.tasks || [];
+      generatedTasks.forEach((generatedTask) => {
+        const index = data.tasks.findIndex((task) => task.id === generatedTask.id);
+        if (index >= 0) data.tasks[index] = { ...data.tasks[index], ...generatedTask, createdAt: data.tasks[index].createdAt || generatedTask.createdAt };
+        else data.tasks.push(generatedTask);
+      });
     }
 
     function creatorDuplicateTasks(baseTask, createdAt) {
@@ -7296,7 +7303,8 @@
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate, createdAt, updatedAt: createdAt };
       if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
-      data.tasks.push(baseTask, ...generatedTasks);
+      data.tasks.push(baseTask);
+      upsertCreatorGeneratedTasks(generatedTasks);
       if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
       syncAutomaticPedPostsForTasks([baseTask, ...generatedTasks]);
       await saveData();
@@ -8265,7 +8273,7 @@
       if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
-        data.tasks.push(...generatedTasks);
+        upsertCreatorGeneratedTasks(generatedTasks);
       }
       syncAutomaticPedPostsForTasks([task, ...generatedTasks]);
       await saveData();
