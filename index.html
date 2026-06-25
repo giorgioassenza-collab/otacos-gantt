@@ -1023,6 +1023,14 @@
       border-radius: 18px;
     }
 
+    .asset-carousel-preview.is-loading .asset-folder-thumb {
+      filter: saturate(.95);
+    }
+
+    .asset-carousel-preview.is-loading .asset-folder-title small::after {
+      content: " loading...";
+    }
+
     .asset-carousel-preview::before,
     .asset-carousel-preview::after {
       content: "";
@@ -3975,6 +3983,8 @@
     let assetViewerItems = [];
     let assetViewerIndex = 0;
     let assetViewerSource = null;
+    const driveFolderCache = new Map();
+    const driveFolderPromises = new Map();
     let xlsxLoadPromise = null;
     const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
@@ -6698,6 +6708,45 @@
       return url.match(/\/folders\/([^/?#]+)/)?.[1] || (url.includes("folderview") ? url.match(/[?&]id=([^&]+)/)?.[1] : "") || "";
     }
 
+    function driveFolderFilesUrl(folderId) {
+      const query = `'${folderId}' in parents and trashed=false and (mimeType contains 'image/' or mimeType contains 'video/')`;
+      const fields = "files(id,name,mimeType,thumbnailLink,webViewLink)";
+      return `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}&orderBy=${encodeURIComponent("name")}&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    }
+
+    function driveFilePreviewItem(file) {
+      const isVideo = String(file.mimeType || "").startsWith("video/");
+      return {
+        type: isVideo ? "iframe" : "image",
+        src: isVideo
+          ? `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`
+          : `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w1200`,
+        fallback: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
+        original: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
+        label: file.name || (isVideo ? "Drive video" : "Drive image")
+      };
+    }
+
+    async function loadDriveFolderItems(folderId) {
+      if (!folderId) return [];
+      if (driveFolderCache.has(folderId)) return driveFolderCache.get(folderId);
+      if (driveFolderPromises.has(folderId)) return driveFolderPromises.get(folderId);
+      const promise = fetch(driveFolderFilesUrl(folderId))
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Drive ${response.status}`)))
+        .then((payload) => (payload.files || []).map(driveFilePreviewItem))
+        .catch((error) => {
+          console.warn("Drive folder preview unavailable", error);
+          return [];
+        })
+        .then((items) => {
+          driveFolderCache.set(folderId, items);
+          driveFolderPromises.delete(folderId);
+          return items;
+        });
+      driveFolderPromises.set(folderId, promise);
+      return promise;
+    }
+
     function assetLinks(value) {
       return String(value || "")
         .split(/\n+/)
@@ -6785,7 +6834,46 @@
       return links.map((link) => assetViewerItemFromLink(link, preferredFormat)).filter(Boolean);
     }
 
+    function driveFolderCoverMarkup(folderId) {
+      const cachedItems = driveFolderCache.get(folderId) || [];
+      const firstImage = cachedItems.find((item) => item.type === "image");
+      const count = cachedItems.length;
+      if (firstImage) {
+        return `
+          <div class="asset-carousel-preview" data-drive-folder-cover="${escapeHtml(folderId)}">
+            <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
+            <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(count > 1 ? `${count} slides` : "1 slide")}</span></span>
+          </div>
+        `;
+      }
+      return `
+        <div class="asset-carousel-preview is-loading" data-drive-folder-cover="${escapeHtml(folderId)}">
+          ${assetFolderThumbMarkup("Loading carousel")}
+          <span class="asset-carousel-badge"><span>Carousel</span><span>Drive folder</span></span>
+        </div>
+      `;
+    }
+
+    function hydrateDriveFolderPreviews(root = document) {
+      root.querySelectorAll("[data-drive-folder-cover]").forEach((node) => {
+        const folderId = node.dataset.driveFolderCover;
+        if (!folderId || node.dataset.driveFolderHydrated === "1") return;
+        node.dataset.driveFolderHydrated = "1";
+        loadDriveFolderItems(folderId).then((items) => {
+          const firstImage = items.find((item) => item.type === "image");
+          if (!firstImage || !node.isConnected) return;
+          node.classList.remove("is-loading");
+          node.innerHTML = `
+            <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
+            <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(items.length > 1 ? `${items.length} slides` : "1 slide")}</span></span>
+          `;
+        });
+      });
+    }
+
     function assetCarouselPreviewMarkup(value, preferredFormat = "") {
+      const folderId = driveFolderId(value);
+      if (folderId) return driveFolderCoverMarkup(folderId);
       const items = assetViewerItemsFromValue(value, preferredFormat);
       const firstImage = items.find((item) => item.type === "image");
       const count = items.length || (driveFolderId(value) ? 1 : 0);
@@ -6961,12 +7049,22 @@
       assetViewerStage.appendChild(track);
     }
 
-    function openAssetViewer(asset, format = "", source = null) {
+    async function openAssetViewer(asset, format = "", source = null) {
       assetViewerItems = assetViewerItemsFromValue(asset, format);
       assetViewerIndex = 0;
       assetViewerSource = source;
       renderAssetViewer();
       assetViewerModal.classList.add("open");
+      const folderId = driveFolderId(asset);
+      if (!folderId) return;
+      assetViewerTitle.textContent = "Carousel";
+      const folderItems = await loadDriveFolderItems(folderId);
+      if (!assetViewerModal.classList.contains("open")) return;
+      if (folderItems.length) {
+        assetViewerItems = folderItems;
+        assetViewerIndex = 0;
+        renderAssetViewer();
+      }
     }
 
     function closeAssetViewer() {
@@ -7130,6 +7228,8 @@
       pedCalendar.querySelectorAll(".ped-post img, .ped-post iframe").forEach((media) => {
         media.addEventListener("load", layoutPosts, { once: true });
       });
+      hydrateDriveFolderPreviews(pedCalendar);
+      setTimeout(layoutPosts, 450);
       syncPedHeaderPosition();
       requestAnimationFrame(syncHorizontalScrollbar);
     }
