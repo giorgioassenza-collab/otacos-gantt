@@ -1023,6 +1023,28 @@
       border-radius: 18px;
     }
 
+    .asset-folder-cover-frame {
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #fff;
+      position: relative;
+    }
+
+    .asset-folder-cover-frame iframe {
+      position: absolute;
+      left: -18px;
+      top: -18px;
+      width: 360px;
+      height: 360px;
+      border: 0;
+      transform: scale(.78);
+      transform-origin: top left;
+      pointer-events: none;
+      background: #fff;
+    }
+
     .asset-carousel-preview.is-loading .asset-folder-thumb {
       filter: saturate(.95);
     }
@@ -1188,17 +1210,21 @@
     }
 
     .asset-slide-track {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      display: flex;
       align-items: center;
-      gap: 18px;
+      justify-content: center;
       width: 100%;
-      max-width: 960px;
+      max-width: 1120px;
     }
 
     .asset-slide-track.is-single {
-      grid-template-columns: minmax(180px, 360px);
       justify-content: center;
+    }
+
+    .asset-slide-track.is-coverflow {
+      height: min(62vh, 620px);
+      position: relative;
+      perspective: 1200px;
     }
 
     .asset-slide-card {
@@ -1212,9 +1238,49 @@
       transition: transform .24s var(--ease-out), opacity .24s var(--ease-out);
     }
 
+    .asset-slide-track.is-coverflow .asset-slide-card {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(24vw, 270px);
+      min-width: 170px;
+      max-width: 280px;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+    }
+
+    .asset-slide-card.offset-m2 {
+      opacity: .35;
+      z-index: 1;
+      transform: translate(-50%, -50%) translateX(-360px) rotateY(34deg) scale(.72);
+    }
+
+    .asset-slide-card.offset-m1 {
+      opacity: .72;
+      z-index: 2;
+      transform: translate(-50%, -50%) translateX(-185px) rotateY(22deg) scale(.86);
+    }
+
+    .asset-slide-card.offset-0 {
+      opacity: 1;
+      z-index: 4;
+      transform: translate(-50%, -50%) translateX(0) rotateY(0deg) scale(1.05);
+    }
+
+    .asset-slide-card.offset-p1 {
+      opacity: .72;
+      z-index: 2;
+      transform: translate(-50%, -50%) translateX(185px) rotateY(-22deg) scale(.86);
+    }
+
+    .asset-slide-card.offset-p2 {
+      opacity: .35;
+      z-index: 1;
+      transform: translate(-50%, -50%) translateX(360px) rotateY(-34deg) scale(.72);
+    }
+
     .asset-slide-card.is-active {
       opacity: 1;
-      transform: scale(1);
       box-shadow: 0 28px 68px rgba(0,0,0,.46), 0 0 0 4px rgba(255, 90, 20, .22);
     }
 
@@ -6848,7 +6914,9 @@
       }
       return `
         <div class="asset-carousel-preview is-loading" data-drive-folder-cover="${escapeHtml(folderId)}">
-          ${assetFolderThumbMarkup("Loading carousel")}
+          <div class="asset-folder-cover-frame">
+            <iframe src="https://drive.google.com/embeddedfolderview?id=${escapeHtml(encodeURIComponent(folderId))}#grid" loading="lazy" referrerpolicy="no-referrer"></iframe>
+          </div>
           <span class="asset-carousel-badge"><span>Carousel</span><span>Drive folder</span></span>
         </div>
       `;
@@ -7011,17 +7079,25 @@
         return;
       }
       const track = document.createElement("div");
-      track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : ""}`;
-      const visibleIndexes = assetViewerItems.length === 1
-        ? [assetViewerIndex]
-        : [
-          (assetViewerIndex - 1 + assetViewerItems.length) % assetViewerItems.length,
-          assetViewerIndex,
-          (assetViewerIndex + 1) % assetViewerItems.length
-        ];
+      track.className = `asset-slide-track ${assetViewerItems.length === 1 ? "is-single" : "is-coverflow"}`;
+      const offsets = assetViewerItems.length === 1 ? [0] : [-2, -1, 0, 1, 2];
+      const visibleIndexes = [];
+      const visibleOffsets = [];
+      offsets.forEach((offset) => {
+        const index = (assetViewerIndex + offset + assetViewerItems.length) % assetViewerItems.length;
+        if (visibleIndexes.includes(index)) return;
+        visibleIndexes.push(index);
+        visibleOffsets.push(offset);
+      });
       visibleIndexes.forEach((index, position) => {
         const card = document.createElement("div");
-        card.className = `asset-slide-card ${position === 1 || assetViewerItems.length === 1 ? "is-active" : ""}`;
+        const offset = visibleOffsets[position] || 0;
+        const offsetClass = offset === -2 ? "offset-m2" : offset === -1 ? "offset-m1" : offset === 0 ? "offset-0" : offset === 1 ? "offset-p1" : "offset-p2";
+        card.className = `asset-slide-card ${offsetClass} ${offset === 0 || assetViewerItems.length === 1 ? "is-active" : ""}`;
+        card.addEventListener("click", () => {
+          assetViewerIndex = index;
+          renderAssetViewer();
+        });
         card.appendChild(assetViewerMediaElement(assetViewerItems[index]));
         track.appendChild(card);
       });
