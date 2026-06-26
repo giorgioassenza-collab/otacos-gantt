@@ -7077,6 +7077,7 @@
           if (items.length) {
             driveFolderCache.set(folderId, items);
             storeDriveFolderItems(folderId, items);
+            updateDriveFolderCoverNodes(folderId, items);
           } else {
             driveFolderCache.delete(folderId);
           }
@@ -7244,12 +7245,32 @@
           </div>
         `;
       }
+      setTimeout(() => hydrateDriveFolderPreviews(document), 0);
       return `
         <div class="asset-carousel-preview is-loading" data-drive-folder-cover="${escapeHtml(folderId)}">
           ${assetFolderThumbMarkup("Loading carousel")}
           <span class="asset-carousel-badge"><span>Carousel</span><span>Loading</span></span>
         </div>
       `;
+    }
+
+    function updateDriveFolderCoverNodes(folderId, items = []) {
+      if (!folderId || !items.length) return;
+      const firstImage = items.find((item) => item.type === "image");
+      if (!firstImage) return;
+      document.querySelectorAll(`[data-drive-folder-cover="${CSS.escape(folderId)}"]`).forEach((node) => {
+        node.dataset.driveFolderHydrated = "ready";
+        node.classList.remove("is-loading");
+        node.classList.remove("is-unavailable");
+        node.innerHTML = `
+          <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
+          <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(items.length > 1 ? `${items.length} slides` : "1 slide")}</span></span>
+        `;
+        const image = node.querySelector("img");
+        if (image) image.addEventListener("load", () => {
+          try { layoutPosts(); } catch {}
+        }, { once: true });
+      });
     }
 
     function hydrateDriveFolderPreviews(root = document) {
@@ -7277,16 +7298,7 @@
             return;
           }
           node.dataset.driveFolderHydrated = "ready";
-          node.classList.remove("is-loading");
-          node.classList.remove("is-unavailable");
-          node.innerHTML = `
-            <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
-            <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(items.length > 1 ? `${items.length} slides` : "1 slide")}</span></span>
-          `;
-          const image = node.querySelector("img");
-          if (image) image.addEventListener("load", () => {
-            try { layoutPosts(); } catch {}
-          }, { once: true });
+          updateDriveFolderCoverNodes(folderId, items);
         }).catch(() => {
           if (node.isConnected) node.dataset.driveFolderHydrated = "";
         });
