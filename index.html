@@ -2745,6 +2745,95 @@
       background: #ffe8eb;
     }
 
+    .comments {
+      display: grid;
+      gap: 10px;
+      margin: 12px 0 16px;
+      padding: 10px;
+      border: 2px solid #fde0cf;
+      border-radius: 8px;
+      background: #fff7ef;
+    }
+
+    .comments-title {
+      color: #6b2506;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .comment-list {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .comment-row {
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(255,255,255,.85) inset, 0 6px 16px rgba(24, 19, 15, .06);
+    }
+
+    .comment-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #7b6b5f;
+      font-size: 10px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .comment-text {
+      color: #241f1a;
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .comment-mention {
+      display: inline-flex;
+      align-items: center;
+      min-height: 18px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      color: #7a2c00;
+      background: #ffe1cf;
+      font-weight: 950;
+    }
+
+    .mention-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .mention-chip {
+      min-height: 24px;
+      border: 1px solid #ffd1b8;
+      border-radius: 999px;
+      padding: 0 9px;
+      color: #823100;
+      background: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .mention-chip:hover {
+      border-color: var(--orange);
+      background: var(--orange-soft);
+    }
+
     .history-list {
       display: grid;
       gap: 8px;
@@ -3812,6 +3901,13 @@
         <label class="field">FORMAT<select id="editPedPostFormat" required></select></label>
         <label class="field">Asset<textarea id="editPedPostAsset" placeholder="Link asset"></textarea></label>
         <label class="field">Copy<textarea id="editPedPostCopy" placeholder="Copy"></textarea></label>
+        <section class="comments">
+          <div class="comments-title">Comments</div>
+          <div class="comment-list" id="pedCommentList"></div>
+          <label class="field">New comment<textarea id="newPedCommentText" placeholder="Write a comment and tag people with @Name"></textarea></label>
+          <div class="mention-tools" id="pedCommentMentions"></div>
+          <button class="secondary-btn" id="addPedCommentButton" type="button">Add comment</button>
+        </section>
         <section class="subtasks">
           <div class="subtasks-title">Subtasks</div>
           <div class="stack-list" id="pedSubtaskList"></div>
@@ -4023,6 +4119,9 @@
     const subtaskList = document.getElementById("subtaskList");
     const newPedSubtaskMembers = document.getElementById("newPedSubtaskMembers");
     const pedSubtaskList = document.getElementById("pedSubtaskList");
+    const pedCommentList = document.getElementById("pedCommentList");
+    const newPedCommentText = document.getElementById("newPedCommentText");
+    const pedCommentMentions = document.getElementById("pedCommentMentions");
     const memberFilter = document.getElementById("memberFilter");
     const projectList = document.getElementById("projectList");
     const memberList = document.getElementById("memberList");
@@ -5427,6 +5526,12 @@
         asset: post.asset || post.link || "",
         assetItems: Array.isArray(post.assetItems) ? post.assetItems : [],
         copy: post.copy || "",
+        comments: (post.comments || []).map((comment) => ({
+          id: comment.id || `pc${Date.now()}${Math.random()}`,
+          text: comment.text || "",
+          mentions: Array.isArray(comment.mentions) ? comment.mentions : [],
+          createdAt: Number(comment.createdAt || Date.now())
+        })).filter((comment) => comment.text.trim()),
         subtasks: (post.subtasks || []).map((subtask) => ({
           id: subtask.id || `ps${Date.now()}${Math.random()}`,
           title: subtask.title || "",
@@ -6611,6 +6716,7 @@
           format: pedFormatOptions[0],
           asset: "",
           copy: "",
+          comments: [],
           subtasks: [],
           createdAt,
           updatedAt: createdAt
@@ -6690,6 +6796,60 @@
 
     function renderPedSubtasks(post) {
       renderSubtasksFor(pedSubtaskList, post, "data-ped-subtask-done", "data-delete-ped-subtask");
+    }
+
+    function commentMentionsFromText(text) {
+      const names = assignableMembers();
+      const lowerText = String(text || "").toLowerCase();
+      return names.filter((name) => lowerText.includes(`@${name.toLowerCase()}`));
+    }
+
+    function commentTextMarkup(text) {
+      let output = escapeHtml(text);
+      assignableMembers()
+        .sort((a, b) => b.length - a.length)
+        .forEach((name) => {
+          const escapedName = escapeHtml(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          output = output.replace(new RegExp(`@${escapedName}`, "g"), `<span class="comment-mention">@${escapeHtml(name)}</span>`);
+        });
+      return output;
+    }
+
+    function renderPedCommentTools() {
+      pedCommentMentions.innerHTML = "";
+      assignableMembers().forEach((member) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mention-chip";
+        button.dataset.mentionMember = member;
+        button.textContent = `@${member}`;
+        pedCommentMentions.appendChild(button);
+      });
+    }
+
+    function renderPedComments(post) {
+      pedCommentList.innerHTML = "";
+      const comments = post.comments || [];
+      if (!comments.length) {
+        pedCommentList.innerHTML = `<div class="comment-row"><div class="comment-text">No comments yet.</div></div>`;
+        return;
+      }
+      comments
+        .slice()
+        .sort((a, b) => Number(a.createdAt || 0) - Number(b.createdAt || 0))
+        .forEach((comment) => {
+          const row = document.createElement("div");
+          row.className = "comment-row";
+          const createdAt = comment.createdAt ? new Date(comment.createdAt) : null;
+          const dateLabel = createdAt && !Number.isNaN(createdAt.getTime())
+            ? createdAt.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+            : "";
+          row.innerHTML = `
+            <div class="comment-meta"><span>Comment</span><span>${escapeHtml(dateLabel)}</span></div>
+            <div class="comment-text">${commentTextMarkup(comment.text || "")}</div>
+          `;
+          pedCommentList.appendChild(row);
+        });
     }
 
     function pedItems() {
@@ -8376,6 +8536,9 @@
       editPedPostFormat.value = normalizePedFormat(post.format);
       document.getElementById("editPedPostAsset").value = post.asset || "";
       document.getElementById("editPedPostCopy").value = post.copy || "";
+      newPedCommentText.value = "";
+      renderPedCommentTools();
+      renderPedComments(post);
       document.getElementById("newPedSubtaskTitle").value = "";
       newPedSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       renderPedSubtasks(post);
@@ -9822,6 +9985,7 @@
         format: normalizePedFormat(sourcePost.format),
         asset: sourcePost.asset || "",
         copy: sourcePost.copy || "",
+        comments: structuredClone(sourcePost.comments || []),
         subtasks: structuredClone(sourcePost.subtasks || []),
         createdAt,
         updatedAt: createdAt
@@ -10175,6 +10339,42 @@
       touchItem(post);
       saveData();
       renderPedSubtasks(post);
+    });
+
+    pedCommentMentions.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-mention-member]");
+      if (!button) return;
+      const mention = `@${button.dataset.mentionMember}`;
+      const input = newPedCommentText;
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? input.value.length;
+      const before = input.value.slice(0, start);
+      const after = input.value.slice(end);
+      const prefix = before && !/\s$/.test(before) ? " " : "";
+      const suffix = after && !/^\s/.test(after) ? " " : "";
+      input.value = `${before}${prefix}${mention} ${suffix}${after}`;
+      const nextPosition = before.length + prefix.length + mention.length + 1;
+      input.focus();
+      input.setSelectionRange(nextPosition, nextPosition);
+    });
+
+    document.getElementById("addPedCommentButton").addEventListener("click", () => {
+      const postId = document.getElementById("editPedPostId").value;
+      const post = (data.pedPosts || []).find((item) => item.id === postId);
+      if (!post) return;
+      const text = newPedCommentText.value.trim();
+      if (!text) return;
+      post.comments = post.comments || [];
+      post.comments.push({
+        id: `pc${Date.now()}`,
+        text,
+        mentions: commentMentionsFromText(text),
+        createdAt: Date.now()
+      });
+      touchItem(post);
+      newPedCommentText.value = "";
+      saveData();
+      renderPedComments(post);
     });
 
     document.getElementById("editTaskForm").addEventListener("submit", async (event) => {
