@@ -7001,7 +7001,10 @@
       const folderUrls = [
         `https://drive.google.com/embeddedfolderview?id=${encodeURIComponent(folderId)}#grid`,
         `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`,
-        `https://drive.google.com/drive/u/0/folders/${encodeURIComponent(folderId)}`
+        `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}?usp=sharing`,
+        `https://drive.google.com/drive/u/0/folders/${encodeURIComponent(folderId)}`,
+        `https://drive.google.com/drive/u/1/folders/${encodeURIComponent(folderId)}`,
+        `https://drive.google.com/drive/u/2/folders/${encodeURIComponent(folderId)}`
       ];
       const readers = [
         (url) => fetchTextWithTimeout(`https://r.jina.ai/http://r.jina.ai/http://${url}`, 12000),
@@ -7015,26 +7018,27 @@
         (url) => fetchTextWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`, 9000),
         (url) => fetchTextWithTimeout(`https://cors.isomorphic-git.org/${url}`, 9000)
       ];
-      for (const url of folderUrls) {
-        for (const read of readers) {
-          try {
-            const html = await read(url);
-            const files = driveFolderFileIdsFromHtml(html).filter((file) => file.id !== folderId);
-            if (files.length) {
-              return files.map((file, index) => ({
+      const attempts = [];
+      folderUrls.forEach((url) => {
+        readers.forEach((read) => {
+          attempts.push(
+            read(url)
+              .then((html) => driveFolderFileIdsFromHtml(html).filter((file) => file.id !== folderId))
+              .then((files) => files.map((file, index) => ({
                 type: "image",
                 src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w1200`,
                 fallback: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
                 original: `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
                 label: file.name || `Slide ${index + 1}`
-              }));
-            }
-          } catch (error) {
-            console.warn("Drive public folder scrape attempt unavailable", error);
-          }
-        }
-      }
-      return [];
+              })))
+              .catch((error) => {
+                console.warn("Drive public folder scrape attempt unavailable", error);
+                return [];
+              })
+          );
+        });
+      });
+      return firstNonEmptyResult(attempts);
     }
 
     function loadDriveFolderItemsFromApi(folderId) {
@@ -7248,7 +7252,16 @@
         node.dataset.driveFolderHydrated = "1";
         loadDriveFolderItems(folderId).then((items) => {
           const firstImage = items.find((item) => item.type === "image");
-          if (!firstImage || !node.isConnected) return;
+          if (!node.isConnected) return;
+          if (!firstImage) {
+            node.classList.remove("is-loading");
+            node.classList.add("is-unavailable");
+            node.innerHTML = `
+              ${assetFolderThumbMarkup("Open carousel")}
+              <span class="asset-carousel-badge"><span>Carousel</span><span>Open</span></span>
+            `;
+            return;
+          }
           node.classList.remove("is-loading");
           node.innerHTML = `
             <img src="${escapeHtml(firstImage.src)}" alt="Carousel preview" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">
