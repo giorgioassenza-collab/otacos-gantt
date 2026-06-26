@@ -8452,7 +8452,7 @@
             const subtaskCount = (task.subtasks || []).length;
             const doneSubtaskCount = (task.subtasks || []).filter((subtask) => subtask.done).length;
             const subtaskBadge = subtaskCount
-              ? `<span class="bar-subtasks" title="${escapeHtml(`${doneSubtaskCount}/${subtaskCount} subtasks`)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3.5 6 1.2 1.2L7 4.8"/><path d="m3.5 12 1.2 1.2L7 10.8"/><path d="m3.5 18 1.2 1.2L7 16.8"/></svg>${escapeHtml(String(subtaskCount))}</span>`
+              ? `<span class="bar-subtasks" title="${escapeHtml(`${doneSubtaskCount}/${subtaskCount} subtasks completed`)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3.5 6 1.2 1.2L7 4.8"/><path d="m3.5 12 1.2 1.2L7 10.8"/><path d="m3.5 18 1.2 1.2L7 16.8"/></svg>${escapeHtml(`${doneSubtaskCount}/${subtaskCount}`)}</span>`
               : "";
             const unassignedBadge = (task.members || []).length
               ? ""
@@ -10104,6 +10104,7 @@
       newSubtaskMembers.querySelectorAll("input[type='checkbox']").forEach((input) => { input.checked = false; });
       saveData();
       renderSubtasks(task);
+      renderBoard();
     });
 
     subtaskList.addEventListener("change", (event) => {
@@ -10118,6 +10119,7 @@
       touchItem(task);
       saveData();
       renderSubtasks(task);
+      renderBoard();
     });
 
     subtaskList.addEventListener("click", (event) => {
@@ -10130,6 +10132,7 @@
       touchItem(task);
       saveData();
       renderSubtasks(task);
+      renderBoard();
     });
 
     document.getElementById("addPedSubtaskButton").addEventListener("click", () => {
