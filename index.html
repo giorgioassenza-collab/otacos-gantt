@@ -7245,6 +7245,11 @@
           </div>
         `;
       }
+      setTimeout(() => {
+        loadDriveFolderItems(folderId, true)
+          .then((items) => updateDriveFolderCoverNodes(folderId, items))
+          .catch((error) => console.warn("Drive carousel direct load failed", error));
+      }, 0);
       setTimeout(() => hydrateDriveFolderPreviews(document), 0);
       return `
         <div class="asset-carousel-preview is-loading" data-drive-folder-cover="${escapeHtml(folderId)}">
