@@ -6834,7 +6834,9 @@
     function driveFolderId(value) {
       const url = String(value || "").trim();
       if (!url.includes("drive.google.com")) return "";
-      return url.match(/\/folders\/([^/?#]+)/)?.[1] || (url.includes("folderview") ? url.match(/[?&]id=([^&]+)/)?.[1] : "") || "";
+      return url.match(/\/folders\/([a-zA-Z0-9_-]{10,})/)?.[1]
+        || (url.includes("folderview") ? url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)?.[1] : "")
+        || "";
     }
 
     function driveFolderFilesUrl(folderId) {
