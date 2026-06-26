@@ -7306,6 +7306,25 @@
       });
     }
 
+    let driveFolderPreviewWatcherStarted = false;
+    function startDriveFolderPreviewWatcher() {
+      if (driveFolderPreviewWatcherStarted) return;
+      driveFolderPreviewWatcherStarted = true;
+      const scan = () => {
+        try {
+          hydrateDriveFolderPreviews(document);
+        } catch (error) {
+          console.warn("Drive carousel preview scan failed", error);
+        }
+      };
+      scan();
+      setInterval(scan, 2000);
+      if ("MutationObserver" in window) {
+        const observer = new MutationObserver(scan);
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+
     function assetCarouselPreviewMarkup(value, preferredFormat = "") {
       const folderId = driveFolderId(value);
       if (folderId) return driveFolderCoverMarkup(folderId);
@@ -8518,6 +8537,7 @@
       renderInfluencers();
       renderCreatorCalendar();
       renderBudget();
+      startDriveFolderPreviewWatcher();
       void (async () => {
         try {
           await importInfluencerSeedIfNeeded();
