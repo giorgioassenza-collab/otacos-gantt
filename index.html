@@ -408,14 +408,16 @@
     }
 
     .months {
-      position: relative;
+      position: sticky;
+      top: 0;
       z-index: 20;
       display: flex;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #fffaf4;
       box-shadow: 0 10px 18px rgba(24, 19, 15, .05);
-      will-change: transform;
+      transform: translateZ(0);
+      will-change: auto;
     }
 
     .month {
@@ -775,14 +777,16 @@
     }
 
     .ped-months {
-      position: relative;
+      position: sticky;
+      top: 0;
       z-index: 20;
       display: flex;
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #fffaf4;
       box-shadow: 0 10px 18px rgba(24, 19, 15, .05);
-      will-change: transform;
+      transform: translateZ(0);
+      will-change: auto;
     }
 
     .ped-day {
@@ -7814,10 +7818,9 @@
     }
 
     function syncPedHeaderPosition() {
-      const pedView = document.getElementById("pedView");
       const months = pedCalendar.querySelector(".ped-months");
       if (!months) return;
-      months.style.transform = `translateY(${pedView.scrollTop}px)`;
+      months.style.transform = "translateZ(0)";
     }
 
     function updatePedHourLabels() {
@@ -8481,11 +8484,7 @@
     }
 
     function syncGanttHeaderPosition() {
-      if (document.body.classList.contains("ped-mode") || document.body.classList.contains("influencer-mode") || document.body.classList.contains("creator-calendar-mode")) {
-        monthsEl.style.transform = "";
-        return;
-      }
-      monthsEl.style.transform = `translateY(${boardEl.scrollTop}px)`;
+      monthsEl.style.transform = "translateZ(0)";
     }
 
     function updateHiddenTaskIndicators() {
@@ -9252,12 +9251,49 @@
     }
 
     function startDragState(details) {
+      const rect = details.element.getBoundingClientRect();
       dragState = {
         ...details,
         lastX: details.startX,
         lastY: details.startY,
-        dragged: false
+        dragged: false,
+        fixedVisual: false,
+        grabOffsetX: details.startX - rect.left,
+        grabOffsetY: details.startY - rect.top,
+        visualWidth: rect.width,
+        visualHeight: rect.height,
+        originalStyle: {
+          position: details.element.style.position,
+          left: details.element.style.left,
+          top: details.element.style.top,
+          width: details.element.style.width,
+          height: details.element.style.height,
+          transform: details.element.style.transform,
+          zIndex: details.element.style.zIndex,
+          pointerEvents: details.element.style.pointerEvents
+        }
       };
+    }
+
+    function beginFixedDragVisual(state, clientX, clientY) {
+      if (!state || state.fixedVisual) return;
+      state.fixedVisual = true;
+      const element = state.element;
+      element.style.position = "fixed";
+      element.style.left = `${clientX - state.grabOffsetX}px`;
+      element.style.top = `${clientY - state.grabOffsetY}px`;
+      element.style.width = `${state.visualWidth}px`;
+      element.style.height = `${state.visualHeight}px`;
+      element.style.zIndex = "260";
+      element.style.pointerEvents = "none";
+      element.style.transform = "scale(1.015)";
+    }
+
+    function moveFixedDragVisual(state, clientX, clientY) {
+      if (!state) return;
+      beginFixedDragVisual(state, clientX, clientY);
+      state.element.style.left = `${clientX - state.grabOffsetX}px`;
+      state.element.style.top = `${clientY - state.grabOffsetY}px`;
     }
 
     function updateDragPosition(clientX, clientY, sourceEvent) {
@@ -9272,7 +9308,7 @@
       dragState.element.classList.remove("is-pressing");
       dragState.element.classList.add("is-dragging");
       autoScrollWhileDragging({ clientX, clientY }, dragState);
-      dragState.element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.015)`;
+      moveFixedDragVisual(dragState, clientX, clientY);
       sourceEvent?.preventDefault?.();
     }
 
@@ -9282,7 +9318,18 @@
         try { state.element.releasePointerCapture(state.pointerId); } catch (error) {}
       }
       state.element.classList.remove("is-pressing", "is-dragging");
-      state.element.style.transform = "";
+      if (state.originalStyle) {
+        state.element.style.position = state.originalStyle.position;
+        state.element.style.left = state.originalStyle.left;
+        state.element.style.top = state.originalStyle.top;
+        state.element.style.width = state.originalStyle.width;
+        state.element.style.height = state.originalStyle.height;
+        state.element.style.transform = state.originalStyle.transform;
+        state.element.style.zIndex = state.originalStyle.zIndex;
+        state.element.style.pointerEvents = state.originalStyle.pointerEvents;
+      } else {
+        state.element.style.transform = "";
+      }
     }
 
     function cancelDrag(event) {
