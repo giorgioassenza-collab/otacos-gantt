@@ -7246,6 +7246,7 @@
         `;
       }
       setTimeout(() => {
+        loadDriveFolderCoverDirect(folderId);
         loadDriveFolderItems(folderId, true)
           .then((items) => updateDriveFolderCoverNodes(folderId, items))
           .catch((error) => console.warn("Drive carousel direct load failed", error));
@@ -7279,11 +7280,37 @@
       });
     }
 
+    function directDriveImageItem(file) {
+      if (!file || !file.id || !String(file.mimeType || "").startsWith("image/")) return null;
+      return {
+        type: "image",
+        src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w1200`,
+        fallback: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
+        original: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
+        label: file.name || "Drive image"
+      };
+    }
+
+    function loadDriveFolderCoverDirect(folderId) {
+      if (!folderId) return;
+      fetch(driveFolderFilesUrl(folderId))
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error(`Drive ${response.status}`)))
+        .then((payload) => {
+          const items = (payload.files || []).map(directDriveImageItem).filter(Boolean);
+          if (!items.length) return;
+          driveFolderCache.set(folderId, items);
+          storeDriveFolderItems(folderId, items);
+          updateDriveFolderCoverNodes(folderId, items);
+        })
+        .catch((error) => console.warn("Drive carousel direct cover failed", folderId, error));
+    }
+
     function hydrateDriveFolderPreviews(root = document) {
       root.querySelectorAll("[data-drive-folder-cover]").forEach((node) => {
         const folderId = node.dataset.driveFolderCover;
         if (!folderId || node.dataset.driveFolderHydrated === "loading" || node.dataset.driveFolderHydrated === "ready") return;
         node.dataset.driveFolderHydrated = "loading";
+        loadDriveFolderCoverDirect(folderId);
         Promise.race([
           loadDriveFolderItems(folderId),
           timeoutValue(14000, [])
