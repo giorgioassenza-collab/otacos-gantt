@@ -7258,7 +7258,8 @@
       if (!folderId || !items.length) return;
       const firstImage = items.find((item) => item.type === "image");
       if (!firstImage) return;
-      document.querySelectorAll(`[data-drive-folder-cover="${CSS.escape(folderId)}"]`).forEach((node) => {
+      document.querySelectorAll("[data-drive-folder-cover]").forEach((node) => {
+        if (node.dataset.driveFolderCover !== folderId) return;
         node.dataset.driveFolderHydrated = "ready";
         node.classList.remove("is-loading");
         node.classList.remove("is-unavailable");
@@ -7753,6 +7754,9 @@
         media.addEventListener("load", layoutPosts, { once: true });
       });
       hydrateDriveFolderPreviews(pedCalendar);
+      [800, 2200, 5000].forEach((delay) => {
+        setTimeout(() => hydrateDriveFolderPreviews(pedCalendar), delay);
+      });
       setTimeout(layoutPosts, 450);
       syncPedHeaderPosition();
       requestAnimationFrame(syncHorizontalScrollbar);
