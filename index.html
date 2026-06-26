@@ -7250,7 +7250,10 @@
         const folderId = node.dataset.driveFolderCover;
         if (!folderId || node.dataset.driveFolderHydrated === "1") return;
         node.dataset.driveFolderHydrated = "1";
-        loadDriveFolderItems(folderId).then((items) => {
+        Promise.race([
+          loadDriveFolderItems(folderId),
+          timeoutValue(14000, [])
+        ]).then((items) => {
           const firstImage = items.find((item) => item.type === "image");
           if (!node.isConnected) return;
           if (!firstImage) {
