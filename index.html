@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23000'/%3E%3Ctext x='9' y='41' fill='%23f2f2f2' font-family='Arial Black,Arial,sans-serif' font-size='22'%3ENO%3C/text%3E%3C/svg%3E">
   <script>
     (() => {
-      const appVersion = "v6";
+      const appVersion = "v7";
       const params = new URLSearchParams(window.location.search);
       if (params.get("app") !== appVersion) {
         params.set("app", appVersion);
@@ -918,17 +918,17 @@
   </div>
 
   <nav class="context-menu" id="contextMenu" aria-label="Azioni task">
-    <button type="button" data-context-action="edit">Modifica <span>Enter</span></button>
-    <button type="button" data-context-action="toggleDone">Completa / riapri <span>OK</span></button>
-    <button type="button" data-context-action="addSubtask">Aggiungi sottotask <span>+</span></button>
-    <button type="button" data-context-action="duplicate">Duplica <span>Copy</span></button>
-    <button type="button" data-context-action="delete">Elimina <span>x</span></button>
+    <button type="button" data-context-action="edit" onclick="window.nokuContextAction('edit'); return false;">Modifica <span>Enter</span></button>
+    <button type="button" data-context-action="toggleDone" onclick="window.nokuContextAction('toggleDone'); return false;">Completa / riapri <span>OK</span></button>
+    <button type="button" data-context-action="addSubtask" onclick="window.nokuContextAction('addSubtask'); return false;">Aggiungi sottotask <span>+</span></button>
+    <button type="button" data-context-action="duplicate" onclick="window.nokuContextAction('duplicate'); return false;">Duplica <span>Copy</span></button>
+    <button type="button" data-context-action="delete" onclick="window.nokuContextAction('delete'); return false;">Elimina <span>x</span></button>
   </nav>
 
   <script>
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const storageKey = "noku-gantt-data-v6";
-    const legacyStorageKeys = ["noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
+    const storageKey = "noku-gantt-data-v7";
+    const legacyStorageKeys = ["noku-gantt-data-v6", "noku-gantt-data-v5", "noku-gantt-data-v4", "noku-gantt-data-v3", "noku-gantt-data-v2", "noku-gantt-data-v1"];
     const weekday = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
     const monthNames = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
     const colors = ["#d9ff00", "#00e0ff", "#ff4f9a", "#ff6b00", "#34d399", "#c084fc", "#facc15"];
@@ -1243,7 +1243,7 @@
             ${subtaskBadge}
             ${memberBadges}
             ${statusBadge}
-            <button class="bar-delete" data-delete-task="${task.id}" type="button" title="Elimina task">x</button>
+            <button class="bar-delete" data-delete-task="${task.id}" type="button" title="Elimina task" onclick="window.nokuDeleteTask(this.dataset.deleteTask); return false;">x</button>
           </div>
         `;
       }).join("") || `<div class="empty">Nessun task visibile. Aggiungi un task o cambia filtro.</div>`;
@@ -1261,7 +1261,7 @@
         <div class="settings-row">
           <input data-project-name="${project.id}" value="${escapeAttr(project.name)}">
           <input data-project-color="${project.id}" type="color" value="${project.color}">
-          <button class="icon-btn" data-delete-project="${project.id}" type="button" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-project="${project.id}" type="button" title="Elimina" onclick="window.nokuDeleteProject(this.dataset.deleteProject); return false;">x</button>
         </div>
       `).join("");
 
@@ -1269,7 +1269,7 @@
         <div class="settings-row">
           <input data-member-name="${escapeAttr(member.name)}" value="${escapeAttr(member.name)}">
           <input data-member-color="${escapeAttr(member.name)}" type="color" value="${member.color}">
-          <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" type="button" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-member="${escapeAttr(member.name)}" type="button" title="Elimina" onclick="window.nokuDeleteMember(this.dataset.deleteMember); return false;">x</button>
         </div>
       `).join("");
 
@@ -1277,7 +1277,7 @@
         <div class="settings-row">
           <input data-status-name="${escapeAttr(status.name)}" value="${escapeAttr(status.name)}">
           <input data-status-color="${escapeAttr(status.name)}" type="color" value="${status.color}">
-          <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" type="button" title="Elimina">x</button>
+          <button class="icon-btn" data-delete-status="${escapeAttr(status.name)}" type="button" title="Elimina" onclick="window.nokuDeleteStatus(this.dataset.deleteStatus); return false;">x</button>
         </div>
       `).join("");
       bindSettingsControls();
@@ -1447,11 +1447,17 @@
       }
     }
 
+    window.nokuContextAction = (action) => runContextAction(action, contextTaskId);
+    window.nokuDeleteTask = (taskId) => deleteTask(taskId);
+    window.nokuDeleteProject = (projectId) => deleteProject(projectId);
+    window.nokuDeleteMember = (name) => deleteMember(name);
+    window.nokuDeleteStatus = (name) => deleteStatus(name);
+
     function bindBarControls() {
       barsEl.querySelectorAll("[data-delete-task]").forEach((button) => {
         button.onclick = (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
           deleteTask(button.dataset.deleteTask);
         };
       });
@@ -1460,22 +1466,22 @@
     function bindSettingsControls() {
       document.querySelectorAll("[data-delete-project]").forEach((button) => {
         button.onclick = (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
           deleteProject(button.dataset.deleteProject);
         };
       });
       document.querySelectorAll("[data-delete-member]").forEach((button) => {
         button.onclick = (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
           deleteMember(button.dataset.deleteMember);
         };
       });
       document.querySelectorAll("[data-delete-status]").forEach((button) => {
         button.onclick = (event) => {
-          event.preventDefault();
-          event.stopPropagation();
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
           deleteStatus(button.dataset.deleteStatus);
         };
       });
