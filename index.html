@@ -653,6 +653,76 @@
       color: var(--ink);
     }
 
+    .gantt-ped-thumb {
+      position: absolute;
+      width: min(68px, calc(var(--day) - 12px));
+      height: 44px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 6px 14px rgba(24, 19, 15, .12);
+      pointer-events: none;
+    }
+
+    .gantt-ped-thumb-media {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      background: #fff5ed;
+      color: var(--orange);
+    }
+
+    .gantt-ped-thumb-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .gantt-ped-thumb-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .gantt-ped-thumb-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 14px;
+      padding: 1px 4px;
+      border-top: 1px solid rgba(24, 19, 15, .12);
+      background: #fff;
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gantt-ped-thumb .asset-carousel-preview,
+    .gantt-ped-thumb .asset-folder-thumb,
+    .gantt-ped-thumb .asset-video-preview {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .gantt-ped-thumb .asset-carousel-badge,
+    .gantt-ped-thumb .asset-folder-title,
+    .gantt-ped-thumb .asset-video-preview span:not(.asset-video-play) {
+      display: none;
+    }
+
     .status-menu,
     .context-menu {
       position: fixed;
@@ -6872,6 +6942,7 @@
             assetItems: linkedPost?.assetItems || task.pedAssetItems || [],
             copy: linkedPost?.copy || "",
             subtasks: linkedPost?.subtasks || task.subtasks || [],
+            projectId: task.projectId,
             project: project?.name || "",
             color: project ? project.color : statusColor(task.status),
             source: "Gantt"
@@ -7542,6 +7613,34 @@
           ${assetFolderThumbMarkup("Drive carousel")}
           <span class="asset-carousel-badge"><span>Carousel</span><span>${escapeHtml(label)}</span></span>
         </div>
+      `;
+    }
+
+    function ganttPedThumbMarkup(item) {
+      const format = normalizePedFormat(item.format);
+      const links = assetLinks(item.asset);
+      const folderId = driveFolderId(item.asset);
+      const isCarousel = format === "Carousel" || folderId || links.length > 1;
+      const firstImage = serializableAssetItems(item.assetItems || []).find((assetItem) => assetItem.type === "image");
+      const directImage = firstImage?.src || (!isCarousel && !isVideoAsset(item.asset) ? drivePreviewUrl(item.asset) : "");
+      let media = `<span class="gantt-ped-thumb-icon">${pedFormatIconMarkup(format)}</span>`;
+      if (isCarousel) {
+        media = folderId
+          ? driveFolderCoverMarkup(folderId)
+          : assetCarouselPreviewMarkup(item.asset, format);
+      } else if (directImage) {
+        media = `<img src="${escapeHtml(directImage)}" alt="" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`;
+      } else if (isVideoAsset(item.asset)) {
+        media = videoAssetPreviewMarkup("Video preview");
+      }
+      const socialLabel = (item.social || [])
+        .map((socialId) => (data.socials || []).find((social) => social.id === socialId)?.label || socialId)
+        .filter(Boolean)
+        .slice(0, 1)[0];
+      const label = socialLabel || format;
+      return `
+        <div class="gantt-ped-thumb-media">${media}</div>
+        <div class="gantt-ped-thumb-label">${escapeHtml(label)}</div>
       `;
     }
 
@@ -8578,9 +8677,11 @@
         projectList.appendChild(pill);
       });
 
+      const allPedItems = pedItems();
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
-        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember));
+        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember))
+          || allPedItems.some((post) => post.projectId === project.id && (post.members || []).includes(selectedMember));
       });
 
       let projectTop = 0;
@@ -8588,7 +8689,18 @@
         const visibleTasks = data.tasks
           .filter((task) => task.projectId === project.id)
           .filter((task) => taskMatchesFilter(task, selectedMember));
-        const rowHeight = Math.max(48, visibleTasks.length * 34 + 14);
+        const visiblePedPosts = allPedItems
+          .filter((post) => post.projectId === project.id && post.date)
+          .filter((post) => selectedMember === "all" || (post.members || []).includes(selectedMember))
+          .sort((a, b) => `${a.date} ${normalizeHour(a.time)}`.localeCompare(`${b.date} ${normalizeHour(b.time)}`));
+        const pedPostsPerDate = visiblePedPosts.reduce((result, post) => {
+          result[post.date] = (result[post.date] || 0) + 1;
+          return result;
+        }, {});
+        const maxPedStack = Math.max(0, ...Object.values(pedPostsPerDate));
+        const taskBandHeight = visibleTasks.length ? visibleTasks.length * 34 + 10 : 8;
+        const pedBandHeight = maxPedStack ? maxPedStack * 48 + 8 : 0;
+        const rowHeight = Math.max(48, taskBandHeight + pedBandHeight + 6);
         const row = document.createElement("div");
         row.className = "row-label";
         row.style.height = `${rowHeight}px`;
@@ -8624,6 +8736,22 @@
             bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${unassignedBadge}${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
+        const pedDateCounts = {};
+        visiblePedPosts.forEach((post) => {
+          const postDate = new Date(`${post.date}T00:00:00`);
+          if (Number.isNaN(postDate.getTime())) return;
+          const dateIndex = pedDateCounts[post.date] || 0;
+          pedDateCounts[post.date] = dateIndex + 1;
+          const left = Math.max(0, dateDiffDays(timelineStart, postDate)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+          const thumb = document.createElement("div");
+          thumb.className = "gantt-ped-thumb";
+          thumb.title = `${post.title || "PED post"}\n${post.date} ${normalizeHour(post.time)}\n${normalizePedFormat(post.format)}`;
+          thumb.style.left = `calc(${left}px + 6px)`;
+          thumb.style.top = `${projectTop + taskBandHeight + dateIndex * 48}px`;
+          thumb.style.borderColor = post.color || project.color;
+          thumb.innerHTML = ganttPedThumbMarkup(post);
+          bars.appendChild(thumb);
+        });
         projectTop += rowHeight;
       });
 
