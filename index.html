@@ -479,22 +479,11 @@
       background: #eeeae4;
     }
 
-    .day.today {
-      background: rgba(255, 90, 20, .15);
-      color: #9a3412;
-      box-shadow: inset 0 -3px 0 var(--orange);
-    }
-
-    .day.today .day-weekday,
-    .day.today .day-number {
-      color: #9a3412;
-    }
-
     .weekends {
       position: absolute;
       inset: var(--timeline-head) 0 0;
       pointer-events: none;
-      z-index: 1;
+      z-index: 0;
     }
 
     .weekend-band {
@@ -506,24 +495,13 @@
       border-right: 1px solid rgba(214, 207, 197, .82);
     }
 
-    .today-band {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      z-index: 2;
-      background: rgba(255, 90, 20, .13);
-      border-left: 2px solid rgba(255, 90, 20, .55);
-      border-right: 2px solid rgba(255, 90, 20, .55);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .38);
-    }
-
     .grid {
       position: absolute;
       inset: var(--timeline-head) 0 0;
       background:
         repeating-linear-gradient(to bottom, transparent 0, transparent 47px, var(--line-soft) 47px, var(--line-soft) 48px),
         #faf8f4;
-      z-index: 0;
+      z-index: 1;
     }
 
     .bars {
@@ -673,85 +651,6 @@
 
     .bar-status-text {
       color: var(--ink);
-    }
-
-    .gantt-ped-thumb {
-      position: absolute;
-      width: min(92px, calc(var(--day) - 12px));
-      height: 54px;
-      display: block;
-      overflow: hidden;
-      border: 2px solid var(--ink);
-      border-radius: 7px;
-      background: #fff;
-      color: var(--ink);
-      box-shadow: 0 6px 14px rgba(24, 19, 15, .12);
-      pointer-events: none;
-    }
-
-    .gantt-ped-thumb-media {
-      position: relative;
-      display: grid;
-      place-items: center;
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      background: #fff5ed;
-      color: var(--orange);
-    }
-
-    .gantt-ped-thumb-media img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .gantt-ped-thumb-icon svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    .gantt-ped-thumb-label {
-      position: absolute;
-      left: 3px;
-      right: 3px;
-      bottom: 3px;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 17px;
-      padding: 2px 5px;
-      border: 1px solid rgba(255, 255, 255, .58);
-      border-radius: 999px;
-      background: var(--orange);
-      color: #fff;
-      font-size: 9px;
-      font-weight: 900;
-      line-height: 1;
-      text-transform: none;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      box-shadow: 0 4px 10px rgba(24, 19, 15, .2);
-    }
-
-    .gantt-ped-thumb .asset-carousel-preview,
-    .gantt-ped-thumb .asset-folder-thumb,
-    .gantt-ped-thumb .asset-video-preview {
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      border: 0;
-      border-radius: 0;
-      box-shadow: none;
-    }
-
-    .gantt-ped-thumb .asset-carousel-badge,
-    .gantt-ped-thumb .asset-folder-title,
-    .gantt-ped-thumb .asset-video-preview span:not(.asset-video-play) {
-      display: none;
     }
 
     .status-menu,
@@ -906,7 +805,7 @@
       background:
         repeating-linear-gradient(to right, transparent 0, transparent calc(var(--day) - 1px), var(--line-soft) calc(var(--day) - 1px), var(--line-soft) var(--day)),
         #faf8f4;
-      z-index: 0;
+      z-index: 1;
     }
 
     .ped-hour-line {
@@ -944,7 +843,7 @@
       position: absolute;
       inset: var(--timeline-head) 0 0;
       pointer-events: none;
-      z-index: 1;
+      z-index: 0;
     }
 
     .ped-post {
@@ -4135,7 +4034,6 @@
   </div>
   <div class="context-menu" id="pedContextMenu" aria-label="PED actions">
     <button type="button" data-ped-context-action="modify">Modify</button>
-    <button type="button" data-ped-context-action="duplicate">Duplicate</button>
     <button type="button" data-ped-context-action="add-gantt">Add to GANTT</button>
     <button type="button" data-ped-context-action="delete">Delete</button>
   </div>
@@ -5242,12 +5140,10 @@
         for (let day = 1; day <= total; day += 1) {
           const el = document.createElement("div");
           el.className = "day";
-          const dayDate = new Date(year, month, day);
-          const iso = dateKey(dayDate);
-          if (iso === currentDateKey()) {
+          if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
             el.classList.add("today");
-            appendTodayBand(weekendsEl, dayOffset);
           }
+          const dayDate = new Date(year, month, day);
           const weekDay = dayDate.getDay();
           if (weekDay === 0 || weekDay === 6) {
             el.classList.add("weekend");
@@ -5364,14 +5260,6 @@
 
     function currentDateKey() {
       return dateKey(new Date());
-    }
-
-    function appendTodayBand(container, dayOffset) {
-      const band = document.createElement("div");
-      band.className = "today-band";
-      band.style.left = `calc(var(--day) * ${dayOffset})`;
-      band.style.width = "var(--day)";
-      container.appendChild(band);
     }
 
     function setNewTaskDefaultDates() {
@@ -6983,7 +6871,6 @@
             assetItems: linkedPost?.assetItems || task.pedAssetItems || [],
             copy: linkedPost?.copy || "",
             subtasks: linkedPost?.subtasks || task.subtasks || [],
-            projectId: task.projectId,
             project: project?.name || "",
             color: project ? project.color : statusColor(task.status),
             source: "Gantt"
@@ -7657,38 +7544,6 @@
       `;
     }
 
-    function ganttPedThumbMarkup(item) {
-      const format = normalizePedFormat(item.format);
-      const links = assetLinks(item.asset);
-      const folderId = driveFolderId(item.asset);
-      const isCarousel = format === "Carousel" || folderId || links.length > 1;
-      const firstImage = serializableAssetItems(item.assetItems || []).find((assetItem) => assetItem.type === "image");
-      const directImage = firstImage?.src || (!isCarousel && !isVideoAsset(item.asset) ? drivePreviewUrl(item.asset) : "");
-      let media = `<span class="gantt-ped-thumb-icon">${pedFormatIconMarkup(format)}</span>`;
-      if (isCarousel) {
-        media = folderId
-          ? driveFolderCoverMarkup(folderId)
-          : assetCarouselPreviewMarkup(item.asset, format);
-      } else if (directImage) {
-        media = `<img src="${escapeHtml(directImage)}" alt="" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`;
-      } else if (isVideoAsset(item.asset)) {
-        media = videoAssetPreviewMarkup("Video preview");
-      }
-      const socialLabel = (item.social || [])
-        .map((socialId) => (data.socials || []).find((social) => social.id === socialId)?.label || socialId)
-        .filter(Boolean)
-        .slice(0, 1)[0];
-      const label = format === "Carousel" || isCarousel
-        ? `${socialLabel ? `${socialLabel} ` : ""}Carousel`
-        : format === "Video"
-          ? `${socialLabel ? `${socialLabel} ` : ""}Video`
-          : socialLabel || format;
-      return `
-        <div class="gantt-ped-thumb-media">${media}</div>
-        <div class="gantt-ped-thumb-label">${escapeHtml(label)}</div>
-      `;
-    }
-
     function pedSubtaskPreview(subtasks = []) {
       if (!subtasks.length) return "-";
       return subtasks
@@ -8040,10 +7895,6 @@
           const iso = dateKey(dayDate);
           const el = document.createElement("div");
           el.className = "day";
-          if (iso === currentDateKey()) {
-            el.classList.add("today");
-            appendTodayBand(weekends, dayOffset);
-          }
           if (weekDay === 0 || weekDay === 6) {
             el.classList.add("weekend");
             const band = document.createElement("div");
@@ -8232,10 +8083,6 @@
           const iso = dateKey(dayDate);
           const el = document.createElement("div");
           el.className = "day";
-          if (iso === currentDateKey()) {
-            el.classList.add("today");
-            appendTodayBand(weekends, dayOffset);
-          }
           if (weekDay === 0 || weekDay === 6) {
             el.classList.add("weekend");
             const band = document.createElement("div");
@@ -8730,11 +8577,9 @@
         projectList.appendChild(pill);
       });
 
-      const allPedItems = pedItems();
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
-        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember))
-          || allPedItems.some((post) => post.projectId === project.id && (post.members || []).includes(selectedMember));
+        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember));
       });
 
       let projectTop = 0;
@@ -8742,18 +8587,7 @@
         const visibleTasks = data.tasks
           .filter((task) => task.projectId === project.id)
           .filter((task) => taskMatchesFilter(task, selectedMember));
-        const visiblePedPosts = allPedItems
-          .filter((post) => post.projectId === project.id && post.date)
-          .filter((post) => selectedMember === "all" || (post.members || []).includes(selectedMember))
-          .sort((a, b) => `${a.date} ${normalizeHour(a.time)}`.localeCompare(`${b.date} ${normalizeHour(b.time)}`));
-        const pedPostsPerDate = visiblePedPosts.reduce((result, post) => {
-          result[post.date] = (result[post.date] || 0) + 1;
-          return result;
-        }, {});
-        const maxPedStack = Math.max(0, ...Object.values(pedPostsPerDate));
-        const taskBandHeight = visibleTasks.length ? visibleTasks.length * 34 + 10 : 8;
-        const pedBandHeight = maxPedStack ? maxPedStack * 48 + 8 : 0;
-        const rowHeight = Math.max(48, taskBandHeight + pedBandHeight + 6);
+        const rowHeight = Math.max(48, visibleTasks.length * 34 + 14);
         const row = document.createElement("div");
         row.className = "row-label";
         row.style.height = `${rowHeight}px`;
@@ -8789,22 +8623,6 @@
             bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${unassignedBadge}${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
-        const pedDateCounts = {};
-        visiblePedPosts.forEach((post) => {
-          const postDate = new Date(`${post.date}T00:00:00`);
-          if (Number.isNaN(postDate.getTime())) return;
-          const dateIndex = pedDateCounts[post.date] || 0;
-          pedDateCounts[post.date] = dateIndex + 1;
-          const left = Math.max(0, dateDiffDays(timelineStart, postDate)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-          const thumb = document.createElement("div");
-          thumb.className = "gantt-ped-thumb";
-          thumb.title = `${post.title || "PED post"}\n${post.date} ${normalizeHour(post.time)}\n${normalizePedFormat(post.format)}`;
-          thumb.style.left = `calc(${left}px + 6px)`;
-          thumb.style.top = `${projectTop + taskBandHeight + dateIndex * 48}px`;
-          thumb.style.borderColor = post.color || project.color;
-          thumb.innerHTML = ganttPedThumbMarkup(post);
-          bars.appendChild(thumb);
-        });
         projectTop += rowHeight;
       });
 
@@ -8829,7 +8647,7 @@
     }
 
     function syncGanttHeaderPosition() {
-      monthsEl.style.transform = `translateY(${boardEl.scrollTop}px) translateZ(0)`;
+      monthsEl.style.transform = "translateZ(0)";
     }
 
     function updateHiddenTaskIndicators() {
@@ -10179,36 +9997,6 @@
       return true;
     }
 
-    async function duplicatePedItem(taskId = "", postId = "") {
-      const sourcePost = pedPostSourceFromContext(taskId, postId);
-      if (!sourcePost) return false;
-      const createdAt = Date.now();
-      data.pedPosts = data.pedPosts || [];
-      data.pedPosts.push({
-        id: `ped${createdAt}-copy`,
-        sourceTaskId: "",
-        title: sourcePost.title || "PED post",
-        projectId: sourcePost.projectId || data.projects[0]?.id || "",
-        date: sourcePost.date || currentDateKey(),
-        time: normalizeHour(sourcePost.time || "12:00"),
-        status: sourcePost.status || (data.pedStatuses[0] ? statusName(data.pedStatuses[0]) : ""),
-        members: structuredClone(sourcePost.members || []),
-        social: structuredClone(sourcePost.social || []),
-        format: normalizePedFormat(sourcePost.format),
-        asset: sourcePost.asset || "",
-        assetItems: structuredClone(sourcePost.assetItems || []),
-        copy: sourcePost.copy || "",
-        comments: structuredClone(sourcePost.comments || []),
-        subtasks: structuredClone(sourcePost.subtasks || []),
-        createdAt,
-        updatedAt: createdAt
-      });
-      const savePromise = saveData();
-      renderPed();
-      await savePromise;
-      return true;
-    }
-
     async function addPedItemToGantt(taskId, postId, selectedDate) {
       if (!selectedDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) return;
       if (taskId) {
@@ -10261,7 +10049,7 @@
       hideTaskMenus();
       if (post.dataset.taskId) pedContextMenu.dataset.taskId = post.dataset.taskId;
       if (post.dataset.pedPostId) pedContextMenu.dataset.pedPostId = post.dataset.pedPostId;
-      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 150);
+      placeContextMenu(pedContextMenu, event.clientX, event.clientY, 190, 120);
     });
 
     pedCalendar.addEventListener("click", (event) => {
@@ -10328,7 +10116,7 @@
       });
     }, { passive: false });
 
-    pedContextMenu.addEventListener("click", async (event) => {
+    pedContextMenu.addEventListener("click", (event) => {
       const button = event.target.closest("[data-ped-context-action]");
       if (!button) return;
       const action = button.dataset.pedContextAction;
@@ -10346,10 +10134,6 @@
       }
       if (action === "add-gantt") {
         if (postNode) openPedToGanttDialog(taskId || "", postId || "");
-        return;
-      }
-      if (action === "duplicate") {
-        await duplicatePedItem(taskId || "", postId || "");
         return;
       }
       if (action === "delete") {
