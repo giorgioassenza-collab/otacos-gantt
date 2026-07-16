@@ -6105,6 +6105,14 @@
       return parseBudgetAmount(value);
     }
 
+    function budgetWorksheetCellNumber(sheet, cellAddress) {
+      if (!sheet || !cellAddress) return null;
+      const cell = sheet[cellAddress];
+      if (!cell) return null;
+      const value = budgetNumberFromCell(cell.v ?? cell.w ?? cell);
+      return Number.isFinite(value) ? value : null;
+    }
+
     function parseBudgetTotals(rows) {
       const headerIndex = rows.findIndex((row) => row.map((cell) => String(cell || "").trim().toUpperCase()).includes("EXPENSES"));
       if (headerIndex < 0) return null;
@@ -6281,21 +6289,34 @@
         total: month.amount,
         categories: aggregateBudget(transactions.filter((row) => row.month === month.name), "category")
       }));
-      const totalSpent = transactions.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const calculatedSpent = transactions.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const totalSpent = Number.isFinite(baseSummary?.totalSpentFromTotalCell)
+        ? baseSummary.totalSpentFromTotalCell
+        : calculatedSpent;
+      const officialRemaining = Number.isFinite(baseSummary?.remainingFromTotalCell)
+        ? baseSummary.remainingFromTotalCell
+        : null;
       return {
         ...(baseSummary || {}),
         totalBudget,
         workingBudget: baseSummary?.workingBudget || totalBudget,
         totalExpenses: totalSpent,
         totalSpent,
-        remaining: Math.max(0, totalBudget - totalSpent),
+        remaining: officialRemaining ?? Math.max(0, totalBudget - totalSpent),
         categoryTotals,
         monthRows
       };
     }
 
     function parseBudgetWorkbook(workbook) {
-      const summary = parseBudgetTotals(budgetRowsFromWorksheet(workbook.Sheets.TOTAL || workbook.Sheets.TOT));
+      const totalSheet = workbook.Sheets.TOTAL || workbook.Sheets.TOT;
+      const summary = parseBudgetTotals(budgetRowsFromWorksheet(totalSheet));
+      const totalSpentFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F24");
+      const remainingFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F25");
+      if (summary) {
+        if (Number.isFinite(totalSpentFromTotalCell)) summary.totalSpentFromTotalCell = totalSpentFromTotalCell;
+        if (Number.isFinite(remainingFromTotalCell)) summary.remainingFromTotalCell = remainingFromTotalCell;
+      }
       const parsedSheets = workbook.SheetNames
         .filter((sheetName) => !/^TOT(AL)?$/i.test(sheetName))
         .map((sheetName) => {
@@ -6446,7 +6467,17 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
         }
-        budgetState = { loaded: true, loading: false, rows: parsed.transactions, forecast: parsed.forecast, summary: parsed.summary || null, title: parsed.title, sheets: parsed.sheets || [], error: "" };
+        const transactions = withManualBudgetAdjustments(parsed.transactions || []);
+        budgetState = {
+          loaded: true,
+          loading: false,
+          rows: transactions,
+          forecast: parsed.forecast || [],
+          summary: budgetSummaryFromTransactions(parsed.summary || null, transactions),
+          title: parsed.title,
+          sheets: parsed.sheets || [],
+          error: ""
+        };
       } catch (error) {
         budgetState = { loaded: true, loading: false, rows: [], forecast: [], title: "Budget", error: "Cannot load the Budget sheet. Check that the Google Sheet is public with link access." };
       }
