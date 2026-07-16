@@ -6309,7 +6309,8 @@
     }
 
     function parseBudgetWorkbook(workbook) {
-      const totalSheet = workbook.Sheets.TOTAL || workbook.Sheets.TOT;
+      const totalSheetName = workbook.SheetNames.find((sheetName) => /^TOT(AL)?$/i.test(String(sheetName || "").trim()));
+      const totalSheet = workbook.Sheets[totalSheetName] || workbook.Sheets.TOTAL || workbook.Sheets.TOT;
       const summary = parseBudgetTotals(budgetRowsFromWorksheet(totalSheet));
       const totalSpentFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F24");
       const remainingFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F25");
@@ -6467,7 +6468,7 @@
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           parsed = parseBudgetRows(parseCsv(await response.text()), "Current tab");
         }
-        const transactions = withManualBudgetAdjustments(parsed.transactions || []);
+        const transactions = parsed.transactions || [];
         budgetState = {
           loaded: true,
           loading: false,
