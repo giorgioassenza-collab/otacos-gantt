@@ -5878,17 +5878,20 @@
           done: Boolean(subtask.done)
         }))
       })), deletedPedPostIds);
-      normalized.influencers = filterDeleted(applyInfluencerStatusAging((normalized.influencers || []).map(normalizeInfluencerRow).filter((row) => influencerColumns.some((column) => row[column.key]))), deletedInfluencerIds);
+      normalized.influencers = filterDeleted(applyInfluencerStatusAging((normalized.influencers || []).map((row, index) => normalizeInfluencerRow(row, index)).filter((row) => influencerColumns.some((column) => row[column.key]))), deletedInfluencerIds)
+        .sort((left, right) => influencerSortValue(left) - influencerSortValue(right));
       ensureInfluencerOptionsFromRows(normalized);
       return normalized;
     }
 
-    function normalizeInfluencerRow(row) {
+    function normalizeInfluencerRow(row, fallbackSortOrder = 0) {
       const source = row || {};
       const rawStatus = source.status || source.STATUS || "";
+      const sortOrder = Number(source.sortOrder ?? source.influencerSortOrder);
       return {
         id: source.id || `inf${Date.now()}${Math.random()}`,
         updatedAt: Number(source.updatedAt || 0),
+        sortOrder: Number.isFinite(sortOrder) ? sortOrder : fallbackSortOrder,
         name: source.name || source.NAME || "",
         city: source.city || source.CITY || "",
         target: source.target || source.TARGET || "",
@@ -8720,13 +8723,17 @@
       select.value = [...select.options].some((item) => item.value === previous) ? previous : "all";
     }
 
+    function orderedInfluencers() {
+      return [...(data.influencers || [])].sort((left, right) => influencerSortValue(left) - influencerSortValue(right));
+    }
+
     function filteredInfluencers() {
       const query = document.getElementById("influencerSearch").value.trim().toLowerCase();
       const city = document.getElementById("influencerCityFilter").value;
       const target = document.getElementById("influencerTargetFilter").value;
       const status = document.getElementById("influencerStatusFilter").value;
       const where = document.getElementById("influencerWhereFilter").value;
-      return (data.influencers || []).filter((row) => {
+      return orderedInfluencers().filter((row) => {
         const searchable = influencerColumns.map((column) => row[column.key] || "").join(" ").toLowerCase();
         if (query && !searchable.includes(query)) return false;
         if (city !== "all" && row.city !== city) return false;
@@ -8748,13 +8755,14 @@
       const visibleColumns = influencerColumns.filter((column) => !column.hidden);
       head.innerHTML = `<tr><th class="row-number-head">#</th>${visibleColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
       const rows = filteredInfluencers();
+      const orderedRows = orderedInfluencers();
       body.innerHTML = rows.map((row) => `
         ${(() => {
           const duplicate = duplicateInfluencerInfo(row);
           const title = duplicate ? `This user may already be present at row ${duplicate.rowNumber}` : "";
           return `<tr data-influencer-id="${escapeHtml(row.id)}" class="${duplicate ? "is-duplicate" : ""}" title="${escapeHtml(title)}">`;
         })()}
-          <td class="row-number-cell">${(data.influencers || []).findIndex((item) => item.id === row.id) + 1}</td>
+          <td class="row-number-cell">${orderedRows.findIndex((item) => item.id === row.id) + 1}</td>
           ${visibleColumns.map((column) => {
             const inlineEditable = ["city", "target", "type", "status", "where", "when"].includes(column.key);
             return `<td ${inlineEditable ? `data-influencer-cell-id="${escapeHtml(row.id)}" data-influencer-cell-key="${escapeHtml(column.key)}"` : ""}>${influencerCellMarkup(row, column)}</td>`;
@@ -8823,11 +8831,25 @@
       renderInfluencers();
     }
 
+    function influencerSortValue(row) {
+      const value = Number(row?.sortOrder);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function nextInfluencerSortOrder(rowId = "") {
+      const maxSort = Math.max(0, ...(data.influencers || [])
+        .filter((item) => item.id !== rowId)
+        .map(influencerSortValue));
+      return maxSort + 1;
+    }
+
     function moveInfluencerToBottom(rowId) {
       data.influencers = data.influencers || [];
       const index = data.influencers.findIndex((item) => item.id === rowId);
-      if (index < 0 || index === data.influencers.length - 1) return;
+      if (index < 0) return;
       const [row] = data.influencers.splice(index, 1);
+      row.sortOrder = nextInfluencerSortOrder(rowId);
+      touchItem(row);
       data.influencers.push(row);
     }
 
@@ -9640,6 +9662,7 @@
       if (String(statusValue).trim().toUpperCase() !== "CONTACTED") {
         row.contactedAt = "";
       }
+      if (!previousRow) row.sortOrder = nextInfluencerSortOrder(id);
       if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember || !row.contactProjectId)) return;
       data.influencers = data.influencers || [];
       const index = data.influencers.findIndex((item) => item.id === id);
