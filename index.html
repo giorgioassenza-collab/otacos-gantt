@@ -5427,6 +5427,49 @@
       horizontalScrollbar.hidden = maxScroll <= 4;
     }
 
+    function wheelPixelDelta(event) {
+      const lineHeight = 16;
+      const pageHeight = Math.max(1, event.currentTarget?.clientHeight || window.innerHeight || 800);
+      const factor = event.deltaMode === 1
+        ? lineHeight
+        : event.deltaMode === 2
+          ? pageHeight
+          : 1;
+      return {
+        x: event.deltaX * factor,
+        y: event.deltaY * factor
+      };
+    }
+
+    function isScrollableInsidePed(target) {
+      const scrollable = target?.closest?.("textarea, select, input, .check-list, .comment-list, .stack-list, .modal, .settings-panel, .asset-viewer-stage");
+      return Boolean(scrollable);
+    }
+
+    function handlePedWheel(event) {
+      if (!document.body.classList.contains("ped-mode")) return;
+      if (event.ctrlKey || event.metaKey || isScrollableInsidePed(event.target)) return;
+      const { x, y } = wheelPixelDelta(event);
+      const maxLeft = Math.max(0, pedView.scrollWidth - pedView.clientWidth);
+      if (maxLeft <= 0) return;
+      const maxTop = Math.max(0, pedView.scrollHeight - pedView.clientHeight);
+      const canScrollDown = pedView.scrollTop < maxTop - 1;
+      const canScrollUp = pedView.scrollTop > 1;
+      const verticalBlocked = y > 0 ? !canScrollDown : y < 0 ? !canScrollUp : true;
+      const horizontalIntent = Math.abs(x) > 0 || event.shiftKey || verticalBlocked;
+      if (!horizontalIntent) return;
+      const before = pedView.scrollLeft;
+      const delta = Math.abs(x) > 0 ? x : y;
+      pedView.scrollLeft = Math.max(0, Math.min(maxLeft, before + delta));
+      if (pedView.scrollLeft !== before) {
+        event.preventDefault();
+        updatePedHiddenIndicators();
+        syncPedHeaderPosition();
+        updatePedHourLabels();
+        syncHorizontalScrollbar();
+      }
+    }
+
     function initials(rawValue) {
       const raw = rawValue || "";
       return raw.trim().slice(0, 2).toUpperCase();
@@ -8743,10 +8786,19 @@
           row.contactTaskEnabled = false;
           syncInfluencerContactTask(row);
         }
+        if (nextStatus !== previousStatus) moveInfluencerToBottom(rowId);
       }
       saveData();
       renderBoard();
       renderInfluencers();
+    }
+
+    function moveInfluencerToBottom(rowId) {
+      data.influencers = data.influencers || [];
+      const index = data.influencers.findIndex((item) => item.id === rowId);
+      if (index < 0 || index === data.influencers.length - 1) return;
+      const [row] = data.influencers.splice(index, 1);
+      data.influencers.push(row);
     }
 
     function isContactInfluencerStatus(status) {
@@ -9563,6 +9615,9 @@
       const index = data.influencers.findIndex((item) => item.id === id);
       if (index >= 0) data.influencers[index] = row;
       else data.influencers.push(row);
+      if (previousRow && String(statusValue).trim().toUpperCase() !== String(previousRow.status || "").trim().toUpperCase()) {
+        moveInfluencerToBottom(id);
+      }
       syncInfluencerContactTask(row);
       saveData();
       renderBoard();
@@ -11481,6 +11536,7 @@
       updatePedHourLabels();
       syncHorizontalScrollbar();
     }, { passive: true });
+    pedView.addEventListener("wheel", handlePedWheel, { passive: false });
     creatorCalendarView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     influencerView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     budgetShell.addEventListener("change", (event) => {
