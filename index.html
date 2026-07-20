@@ -4766,6 +4766,19 @@
         ids.forEach((id) => {
           if (!seen.has(id) && localById.has(id)) next[kind].push(localById.get(id));
         });
+        if (kind === "influencers") {
+          const nextById = collectionById(next[kind] || []);
+          const orderedIds = new Set();
+          next[kind] = [
+            ...(localData?.[kind] || [])
+              .filter((item) => item?.id && nextById.has(item.id))
+              .map((item) => {
+                orderedIds.add(item.id);
+                return nextById.get(item.id);
+              }),
+            ...(next[kind] || []).filter((item) => item?.id && !orderedIds.has(item.id))
+          ];
+        }
       });
       return normalizeData(next);
     }
@@ -4790,6 +4803,23 @@
         .map((item) => item.id);
       const order = [...remoteOrder, ...localOnly];
       return order.map((id) => merged.get(id)).filter(Boolean);
+    }
+
+    function mergeInfluencersById(localItems = [], remoteItems = []) {
+      const merged = collectionById(mergeById(localItems, remoteItems));
+      const localChangedIds = changedCollectionIds(localItems, remoteItems);
+      const shouldUseLocalOrder = localChangedIds.size > 0;
+      const orderSource = shouldUseLocalOrder ? localItems : remoteItems;
+      const orderedIds = new Set();
+      return [
+        ...orderSource
+          .filter((item) => item?.id && merged.has(item.id))
+          .map((item) => {
+            orderedIds.add(item.id);
+            return merged.get(item.id);
+          }),
+        ...[...merged.values()].filter((item) => item?.id && !orderedIds.has(item.id))
+      ];
     }
 
     function deletedMap(rawData, kind) {
@@ -4988,7 +5018,7 @@
         influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
         tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
         pedPosts: filterDeleted(mergeById(local.pedPosts || [], remote.pedPosts || []), deletedSet({ deletedIds: mergedDeletedIds }, "pedPosts")),
-        influencers: filterDeleted(mergeById(local.influencers || [], remote.influencers || []), deletedSet({ deletedIds: mergedDeletedIds }, "influencers"))
+        influencers: filterDeleted(mergeInfluencersById(local.influencers || [], remote.influencers || []), deletedSet({ deletedIds: mergedDeletedIds }, "influencers"))
       });
     }
 
