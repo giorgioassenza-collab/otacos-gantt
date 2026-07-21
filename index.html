@@ -4392,6 +4392,8 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
+    const viewStorageKey = "tacos-gantt-board-active-view-v1";
+    const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget"];
     const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
@@ -9294,16 +9296,7 @@
       setNewTaskDefaultDates();
       document.getElementById("pedPostDate").value = currentDateKey();
       pedPostTime.value = "11:00";
-      document.body.classList.remove("ped-mode", "influencer-mode", "creator-calendar-mode", "budget-mode");
-      viewGantt.classList.add("is-active");
-      viewPed.classList.remove("is-active");
-      viewInfluencer.classList.remove("is-active");
-      viewCreatorCalendar.classList.remove("is-active");
-      viewBudget.classList.remove("is-active");
-      document.querySelector(".brand-title").textContent = "Workflow";
-      document.getElementById("currentMonth").textContent = "O'TACOS";
-      requestAnimationFrame(snapActiveTimelineToToday);
-      requestAnimationFrame(syncHorizontalScrollbar);
+      setView(readSavedView(), { persist: false });
       retryPendingLocalSave();
       setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
@@ -9465,7 +9458,27 @@
       return "GANTT";
     }
 
-    function setView(view) {
+    function readSavedView() {
+      try {
+        const savedView = localStorage.getItem(viewStorageKey);
+        return validViews.includes(savedView) ? savedView : "gantt";
+      } catch {
+        return "gantt";
+      }
+    }
+
+    function saveActiveView(view) {
+      if (!validViews.includes(view)) return;
+      try {
+        localStorage.setItem(viewStorageKey, view);
+      } catch {
+        // Local storage can be unavailable in private or restricted browser contexts.
+      }
+    }
+
+    function setView(view, options = {}) {
+      view = validViews.includes(view) ? view : "gantt";
+      if (options.persist !== false) saveActiveView(view);
       const pedMode = view === "ped";
       const influencerMode = view === "influencer";
       const creatorCalendarMode = view === "creator-calendar";
