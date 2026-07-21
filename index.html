@@ -8813,6 +8813,7 @@
     function updateInfluencerInlineValue(rowId, key, value) {
       const row = (data.influencers || []).find((item) => item.id === rowId);
       if (!row || !key) return;
+      const previousValue = row[key] || "";
       const previousStatus = String(row.status || "").trim().toUpperCase();
       row[key] = value;
       if (key === "status") {
@@ -8824,8 +8825,8 @@
           row.contactTaskEnabled = false;
           syncInfluencerContactTask(row);
         }
-        if (nextStatus !== previousStatus) moveInfluencerToBottom(rowId);
       }
+      if (String(value || "") !== String(previousValue || "")) moveInfluencerToBottom(rowId);
       saveData();
       renderBoard();
       renderInfluencers();
@@ -9634,6 +9635,7 @@
       const statusValue = document.getElementById("influencerStatus").value.trim();
       const row = normalizeInfluencerRow({
         id,
+        sortOrder: previousRow?.sortOrder,
         name: document.getElementById("influencerName").value.trim(),
         city: document.getElementById("influencerCity").value.trim(),
         target: document.getElementById("influencerTarget").value.trim(),
@@ -9665,10 +9667,11 @@
       if (!previousRow) row.sortOrder = nextInfluencerSortOrder(id);
       if (row.contactTaskEnabled && (!row.contactDate || !row.contactMember || !row.contactProjectId)) return;
       data.influencers = data.influencers || [];
+      const rowChanged = previousRow ? stableDataString(row) !== stableDataString(previousRow) : true;
       const index = data.influencers.findIndex((item) => item.id === id);
       if (index >= 0) data.influencers[index] = row;
       else data.influencers.push(row);
-      if (previousRow && String(statusValue).trim().toUpperCase() !== String(previousRow.status || "").trim().toUpperCase()) {
+      if (rowChanged) {
         moveInfluencerToBottom(id);
       }
       syncInfluencerContactTask(row);
