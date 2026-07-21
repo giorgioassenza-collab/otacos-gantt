@@ -1927,9 +1927,9 @@
     .influencer-controls {
       position: sticky;
       top: 0;
-      z-index: 4;
+      z-index: 20;
       display: grid;
-      grid-template-columns: minmax(220px, 1fr) repeat(4, 160px) auto;
+      grid-template-columns: minmax(280px, 1fr) repeat(4, minmax(132px, 160px)) max-content;
       gap: 8px;
       padding: 12px;
       border: 1px solid var(--line);
@@ -1940,12 +1940,17 @@
 
     .influencer-controls input,
     .influencer-controls select {
+      min-width: 0;
       height: 34px;
       border: 1px solid #d9d2c8;
       border-radius: 8px;
       padding: 0 10px;
       font-size: 12px;
       font-weight: 800;
+    }
+
+    .influencer-controls .toolbar-btn {
+      white-space: nowrap;
     }
 
     .influencer-table-wrap {
@@ -3719,7 +3724,7 @@
       .influencer-controls {
         position: sticky;
         left: 0;
-        z-index: 7;
+        z-index: 20;
         width: calc(100vw - 16px);
         grid-template-columns: minmax(150px, 1fr) minmax(116px, 132px);
         overflow-x: auto;
