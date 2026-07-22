@@ -3865,7 +3865,10 @@
     </form>
     <h3>Projects</h3>
     <div class="project-list" id="projectList"></div>
-    <div class="panel-footer"><button class="secondary-btn" type="button" data-close-panel>Close</button></div>
+    <div class="panel-footer">
+      <button class="secondary-btn" type="button" data-close-panel>Close</button>
+      <button class="primary-btn" id="saveInfluencerSettings" type="button">Save settings</button>
+    </div>
   </aside>
 
   <aside class="settings-panel" id="taskPanel" aria-label="Task">
@@ -4201,9 +4204,18 @@
       <h2>Add to GANTT</h2>
       <form id="influencerToGanttForm">
         <input id="influencerToGanttId" type="hidden">
+        <label class="field">Type<select id="influencerToGanttAction" required>
+          <option value="contact">Contact</option>
+          <option value="video-store">In-store video</option>
+        </select></label>
         <label class="field">Project<select id="influencerToGanttProject" required></select></label>
         <label class="field">Who<select id="influencerToGanttWho" required></select></label>
         <label class="field">Date<input id="influencerToGanttDate" type="date" required></label>
+        <div class="ped-fields" id="influencerToGanttCreatorFields" hidden>
+          <label class="field">Creator Calendar status<select id="influencerToGanttCreatorStatus"></select></label>
+          <label class="field">Store<select id="influencerToGanttCreatorStore"></select></label>
+          <label class="field">Time<input id="influencerToGanttCreatorTime" type="time" value="10:00"></label>
+        </div>
         <div class="modal-actions">
           <button class="secondary-btn" id="closeInfluencerToGanttModal" type="button">Close</button>
           <button class="primary-btn" type="submit">Add</button>
@@ -4435,6 +4447,7 @@
       pedPosts: [],
       influencers: [],
       influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
+      influencerDeletedOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
       influencerColumnLabels: {}
     };
     let data = structuredClone(starterData);
@@ -4679,6 +4692,7 @@
       "projects",
       "socials",
       "influencerOptions",
+      "influencerDeletedOptions",
       "influencerColumnLabels"
     ];
 
@@ -5004,6 +5018,18 @@
       }, {});
     }
 
+    function mergeInfluencerDeletedOptions(localOptions = {}, remoteOptions = {}, localTime = 0, remoteTime = 0) {
+      const primary = localTime >= remoteTime ? localOptions : remoteOptions;
+      const secondary = localTime >= remoteTime ? remoteOptions : localOptions;
+      const keys = [...new Set([...Object.keys(secondary || {}), ...Object.keys(primary || {})])];
+      return keys.reduce((result, key) => {
+        result[key] = localTime === remoteTime
+          ? uniqueStrings(primary[key] || [], secondary[key] || [])
+          : uniqueStrings(primary[key] || []);
+        return result;
+      }, {});
+    }
+
     function mergeBoardData(localData, remoteData) {
       const local = normalizeData(localData);
       const remote = normalizeData(remoteData);
@@ -5022,6 +5048,7 @@
         projects: mergeProjects(local.projects || [], remote.projects || [], settingUpdatedAt(local, "projects"), settingUpdatedAt(remote, "projects")),
         socials: mergeSocials(local.socials || [], remote.socials || [], settingUpdatedAt(local, "socials"), settingUpdatedAt(remote, "socials")),
         influencerOptions: mergeInfluencerOptions(local.influencerOptions || {}, remote.influencerOptions || {}, settingUpdatedAt(local, "influencerOptions"), settingUpdatedAt(remote, "influencerOptions")),
+        influencerDeletedOptions: mergeInfluencerDeletedOptions(local.influencerDeletedOptions || {}, remote.influencerDeletedOptions || {}, settingUpdatedAt(local, "influencerDeletedOptions"), settingUpdatedAt(remote, "influencerDeletedOptions")),
         influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
         tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
         pedPosts: filterDeleted(mergeById(local.pedPosts || [], remote.pedPosts || []), deletedSet({ deletedIds: mergedDeletedIds }, "pedPosts")),
@@ -5887,8 +5914,29 @@
       })), deletedPedPostIds);
       normalized.influencers = filterDeleted(applyInfluencerStatusAging((normalized.influencers || []).map((row, index) => normalizeInfluencerRow(row, index)).filter((row) => influencerColumns.some((column) => row[column.key]))), deletedInfluencerIds)
         .sort((left, right) => influencerSortValue(left) - influencerSortValue(right));
+      normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
+      applyInfluencerDeletedOptionsToRows(normalized);
       ensureInfluencerOptionsFromRows(normalized);
       return normalized;
+    }
+
+    function normalizeInfluencerDeletedOptions(options = {}) {
+      return ["city", "target", "type", "status", "where", "when"].reduce((result, key) => {
+        result[key] = uniqueStrings(options?.[key] || []);
+        return result;
+      }, {});
+    }
+
+    function applyInfluencerDeletedOptionsToRows(normalized) {
+      const deletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
+      normalized.influencers = (normalized.influencers || []).map((row) => {
+        const next = { ...row };
+        Object.keys(deletedOptions).forEach((key) => {
+          const deletedNames = new Set((deletedOptions[key] || []).map((name) => name.toLowerCase()));
+          if (next[key] && deletedNames.has(String(next[key]).toLowerCase())) next[key] = "";
+        });
+        return next;
+      });
     }
 
     function normalizeInfluencerRow(row, fallbackSortOrder = 0) {
@@ -5949,13 +5997,15 @@
 
     function ensureInfluencerOptionsFromRows(normalized) {
       normalized.influencerOptions = normalized.influencerOptions || {};
+      normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       ["city", "target", "type", "status", "where", "when"].forEach((key) => {
+        const deletedNames = new Set((normalized.influencerDeletedOptions[key] || []).map((name) => name.toLowerCase()));
         const existing = (normalized.influencerOptions[key] || [])
           .map((item) => normalizeInfluencerOption(item, legacyInfluencerOptionColors[key]))
-          .filter((item) => item.name);
+          .filter((item) => item.name && !deletedNames.has(item.name.toLowerCase()));
         const names = new Set(existing.map((item) => item.name));
         (normalized.influencers || []).forEach((row) => {
-          if (row[key] && !names.has(row[key])) {
+          if (row[key] && !names.has(row[key]) && !deletedNames.has(String(row[key]).toLowerCase())) {
             const color = uxInfluencerOptionColor(key, row[key], existing.length, normalized.projects);
             existing.push({ name: row[key], color, textColor: readableTextColor(color) });
             names.add(row[key]);
@@ -6708,6 +6758,8 @@
         if (!importedRows.length) return;
         if (!(data.influencers || []).length) {
           data.influencers = applyInfluencerStatusAging(importedRows);
+          data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+          applyInfluencerDeletedOptionsToRows(data);
           ensureInfluencerOptionsFromRows(data);
           await saveData(true);
           return;
@@ -6733,6 +6785,8 @@
           return next;
         });
         data.influencers = applyInfluencerStatusAging(data.influencers);
+        data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+        applyInfluencerDeletedOptionsToRows(data);
         ensureInfluencerOptionsFromRows(data);
         if (changed) await saveData(true);
       } catch {
@@ -9721,6 +9775,8 @@
       const textColor = textColorInput.value;
       if (!name) return;
       data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [], status: [], where: [], when: [] };
+      data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+      data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => item.toLowerCase() !== name.toLowerCase());
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => item.name === name)) {
         data.influencerOptions[key].push({ name, color, textColor });
@@ -9731,6 +9787,19 @@
       saveData();
       renderInfluencerSettings();
       renderInfluencers();
+    }
+
+    async function saveInfluencerSettings() {
+      data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+      applyInfluencerDeletedOptionsToRows(data);
+      ensureInfluencerOptionsFromRows(data);
+      data.settingsUpdatedAt = data.settingsUpdatedAt || {};
+      data.settingsUpdatedAt.influencerOptions = Date.now();
+      data.settingsUpdatedAt.influencerDeletedOptions = Date.now();
+      await saveData();
+      renderInfluencerSettings();
+      renderInfluencers();
+      setSyncMessage("Influencer settings saved");
     }
 
     document.getElementById("influencerCityForm").addEventListener("submit", (event) => {
@@ -9763,6 +9832,10 @@
       addInfluencerOption("when", "influencerWhenName", "influencerWhenColor", "influencerWhenTextColor", "New when", "#fce7f3");
     });
 
+    document.getElementById("saveInfluencerSettings").addEventListener("click", async (event) => {
+      await runWithSavingButton(event, saveInfluencerSettings);
+    });
+
     document.getElementById("influencerColumnList").addEventListener("change", (event) => {
       const input = event.target.closest("[data-edit-influencer-column]");
       if (!input) return;
@@ -9783,6 +9856,8 @@
             renderInfluencerSettings();
             return;
           }
+          data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+          data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => item.toLowerCase() !== newName.toLowerCase());
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => item.name === oldName ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => row[key] === oldName ? { ...row, [key]: newName } : row);
           saveData();
@@ -9815,6 +9890,10 @@
         if (!button) return;
         const key = button.dataset.deleteInfluencerOption;
         const name = button.dataset.optionName;
+        data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
+        if (!data.influencerDeletedOptions[key].some((item) => item.toLowerCase() === name.toLowerCase())) {
+          data.influencerDeletedOptions[key].push(name);
+        }
         data.influencerOptions[key] = (data.influencerOptions[key] || []).filter((item) => item.name !== name);
         data.influencers = (data.influencers || []).map((row) => row[key] === name ? { ...row, [key]: "" } : row);
         saveData();
@@ -10413,15 +10492,41 @@
     function fillInfluencerToGanttFields(row) {
       const projectSelect = document.getElementById("influencerToGanttProject");
       const whoSelect = document.getElementById("influencerToGanttWho");
+      const actionSelect = document.getElementById("influencerToGanttAction");
+      const creatorStatusSelect = document.getElementById("influencerToGanttCreatorStatus");
+      const creatorStoreSelect = document.getElementById("influencerToGanttCreatorStore");
       projectSelect.innerHTML = "";
       whoSelect.innerHTML = "";
+      creatorStatusSelect.innerHTML = "";
+      creatorStoreSelect.innerHTML = "";
       (data.projects || []).forEach((project) => projectSelect.appendChild(option(project.id, project.name)));
       assignableMembers().forEach((member) => whoSelect.appendChild(option(member)));
+      (data.creatorStatuses || []).forEach((status) => creatorStatusSelect.appendChild(option(statusName(status))));
+      creatorStoreSelect.appendChild(option("", "-"));
+      (data.creatorStores || []).forEach((store) => creatorStoreSelect.appendChild(option(store)));
+      actionSelect.value = "contact";
       projectSelect.value = (data.projects || [])[0]?.id || "";
       whoSelect.value = assignableMembers()[0] || "";
       document.getElementById("influencerToGanttDate").value = currentDateKey();
+      creatorStatusSelect.value = data.creatorStatuses?.[0] ? statusName(data.creatorStatuses[0]) : "";
+      creatorStoreSelect.value = data.creatorStores?.[0] || "";
+      document.getElementById("influencerToGanttCreatorTime").value = "10:00";
       projectSelect.disabled = !(data.projects || []).length;
       whoSelect.disabled = !assignableMembers().length;
+      syncInfluencerToGanttActionFields();
+    }
+
+    function syncInfluencerToGanttActionFields() {
+      const isVideoStore = document.getElementById("influencerToGanttAction").value === "video-store";
+      const creatorFields = document.getElementById("influencerToGanttCreatorFields");
+      const creatorStatusSelect = document.getElementById("influencerToGanttCreatorStatus");
+      const creatorStoreSelect = document.getElementById("influencerToGanttCreatorStore");
+      const creatorTimeInput = document.getElementById("influencerToGanttCreatorTime");
+      creatorFields.hidden = !isVideoStore;
+      [creatorStatusSelect, creatorStoreSelect, creatorTimeInput].forEach((field) => {
+        field.disabled = !isVideoStore;
+        field.required = isVideoStore;
+      });
     }
 
     function openInfluencerToGanttDialog(influencerId) {
@@ -10436,11 +10541,14 @@
       influencerToGanttModal.classList.remove("open");
     }
 
-    async function addInfluencerToGantt(influencerId, projectId, member, date) {
+    async function addInfluencerToGantt(influencerId, projectId, member, date, options = {}) {
       const row = (data.influencers || []).find((item) => item.id === influencerId);
       if (!row || !projectId || !member || !date) return;
+      const action = options.action === "video-store" ? "video-store" : "contact";
       const createdAt = Date.now();
-      const taskName = `TO CONTACT ${row.name || "Influencer"}`;
+      const taskName = action === "video-store"
+        ? `Video in store ${row.name || "Influencer"}`
+        : `TO CONTACT ${row.name || "Influencer"}`;
       const task = {
         id: `t${createdAt}-influencer-gantt`,
         projectId,
@@ -10451,7 +10559,7 @@
         start: date,
         end: date,
         info: row.ttLink || row.igLink || row.ttProfile || row.igProfile || "",
-        label: "",
+        label: action === "video-store" ? "Video in store" : "Contattare",
         pedEnabled: false,
         pedDate: "",
         pedTime: "12:00",
@@ -10459,6 +10567,12 @@
         createdAt,
         updatedAt: createdAt
       };
+      if (action === "video-store") {
+        task.creatorStatus = options.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "");
+        task.creatorStore = options.creatorStore || "";
+        task.creatorTime = options.creatorTime || "10:00";
+        syncCreatorStatusToGantt(task);
+      }
       data.tasks.push(task);
       await saveData();
       renderBoard();
@@ -10836,6 +10950,7 @@
       moveAssetViewerItem(1);
     });
     document.getElementById("closeInfluencerToGanttModal").addEventListener("click", closeInfluencerToGanttDialog);
+    document.getElementById("influencerToGanttAction").addEventListener("change", syncInfluencerToGanttActionFields);
     document.getElementById("closeCreatorCalendarModal").addEventListener("click", closeCreatorCalendarEditor);
 
     document.getElementById("deletePedPostButton").addEventListener("click", async () => {
@@ -11091,7 +11206,13 @@
         document.getElementById("influencerToGanttId").value,
         document.getElementById("influencerToGanttProject").value,
         document.getElementById("influencerToGanttWho").value,
-        document.getElementById("influencerToGanttDate").value
+        document.getElementById("influencerToGanttDate").value,
+        {
+          action: document.getElementById("influencerToGanttAction").value,
+          creatorStatus: document.getElementById("influencerToGanttCreatorStatus").value,
+          creatorStore: document.getElementById("influencerToGanttCreatorStore").value,
+          creatorTime: document.getElementById("influencerToGanttCreatorTime").value
+        }
       ));
       closeInfluencerToGanttDialog();
     });
