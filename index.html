@@ -5927,13 +5927,24 @@
       }, {});
     }
 
+    function influencerOptionKey(value) {
+      return String(value || "")
+        .normalize("NFKD")
+        .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+        .replace(/[\u2010-\u2015]/g, "-")
+        .replace(/\s*-\s*/g, " - ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+    }
+
     function applyInfluencerDeletedOptionsToRows(normalized) {
       const deletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       normalized.influencers = (normalized.influencers || []).map((row) => {
         const next = { ...row };
         Object.keys(deletedOptions).forEach((key) => {
-          const deletedNames = new Set((deletedOptions[key] || []).map((name) => name.toLowerCase()));
-          if (next[key] && deletedNames.has(String(next[key]).toLowerCase())) next[key] = "";
+          const deletedNames = new Set((deletedOptions[key] || []).map(influencerOptionKey));
+          if (next[key] && deletedNames.has(influencerOptionKey(next[key]))) next[key] = "";
         });
         return next;
       });
@@ -5999,16 +6010,17 @@
       normalized.influencerOptions = normalized.influencerOptions || {};
       normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       ["city", "target", "type", "status", "where", "when"].forEach((key) => {
-        const deletedNames = new Set((normalized.influencerDeletedOptions[key] || []).map((name) => name.toLowerCase()));
+        const deletedNames = new Set((normalized.influencerDeletedOptions[key] || []).map(influencerOptionKey));
         const existing = (normalized.influencerOptions[key] || [])
           .map((item) => normalizeInfluencerOption(item, legacyInfluencerOptionColors[key]))
-          .filter((item) => item.name && !deletedNames.has(item.name.toLowerCase()));
-        const names = new Set(existing.map((item) => item.name));
+          .filter((item) => item.name && !deletedNames.has(influencerOptionKey(item.name)));
+        const names = new Set(existing.map((item) => influencerOptionKey(item.name)));
         (normalized.influencers || []).forEach((row) => {
-          if (row[key] && !names.has(row[key]) && !deletedNames.has(String(row[key]).toLowerCase())) {
+          const rowOptionKey = influencerOptionKey(row[key]);
+          if (row[key] && !names.has(rowOptionKey) && !deletedNames.has(rowOptionKey)) {
             const color = uxInfluencerOptionColor(key, row[key], existing.length, normalized.projects);
             existing.push({ name: row[key], color, textColor: readableTextColor(color) });
-            names.add(row[key]);
+            names.add(rowOptionKey);
           }
         });
         normalized.influencerOptions[key] = existing.map((item, index) => {
@@ -9776,9 +9788,9 @@
       if (!name) return;
       data.influencerOptions = data.influencerOptions || { city: [], target: [], type: [], status: [], where: [], when: [] };
       data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
-      data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => item.toLowerCase() !== name.toLowerCase());
+      data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(name));
       data.influencerOptions[key] = data.influencerOptions[key] || [];
-      if (!data.influencerOptions[key].some((item) => item.name === name)) {
+      if (!data.influencerOptions[key].some((item) => influencerOptionKey(item.name) === influencerOptionKey(name))) {
         data.influencerOptions[key].push({ name, color, textColor });
       }
       nameInput.value = defaultName;
@@ -9857,9 +9869,9 @@
             return;
           }
           data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
-          data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => item.toLowerCase() !== newName.toLowerCase());
-          data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => item.name === oldName ? { ...item, name: newName } : item);
-          data.influencers = (data.influencers || []).map((row) => row[key] === oldName ? { ...row, [key]: newName } : row);
+          data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(newName));
+          data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => influencerOptionKey(item.name) === influencerOptionKey(oldName) ? { ...item, name: newName } : item);
+          data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(oldName) ? { ...row, [key]: newName } : row);
           saveData();
           renderInfluencerSettings();
           renderInfluencers();
@@ -9891,11 +9903,11 @@
         const key = button.dataset.deleteInfluencerOption;
         const name = button.dataset.optionName;
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
-        if (!data.influencerDeletedOptions[key].some((item) => item.toLowerCase() === name.toLowerCase())) {
+        if (!data.influencerDeletedOptions[key].some((item) => influencerOptionKey(item) === influencerOptionKey(name))) {
           data.influencerDeletedOptions[key].push(name);
         }
-        data.influencerOptions[key] = (data.influencerOptions[key] || []).filter((item) => item.name !== name);
-        data.influencers = (data.influencers || []).map((row) => row[key] === name ? { ...row, [key]: "" } : row);
+        data.influencerOptions[key] = (data.influencerOptions[key] || []).filter((item) => influencerOptionKey(item.name) !== influencerOptionKey(name));
+        data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(name) ? { ...row, [key]: "" } : row);
         saveData();
         renderInfluencerSettings();
         renderInfluencers();
