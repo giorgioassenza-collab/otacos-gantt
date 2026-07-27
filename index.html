@@ -318,6 +318,7 @@
     body.budget-mode .ped-view,
     body.budget-mode .influencer-view,
     body.budget-mode .creator-calendar-view,
+    body.budget-mode .social-radar-view,
     body.budget-mode #openTaskPanel,
     body.budget-mode #openProjectPanel,
     body.budget-mode #openPedPostPanel,
@@ -343,6 +344,124 @@
 
     body:not(.budget-mode) .budget-view {
       display: none;
+    }
+
+    body.social-radar-mode .board,
+    body.social-radar-mode .ped-view,
+    body.social-radar-mode .influencer-view,
+    body.social-radar-mode .creator-calendar-view,
+    body.social-radar-mode .budget-view,
+    body.social-radar-mode #openTaskPanel,
+    body.social-radar-mode #openProjectPanel,
+    body.social-radar-mode #openPedPostPanel,
+    body.social-radar-mode #memberFilter,
+    body.social-radar-mode .zoom,
+    body.social-radar-mode #settings {
+      display: none;
+    }
+
+    body:not(.social-radar-mode) .social-radar-view {
+      display: none;
+    }
+
+    .social-radar-view {
+      min-height: 0;
+      overflow: auto;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 8% 10%, rgba(255, 214, 92, .18), transparent 26rem),
+        #fffdf9;
+    }
+
+    .social-radar-shell {
+      width: min(960px, 100%);
+      margin: 0 auto;
+    }
+
+    .social-radar-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .social-radar-heading h1 {
+      margin: 0 0 5px;
+      font-size: clamp(26px, 3vw, 40px);
+      letter-spacing: -.04em;
+    }
+
+    .social-radar-heading p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .social-radar-status {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .social-radar-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .social-radar-link {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+      padding: 16px 18px;
+      color: var(--ink);
+      text-decoration: none;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 5px 18px rgba(24, 19, 15, .05);
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+    }
+
+    .social-radar-link:hover {
+      transform: translateY(-2px);
+      border-color: rgba(24, 19, 15, .3);
+      box-shadow: 0 10px 26px rgba(24, 19, 15, .1);
+    }
+
+    .social-radar-platform {
+      flex: 0 0 auto;
+      min-width: 78px;
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .social-radar-url {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .social-radar-arrow {
+      margin-left: auto;
+      font-size: 20px;
+    }
+
+    .social-radar-empty {
+      padding: 52px 24px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.75);
+      border: 1px dashed var(--line);
+      border-radius: 18px;
     }
 
     .sidebar {
@@ -3837,6 +3956,20 @@
         <div class="budget-empty">Loading budget...</div>
       </div>
     </section>
+
+    <section class="social-radar-view" id="socialRadarView" aria-label="Social Radar">
+      <div class="social-radar-shell">
+        <div class="social-radar-heading">
+          <div>
+            <h1>Social Radar</h1>
+            <p>Post pubblici che citano O'Tacos su Instagram e TikTok.</p>
+          </div>
+          <span class="social-radar-status" id="socialRadarStatus">Connessione...</span>
+        </div>
+        <div class="social-radar-list" id="socialRadarList"></div>
+        <div class="social-radar-empty" id="socialRadarEmpty" hidden>Nessun link trovato per il momento.</div>
+      </div>
+    </section>
   </main>
 
   <div class="view-switch" id="viewSwitch" aria-label="Views">
@@ -3847,6 +3980,7 @@
       <button id="viewInfluencer" type="button">INFLUENCER</button>
       <button id="viewCreatorCalendar" type="button">CREATOR CALENDAR</button>
       <button id="viewBudget" type="button">BUDGET</button>
+      <button id="viewSocialRadar" type="button">SOCIAL RADAR</button>
     </div>
   </div>
   <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
@@ -4296,7 +4430,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-    import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { collection, doc, getDoc, getFirestore, onSnapshot, query, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     window.FIREBASE_CONFIG = {
       apiKey: "AIzaSyCq4dqoSiAe-_mAVxBGOkuS8U54-xZgoNs",
@@ -4331,8 +4465,12 @@
     const viewInfluencer = document.getElementById("viewInfluencer");
     const viewCreatorCalendar = document.getElementById("viewCreatorCalendar");
     const viewBudget = document.getElementById("viewBudget");
+    const viewSocialRadar = document.getElementById("viewSocialRadar");
     const budgetView = document.getElementById("budgetView");
     const budgetShell = document.getElementById("budgetShell");
+    const socialRadarList = document.getElementById("socialRadarList");
+    const socialRadarEmpty = document.getElementById("socialRadarEmpty");
+    const socialRadarStatus = document.getElementById("socialRadarStatus");
     const pedPostMembers = document.getElementById("pedPostMembers");
     const pedPostStatus = document.getElementById("pedPostStatus");
     const pedPostSocials = document.getElementById("pedPostSocials");
@@ -4405,7 +4543,7 @@
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
     const viewStorageKey = "tacos-gantt-board-active-view-v1";
-    const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget"];
+    const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget", "social-radar"];
     const maxHistoryEntries = 10;
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
@@ -4458,6 +4596,8 @@
     let appStarted = false;
     let boardDb = null;
     let boardRef = null;
+    let unsubscribeSocialRadar = null;
+    let socialRadarLinks = [];
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
     let suppressRemoteUntil = 0;
@@ -4566,6 +4706,7 @@
           const db = getFirestore(app);
           boardDb = db;
           boardRef = doc(db, "boards", "default");
+          subscribeSocialRadar();
           const snapshot = await getDoc(boardRef);
           if (!snapshot.exists()) {
             await setDoc(boardRef, {
@@ -7000,35 +7141,30 @@
     }
 
     function creatorDuplicateTasks(baseTask, createdAt) {
-      return creatorDuplicateTasksFromControls(baseTask, createdAt, {
-        contact: document.getElementById("creatorContact"),
-        askOk: document.getElementById("creatorAskOk"),
-        contract: document.getElementById("creatorContract"),
-        brief: document.getElementById("creatorBrief"),
-        giorgia: document.getElementById("creatorGiorgia"),
-        video: document.getElementById("creatorVideo"),
-        videoDate: document.getElementById("creatorVideoDate"),
-        sendVideoAlice: document.getElementById("creatorSendVideoAlice"),
-        sendVideoAliceDate: document.getElementById("creatorSendVideoAliceDate"),
-        publish: document.getElementById("creatorPublish"),
-        publishDate: document.getElementById("creatorPublishDate")
-      });
+      return creatorDuplicateTasksFromControls(baseTask, createdAt, creatorControlsSnapshot(""));
     }
 
     function editCreatorDuplicateTasks(baseTask, createdAt) {
-      return creatorDuplicateTasksFromControls(baseTask, createdAt, {
-        contact: document.getElementById("editCreatorContact"),
-        askOk: document.getElementById("editCreatorAskOk"),
-        contract: document.getElementById("editCreatorContract"),
-        brief: document.getElementById("editCreatorBrief"),
-        giorgia: document.getElementById("editCreatorGiorgia"),
-        video: document.getElementById("editCreatorVideo"),
-        videoDate: document.getElementById("editCreatorVideoDate"),
-        sendVideoAlice: document.getElementById("editCreatorSendVideoAlice"),
-        sendVideoAliceDate: document.getElementById("editCreatorSendVideoAliceDate"),
-        publish: document.getElementById("editCreatorPublish"),
-        publishDate: document.getElementById("editCreatorPublishDate")
-      });
+      return creatorDuplicateTasksFromControls(baseTask, createdAt, creatorControlsSnapshot("edit"));
+    }
+
+    function creatorControlsSnapshot(prefix = "") {
+      const id = (name) => `${prefix}${prefix ? "Creator" : "creator"}${name}`;
+      const checkbox = (name) => ({ checked: Boolean(document.getElementById(id(name))?.checked) });
+      const input = (name) => ({ value: document.getElementById(id(name))?.value || "" });
+      return {
+        contact: checkbox("Contact"),
+        askOk: checkbox("AskOk"),
+        contract: checkbox("Contract"),
+        brief: checkbox("Brief"),
+        giorgia: checkbox("Giorgia"),
+        video: checkbox("Video"),
+        videoDate: input("VideoDate"),
+        sendVideoAlice: checkbox("SendVideoAlice"),
+        sendVideoAliceDate: input("SendVideoAliceDate"),
+        publish: checkbox("Publish"),
+        publishDate: input("PublishDate")
+      };
     }
 
     function ensureStatusExists(name) {
@@ -7051,6 +7187,22 @@
 
     function renderSettingsLists() {
       const previousFilter = memberFilter.value || "all";
+      const previousTaskStatus = taskStatus.value;
+      const previousEditTaskStatus = editTaskStatus.value;
+      const previousTaskLabel = taskLabel.value;
+      const previousEditTaskLabel = editTaskLabel.value;
+      const previousTaskMembers = new Set(selectedMembers(taskMembers));
+      const previousEditTaskMembers = new Set(selectedMembers(editTaskMembers));
+      const previousNewSubtaskMembers = new Set(selectedMembers(newSubtaskMembers));
+      const previousNewPedSubtaskMembers = new Set(selectedMembers(newPedSubtaskMembers));
+      const previousPedPostMembers = new Set(selectedMembers(pedPostMembers));
+      const previousEditPedPostMembers = new Set(selectedMembers(editPedPostMembers));
+      const previousPedPostStatus = pedPostStatus.value;
+      const previousEditPedPostStatus = editPedPostStatus.value;
+      const previousCreatorCalendarStatus = creatorCalendarStatus.value;
+      const previousCreatorCalendarStore = creatorCalendarStore.value;
+      const selectedPedSocials = new Set(selectedValues(pedPostSocials));
+      const selectedEditPedSocials = new Set(selectedValues(editPedPostSocials));
       taskMembers.innerHTML = "";
       editTaskMembers.innerHTML = "";
       newSubtaskMembers.innerHTML = "";
@@ -7095,6 +7247,8 @@
       });
       taskStatus.disabled = data.statuses.length === 0;
       editTaskStatus.disabled = data.statuses.length === 0;
+      if ([...taskStatus.options].some((item) => item.value === previousTaskStatus)) taskStatus.value = previousTaskStatus;
+      if ([...editTaskStatus.options].some((item) => item.value === previousEditTaskStatus)) editTaskStatus.value = previousEditTaskStatus;
 
       pedPostStatus.innerHTML = "";
       editPedPostStatus.innerHTML = "";
@@ -7111,6 +7265,8 @@
       });
       pedPostStatus.disabled = data.pedStatuses.length === 0;
       editPedPostStatus.disabled = data.pedStatuses.length === 0;
+      if ([...pedPostStatus.options].some((item) => item.value === previousPedPostStatus)) pedPostStatus.value = previousPedPostStatus;
+      if ([...editPedPostStatus.options].some((item) => item.value === previousEditPedPostStatus)) editPedPostStatus.value = previousEditPedPostStatus;
 
       creatorCalendarStatus.innerHTML = "";
       creatorStatusList.innerHTML = "";
@@ -7124,6 +7280,7 @@
         creatorStatusList.appendChild(pill);
       });
       creatorCalendarStatus.disabled = (data.creatorStatuses || []).length === 0;
+      if ([...creatorCalendarStatus.options].some((item) => item.value === previousCreatorCalendarStatus)) creatorCalendarStatus.value = previousCreatorCalendarStatus;
 
       creatorCalendarStore.innerHTML = "";
       creatorCalendarStore.appendChild(option("", "-"));
@@ -7135,6 +7292,7 @@
         pill.innerHTML = `<input value="${escapeHtml(store)}" aria-label="Edit ${escapeHtml(store)}" data-edit-creator-store="${escapeHtml(store)}"><button type="button" aria-label="Move up ${escapeHtml(store)}" data-move-creator-store="${escapeHtml(store)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(store)}" data-move-creator-store="${escapeHtml(store)}" data-move-direction="1" ${index === data.creatorStores.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(store)}" data-delete-creator-store="${escapeHtml(store)}">x</button>`;
         creatorStoreList.appendChild(pill);
       });
+      if ([...creatorCalendarStore.options].some((item) => item.value === previousCreatorCalendarStore)) creatorCalendarStore.value = previousCreatorCalendarStore;
 
       taskLabel.innerHTML = "";
       editTaskLabel.innerHTML = "";
@@ -7149,9 +7307,9 @@
         pill.innerHTML = `<input value="${escapeHtml(label)}" aria-label="Edit ${escapeHtml(label)}" data-edit-label="${escapeHtml(label)}"><button type="button" aria-label="Move up ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(label)}" data-move-label="${escapeHtml(label)}" data-move-direction="1" ${index === data.labels.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(label)}" data-delete-label="${escapeHtml(label)}">x</button>`;
         labelList.appendChild(pill);
       });
+      if ([...taskLabel.options].some((item) => item.value === previousTaskLabel)) taskLabel.value = previousTaskLabel;
+      if ([...editTaskLabel.options].some((item) => item.value === previousEditTaskLabel)) editTaskLabel.value = previousEditTaskLabel;
 
-      const selectedPedSocials = new Set(selectedValues(pedPostSocials));
-      const selectedEditPedSocials = new Set(selectedValues(editPedPostSocials));
       pedPostSocials.innerHTML = "";
       editPedPostSocials.innerHTML = "";
       socialList.innerHTML = "";
@@ -7163,6 +7321,21 @@
         pill.innerHTML = `<input value="${escapeHtml(social.label)}" aria-label="Edit ${escapeHtml(social.label)}" data-edit-social="${escapeHtml(social.id)}"><input type="color" value="${escapeHtml(social.color)}" aria-label="Color ${escapeHtml(social.label)}" data-social-color="${escapeHtml(social.id)}"><button type="button" aria-label="Move up ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>^</button><button type="button" aria-label="Move down ${escapeHtml(social.label)}" data-move-social="${escapeHtml(social.id)}" data-move-direction="1" ${index === data.socials.length - 1 ? "disabled" : ""}>v</button><button type="button" aria-label="Delete ${escapeHtml(social.label)}" data-delete-social="${escapeHtml(social.id)}">x</button>`;
         socialList.appendChild(pill);
       });
+
+      [
+        [taskMembers, previousTaskMembers],
+        [editTaskMembers, previousEditTaskMembers],
+        [newSubtaskMembers, previousNewSubtaskMembers],
+        [newPedSubtaskMembers, previousNewPedSubtaskMembers],
+        [pedPostMembers, previousPedPostMembers],
+        [editPedPostMembers, previousEditPedPostMembers]
+      ].forEach(([container, selected]) => {
+        container.querySelectorAll("input[type='checkbox']").forEach((input) => {
+          input.checked = selected.has(input.value);
+        });
+      });
+      syncCreatorOptionsVisibility();
+      syncEditCreatorOptionsVisibility();
     }
 
     function openPanel(panelId) {
@@ -9146,6 +9319,8 @@
     }
 
     function renderBoard() {
+      const previousTaskProject = taskProject.value;
+      const previousEditTaskProject = editTaskProject.value;
       sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
       bars.innerHTML = "";
       taskProject.innerHTML = "";
@@ -9164,6 +9339,8 @@
         pill.innerHTML = `<input value="${escapeHtml(project.name)}" aria-label="Edit ${escapeHtml(project.name)}" data-edit-project="${escapeHtml(project.id)}"><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
         projectList.appendChild(pill);
       });
+      if ([...taskProject.options].some((item) => item.value === previousTaskProject)) taskProject.value = previousTaskProject;
+      if ([...editTaskProject.options].some((item) => item.value === previousEditTaskProject)) editTaskProject.value = previousEditTaskProject;
 
       const allPedItems = pedItems();
       const visibleProjects = data.projects.filter((project) => {
@@ -9521,7 +9698,80 @@
       if (view === "influencer") return "INFLUENCER";
       if (view === "creator-calendar") return "CREATOR CALENDAR";
       if (view === "budget") return "BUDGET";
+      if (view === "social-radar") return "SOCIAL RADAR";
       return "GANTT";
+    }
+
+    function socialRadarPlatform(url, savedPlatform = "") {
+      const platform = String(savedPlatform || "").trim().toLowerCase();
+      if (platform === "instagram" || platform === "tiktok") return platform;
+      try {
+        const hostname = new URL(url).hostname.replace(/^www\./, "");
+        if (hostname.endsWith("instagram.com")) return "instagram";
+        if (hostname.endsWith("tiktok.com")) return "tiktok";
+      } catch {
+        return "link";
+      }
+      return "link";
+    }
+
+    function socialRadarTimestamp(item) {
+      const value = item.discoveredAt || item.createdAt || item.detectedAt;
+      if (value?.toMillis) return value.toMillis();
+      if (value?.seconds) return value.seconds * 1000;
+      const parsed = Date.parse(value || "");
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function renderSocialRadar() {
+      if (!socialRadarList) return;
+      const uniqueLinks = new Map();
+      socialRadarLinks.forEach((item) => {
+        const url = String(item?.url || item?.link || "").trim();
+        if (!/^https:\/\/(www\.)?(instagram\.com|tiktok\.com)\//i.test(url)) return;
+        const key = url.replace(/[?#].*$/, "").replace(/\/+$/, "").toLowerCase();
+        const current = uniqueLinks.get(key);
+        if (!current || socialRadarTimestamp(item) > socialRadarTimestamp(current)) {
+          uniqueLinks.set(key, { ...item, url });
+        }
+      });
+      const links = [...uniqueLinks.values()].sort((a, b) => socialRadarTimestamp(b) - socialRadarTimestamp(a));
+      socialRadarList.replaceChildren(...links.map((item) => {
+        const anchor = document.createElement("a");
+        anchor.className = "social-radar-link";
+        anchor.href = item.url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        const platform = socialRadarPlatform(item.url, item.platform);
+        const label = document.createElement("span");
+        label.className = "social-radar-platform";
+        label.textContent = platform;
+        const url = document.createElement("span");
+        url.className = "social-radar-url";
+        url.textContent = item.url;
+        const arrow = document.createElement("span");
+        arrow.className = "social-radar-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.textContent = "↗";
+        anchor.append(label, url, arrow);
+        return anchor;
+      }));
+      socialRadarEmpty.hidden = links.length > 0;
+      socialRadarStatus.textContent = links.length ? `${links.length} link` : "In attesa";
+    }
+
+    function subscribeSocialRadar() {
+      if (!boardDb || unsubscribeSocialRadar) return;
+      socialRadarStatus.textContent = "Aggiornamento...";
+      unsubscribeSocialRadar = onSnapshot(query(collection(boardDb, "socialRadarLinks")), (snapshot) => {
+        socialRadarLinks = snapshot.docs.map((snapshotDoc) => ({ id: snapshotDoc.id, ...snapshotDoc.data() }));
+        renderSocialRadar();
+      }, (error) => {
+        console.error("Social Radar load failed", error);
+        socialRadarStatus.textContent = "Non disponibile";
+        socialRadarEmpty.hidden = false;
+        socialRadarEmpty.textContent = "Non riesco a caricare i link di Social Radar.";
+      });
     }
 
     function readSavedView() {
@@ -9549,19 +9799,22 @@
       const influencerMode = view === "influencer";
       const creatorCalendarMode = view === "creator-calendar";
       const budgetMode = view === "budget";
+      const socialRadarMode = view === "social-radar";
       closeViewSwitch();
       document.body.classList.toggle("ped-mode", pedMode);
       document.body.classList.toggle("influencer-mode", influencerMode);
       document.body.classList.toggle("creator-calendar-mode", creatorCalendarMode);
       document.body.classList.toggle("budget-mode", budgetMode);
+      document.body.classList.toggle("social-radar-mode", socialRadarMode);
       viewGantt.classList.toggle("is-active", view === "gantt");
       viewPed.classList.toggle("is-active", pedMode);
       viewInfluencer.classList.toggle("is-active", influencerMode);
       viewCreatorCalendar.classList.toggle("is-active", creatorCalendarMode);
       viewBudget.classList.toggle("is-active", budgetMode);
+      viewSocialRadar.classList.toggle("is-active", socialRadarMode);
       document.getElementById("viewSwitchCurrent").textContent = viewLabel(view);
-      document.querySelector(".brand-title").textContent = budgetMode ? "Budget" : creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
-      document.getElementById("currentMonth").textContent = budgetMode ? "BUDGET" : creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
+      document.querySelector(".brand-title").textContent = socialRadarMode ? "Social Radar" : budgetMode ? "Budget" : creatorCalendarMode ? "Creator Calendar" : influencerMode ? "Influencer" : pedMode ? "PED" : "Workflow";
+      document.getElementById("currentMonth").textContent = socialRadarMode ? "SOCIAL RADAR" : budgetMode ? "BUDGET" : creatorCalendarMode ? "CREATOR CALENDAR" : influencerMode ? "INFLUENCER" : pedMode ? "PED" : "O'TACOS";
       closePanels();
       if (!influencerMode && !budgetMode) {
         zoomIndex = zooms.length - 1;
@@ -9574,6 +9827,8 @@
       if (budgetMode) {
         renderBudget();
         loadBudgetData(true);
+      } else if (socialRadarMode) {
+        renderSocialRadar();
       } else {
         requestAnimationFrame(snapActiveTimelineToToday);
         setTimeout(snapActiveTimelineToToday, 120);
@@ -9598,6 +9853,7 @@
     viewInfluencer.addEventListener("click", () => setView("influencer"));
     viewCreatorCalendar.addEventListener("click", () => setView("creator-calendar"));
     viewBudget.addEventListener("click", () => setView("budget"));
+    viewSocialRadar.addEventListener("click", () => setView("social-radar"));
 
     document.getElementById("taskAddEndDate").addEventListener("change", (event) => {
       document.getElementById("taskEndWrap").hidden = !event.target.checked;
@@ -9927,13 +10183,14 @@
       const info = document.getElementById("taskInfo").value.trim();
       const pedEnabled = document.getElementById("taskPedEnabled").checked;
       const pedDate = document.getElementById("taskPedDate").value || start;
+      const creatorControls = creatorControlsSnapshot("");
       if (!projectId || !name || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
       const nameEn = await translateToEnglish(name);
       const createdAt = Date.now();
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate, createdAt, updatedAt: createdAt };
-      if (document.getElementById("creatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
-      const generatedTasks = creatorDuplicateTasks(baseTask, createdAt);
+      if (creatorControls.giorgia.checked) ensureStatusExists("Notify Giorgia");
+      const generatedTasks = creatorDuplicateTasksFromControls(baseTask, createdAt, creatorControls);
       data.tasks.push(baseTask);
       upsertCreatorGeneratedTasks(generatedTasks);
       if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
@@ -11113,8 +11370,8 @@
       event.preventDefault();
       await runWithSavingButton(event, async () => {
       const taskId = document.getElementById("editTaskId").value;
-      const task = data.tasks.find((item) => item.id === taskId);
-      if (!task) return;
+      const originalTask = data.tasks.find((item) => item.id === taskId);
+      if (!originalTask) return;
       const projectId = editTaskProject.value;
       const name = document.getElementById("editTaskName").value.trim();
       const status = editTaskStatus.value;
@@ -11125,8 +11382,11 @@
       const info = document.getElementById("editTaskInfo").value.trim();
       const pedEnabled = document.getElementById("editTaskPedEnabled").checked;
       const pedDate = document.getElementById("editTaskPedDate").value || start;
+      const creatorControls = creatorControlsSnapshot("edit");
       if (!projectId || !name || !status || !start || !end) return;
-      const nameEn = task.name === name && task.nameEn ? task.nameEn : await translateToEnglish(name);
+      const nameEn = originalTask.name === name && originalTask.nameEn ? originalTask.nameEn : await translateToEnglish(name);
+      const task = data.tasks.find((item) => item.id === taskId);
+      if (!task) return;
       task.name = name;
       task.nameEn = nameEn;
       task.projectId = projectId;
@@ -11143,8 +11403,8 @@
       touchItem(task);
       if (task.pedEnabled || shouldAutoCreatePedPost(task)) ensurePedPostForTask(task, { syncFromTask: true });
       else removeLinkedPedPostForTask(task.id);
-      if (document.getElementById("editCreatorGiorgia").checked) ensureStatusExists("Notify Giorgia");
-      const generatedTasks = editCreatorDuplicateTasks({ ...task }, Date.now());
+      if (creatorControls.giorgia.checked) ensureStatusExists("Notify Giorgia");
+      const generatedTasks = creatorDuplicateTasksFromControls({ ...task }, Date.now(), creatorControls);
       if (isCreatorLabel(label) && generatedTasks.length > 0) {
         upsertCreatorGeneratedTasks(generatedTasks);
       }
