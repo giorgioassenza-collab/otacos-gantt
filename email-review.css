@@ -1,0 +1,120 @@
+.email-review-button {
+  position: relative;
+}
+
+.email-review-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--panel, #fff);
+  border-radius: 999px;
+  background: #ff5a14;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+}
+
+.email-review-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 16, 12, .48);
+  backdrop-filter: blur(3px);
+}
+
+.email-review-modal.open { display: grid; }
+
+.email-review-dialog {
+  width: min(980px, 96vw);
+  max-height: min(820px, 90vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2ddd5;
+  border-radius: 18px;
+  background: #fffdf9;
+  box-shadow: 0 28px 80px rgba(24, 19, 15, .22);
+}
+
+.email-review-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #eee9e2;
+}
+
+.email-review-head h2 { margin: 0 0 4px; font-size: 22px; }
+.email-review-head p { margin: 0; color: #746c63; font-size: 13px; }
+.email-review-head button { margin-left: auto; }
+.email-review-list { overflow: auto; padding: 18px; }
+
+.email-review-card {
+  position: relative;
+  padding: 18px;
+  border: 1px solid #e2ddd5;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.email-review-status {
+  display: inline-flex;
+  margin-bottom: 10px;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.email-review-card + .email-review-card { margin-top: 12px; }
+.email-review-meta { display: flex; flex-wrap: wrap; gap: 8px; color: #746c63; font-size: 12px; }
+.email-review-card h3 { margin: 12px 0 8px; font-size: 17px; }
+.email-review-source { margin: 10px 0; color: #574f47; font-size: 13px; line-height: 1.45; }
+.email-review-fields { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+.email-review-fields label { display: grid; gap: 5px; color: #746c63; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.email-review-fields input, .email-review-fields select, .email-review-fields textarea {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #ddd6ce;
+  border-radius: 9px;
+  background: #fff;
+  color: #18130f;
+  font: inherit;
+  text-transform: none;
+}
+.email-review-fields textarea { min-height: 74px; resize: vertical; }
+.email-review-wide { grid-column: 1 / -1; }
+.email-review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.email-review-actions button, .email-review-head button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #d8d1c9;
+  border-radius: 9px;
+  background: #fff;
+  color: #18130f;
+  font-weight: 750;
+  cursor: pointer;
+}
+.email-review-actions .approve { border-color: #ff5a14; background: #ff5a14; color: #fff; }
+.email-review-empty { padding: 54px 20px; color: #746c63; text-align: center; }
+.email-review-confidence { color: #c2410c; font-weight: 800; }
+
+@media (max-width: 760px) {
+  .email-review-modal { padding: 8px; }
+  .email-review-dialog { max-height: 96vh; }
+  .email-review-fields { grid-template-columns: 1fr; }
+  .email-review-wide { grid-column: auto; }
+}
