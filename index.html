@@ -5807,13 +5807,17 @@
       return String(status || "").replace(/\s+/g, "").toUpperCase() === "DONE";
     }
 
+    function isBlockedStatus(status) {
+      return String(status || "").replace(/\s+/g, "").toUpperCase().includes("BLOCKED");
+    }
+
     function taskDateKey(task) {
       return task?.end || task?.start || "";
     }
 
     function isOverdueTask(task) {
       const date = taskDateKey(task);
-      if (!date || isDoneStatus(task.status)) return false;
+      if (!date || isDoneStatus(task.status) || isBlockedStatus(task.status)) return false;
       return date < currentDateKey();
     }
 
