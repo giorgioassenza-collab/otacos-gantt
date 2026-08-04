@@ -264,6 +264,20 @@
       background: var(--orange);
     }
 
+    .toolbar-btn.overdue-btn {
+      color: #7a2500;
+      background: #fff1e8;
+      border: 1px solid rgba(255, 90, 20, .28);
+      font-weight: 1000;
+      min-width: 104px;
+    }
+
+    .toolbar-btn.overdue-btn.has-overdue {
+      color: #fff;
+      background: var(--orange);
+      box-shadow: 0 8px 18px rgba(255, 90, 20, .2);
+    }
+
     .member-select {
       height: 34px;
       width: 156px;
@@ -2480,6 +2494,64 @@
       font-size: 15px;
     }
 
+    .overdue-modal {
+      width: min(720px, calc(100vw - 32px));
+    }
+
+    .overdue-summary {
+      margin: -4px 0 12px;
+      color: #70675f;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .overdue-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .overdue-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffaf4;
+    }
+
+    .overdue-title {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 1000;
+      line-height: 1.25;
+    }
+
+    .overdue-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-top: 5px;
+      color: #746b62;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .overdue-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .overdue-actions button {
+      height: 30px;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
     .modal-actions {
       display: flex;
       justify-content: flex-end;
@@ -3784,6 +3856,7 @@
       <button class="today-btn" id="jumpTodayButton" type="button">Today</button>
       <button class="toolbar-btn" id="openTaskPanel" type="button">Task</button>
       <button class="toolbar-btn" id="openProjectPanel" type="button">Project</button>
+      <button class="toolbar-btn overdue-btn" id="openOverdueModal" type="button">Backlog 0</button>
       <button class="toolbar-btn ped-only" id="openPedPostPanel" type="button">New post</button>
       <select class="member-select" id="memberFilter" aria-label="Who"></select>
       <button class="icon-btn" id="settings" type="button" title="General settings" aria-label="General settings">
@@ -4276,6 +4349,17 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="overdueModal" aria-label="Overdue tasks">
+    <div class="modal overdue-modal">
+      <h2>Overdue tasks</h2>
+      <p class="overdue-summary" id="overdueSummary">No overdue tasks.</p>
+      <div class="overdue-list" id="overdueList"></div>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="closeOverdueModal" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div class="context-menu" id="taskContextMenu" aria-label="Task actions">
     <button type="button" data-context-action="modify">Modify</button>
     <button type="button" data-context-action="duplicate">Duplicate</button>
@@ -4399,6 +4483,10 @@
     const historyButton = document.getElementById("historyButton");
     const historyModal = document.getElementById("historyModal");
     const historyList = document.getElementById("historyList");
+    const openOverdueModalButton = document.getElementById("openOverdueModal");
+    const overdueModal = document.getElementById("overdueModal");
+    const overdueList = document.getElementById("overdueList");
+    const overdueSummary = document.getElementById("overdueSummary");
     const horizontalScrollbar = document.getElementById("horizontalScrollbar");
     const horizontalScrollRange = document.getElementById("horizontalScrollRange");
     const syncIndicator = document.querySelector(".sync");
@@ -5579,6 +5667,88 @@
 
     function isDoneStatus(status) {
       return String(status || "").replace(/\s+/g, "").toUpperCase() === "DONE";
+    }
+
+    function isBlockedStatus(status) {
+      return String(status || "").replace(/\s+/g, "").toUpperCase().includes("BLOCKED");
+    }
+
+    function taskDateKey(task) {
+      return task?.end || task?.start || "";
+    }
+
+    function isOverdueTask(task) {
+      const date = taskDateKey(task);
+      if (!date || isDoneStatus(task.status) || isBlockedStatus(task.status)) return false;
+      return date < currentDateKey();
+    }
+
+    function overdueTasks() {
+      return [...(data.tasks || [])]
+        .filter(isOverdueTask)
+        .sort((left, right) =>
+          taskDateKey(left).localeCompare(taskDateKey(right)) ||
+          (left.nameEn || left.name || "").localeCompare(right.nameEn || right.name || "")
+        );
+    }
+
+    function taskProjectName(task) {
+      return (data.projects || []).find((project) => project.id === task.projectId)?.name || "-";
+    }
+
+    function updateOverdueButton() {
+      if (!openOverdueModalButton) return;
+      const count = overdueTasks().length;
+      openOverdueModalButton.textContent = `Backlog ${count}`;
+      openOverdueModalButton.disabled = false;
+      openOverdueModalButton.classList.toggle("has-overdue", count > 0);
+      openOverdueModalButton.title = count ? `${count} overdue tasks` : "Open backlog";
+    }
+
+    function renderOverdueList() {
+      const rows = overdueTasks();
+      if (!overdueList || !overdueSummary) return;
+      overdueSummary.textContent = rows.length
+        ? `${rows.length} unfinished task${rows.length === 1 ? "" : "s"} past their original date.`
+        : "No unfinished tasks before today were found.";
+      overdueList.innerHTML = rows.map((task) => `
+        <div class="overdue-row" data-overdue-task-id="${escapeHtml(task.id)}">
+          <div>
+            <div class="overdue-title">${escapeHtml(task.nameEn || task.name || "Task")}</div>
+            <div class="overdue-meta">
+              <span>${escapeHtml(taskProjectName(task))}</span>
+              <span>${escapeHtml(formatDateLabel(taskDateKey(task)))}</span>
+              <span>${escapeHtml((task.members || []).join(", ") || "-")}</span>
+              <span>${escapeHtml(task.status || "-")}</span>
+            </div>
+          </div>
+          <div class="overdue-actions">
+            <button class="secondary-btn" type="button" data-overdue-open="${escapeHtml(task.id)}">Open</button>
+            <button class="primary-btn" type="button" data-overdue-done="${escapeHtml(task.id)}">Mark done</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function openOverdueModal() {
+      renderOverdueList();
+      overdueModal.classList.add("open");
+    }
+
+    function closeOverdueModal() {
+      overdueModal.classList.remove("open");
+    }
+
+    async function markOverdueTaskDone(taskId) {
+      const task = (data.tasks || []).find((item) => item.id === taskId);
+      if (!task) return;
+      task.status = ganttStatusByName("DONE", "#d1d5db");
+      touchItem(task);
+      await saveData();
+      renderBoard();
+      renderPed();
+      renderCreatorCalendar();
+      renderOverdueList();
     }
 
     function escapeHtml(value) {
@@ -9327,6 +9497,7 @@
       taskProject.disabled = data.projects.length === 0;
       syncGanttHeaderPosition();
       updateHiddenTaskIndicators();
+      updateOverdueButton();
       requestAnimationFrame(syncHorizontalScrollbar);
     }
 
@@ -9500,6 +9671,32 @@
 
     document.getElementById("closeHistoryModal").addEventListener("click", () => {
       historyModal.classList.remove("open");
+    });
+
+    openOverdueModalButton.addEventListener("click", openOverdueModal);
+
+    document.getElementById("closeOverdueModal").addEventListener("click", closeOverdueModal);
+
+    overdueModal.addEventListener("click", (event) => {
+      if (event.target === overdueModal) closeOverdueModal();
+    });
+
+    overdueList.addEventListener("click", async (event) => {
+      const openButton = event.target.closest("[data-overdue-open]");
+      if (openButton) {
+        closeOverdueModal();
+        closePanels();
+        openTaskEditor(openButton.dataset.overdueOpen);
+        return;
+      }
+      const doneButton = event.target.closest("[data-overdue-done]");
+      if (!doneButton) return;
+      doneButton.disabled = true;
+      try {
+        await markOverdueTaskDone(doneButton.dataset.overdueDone);
+      } finally {
+        doneButton.disabled = false;
+      }
     });
 
     historyList.addEventListener("click", (event) => {
