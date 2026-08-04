@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
   <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="./otacos-favicon.png?v=7">
-  <link rel="stylesheet" href="./email-review.css?v=2">
+  <link rel="stylesheet" href="./email-review.css?v=3">
   <style>
     :root {
       --bg: #f7f5f1;
@@ -3837,11 +3837,13 @@
         flex: 0 0 auto;
         height: 38px;
       }
-      #openTaskPanel { order: 6; }
-      #openProjectPanel { order: 7; }
-      #openPedPostPanel { order: 8; }
+      #jumpTodayButton { order: 6; }
+      #openTaskPanel { order: 7; }
+      #openProjectPanel { order: 8; }
+      #openOverdueModal { order: 9; }
+      #openPedPostPanel { order: 10; }
       .member-select {
-        order: 9;
+        order: 11;
         flex: 1 1 142px;
         width: auto;
         min-width: 142px;
@@ -8353,6 +8355,7 @@
       if (!folderId || !items.length) return;
       const firstImage = items.find((item) => item.type === "image");
       if (!firstImage) return;
+      updateGanttFolderPreviewNodes(folderId, items);
       document.querySelectorAll("[data-drive-folder-cover]").forEach((node) => {
         if (node.dataset.driveFolderCover !== folderId) return;
         node.dataset.driveFolderHydrated = "ready";
@@ -8366,6 +8369,22 @@
         if (image) image.addEventListener("load", () => {
           try { layoutPosts(); } catch {}
         }, { once: true });
+      });
+    }
+
+    function updateGanttFolderPreviewNodes(folderId, items = []) {
+      if (!folderId || !items.length) return;
+      const imageSources = serializableAssetItems(items)
+        .filter((item) => item.type === "image")
+        .map((item) => item.src)
+        .filter(Boolean)
+        .slice(0, 3);
+      if (!imageSources.length) return;
+      while (imageSources.length < 3) imageSources.push("");
+      document.querySelectorAll("[data-gantt-folder-cover]").forEach((node) => {
+        if (node.dataset.ganttFolderCover !== folderId) return;
+        node.dataset.ganttFolderHydrated = "ready";
+        node.innerHTML = imageSources.map(ganttMockSlideMarkup).join("");
       });
     }
 
@@ -8493,15 +8512,42 @@
     }
 
     function ganttMockSlides(item, count = 3) {
-      const links = assetLinks(item.asset).map((link) => drivePreviewUrl(link) || link).filter(Boolean);
+      const folderId = driveFolderId(item.asset);
+      const storedFolderImages = folderId
+        ? serializableAssetItems(driveFolderCache.get(folderId) || storedDriveFolderItems(folderId) || knownDriveFolderItems(folderId))
+          .filter((assetItem) => assetItem.type === "image")
+          .map((assetItem) => assetItem.src)
+          .filter(Boolean)
+        : [];
+      const links = assetLinks(item.asset)
+        .map((link) => driveFolderId(link) ? "" : drivePreviewUrl(link) || link)
+        .filter(Boolean);
       const assetImages = serializableAssetItems(item.assetItems || [])
         .filter((assetItem) => assetItem.type === "image")
         .map((assetItem) => assetItem.src)
         .filter(Boolean);
-      const fallback = drivePreviewUrl(item.asset);
-      const slides = [...assetImages, ...links, fallback].filter(Boolean).slice(0, count);
+      const fallback = folderId ? "" : drivePreviewUrl(item.asset);
+      const slides = [...assetImages, ...storedFolderImages, ...links, fallback].filter(Boolean).slice(0, count);
       while (slides.length < count) slides.push("");
       return slides;
+    }
+
+    function hydrateGanttFolderPreviews(root = document) {
+      const folderIds = new Set(
+        [...root.querySelectorAll("[data-gantt-folder-cover]")]
+          .map((node) => node.dataset.ganttFolderCover)
+          .filter(Boolean)
+      );
+      folderIds.forEach((folderId) => {
+        const cachedItems = driveFolderCache.get(folderId) || storedDriveFolderItems(folderId) || knownDriveFolderItems(folderId);
+        if (cachedItems.length) {
+          updateGanttFolderPreviewNodes(folderId, cachedItems);
+          return;
+        }
+        loadDriveFolderItems(folderId)
+          .then((items) => updateGanttFolderPreviewNodes(folderId, items))
+          .catch((error) => console.warn("Gantt Drive carousel preview failed", error));
+      });
     }
 
     function ganttMockSlideMarkup(src) {
@@ -8545,7 +8591,8 @@
         `;
       } else if (isCarousel) {
         const slides = ganttMockSlides(item, 3);
-        media = `<div class="gantt-mock-slides gantt-mock-carousel">${slides.map(ganttMockSlideMarkup).join("")}</div>`;
+        const folderAttr = folderId ? ` data-gantt-folder-cover="${escapeHtml(folderId)}"` : "";
+        media = `<div class="gantt-mock-slides gantt-mock-carousel"${folderAttr}>${slides.map(ganttMockSlideMarkup).join("")}</div>`;
       } else {
         media = `<div class="gantt-mock-slides gantt-mock-static">${ganttMockSlideMarkup(contentImage)}</div>`;
       }
@@ -9755,6 +9802,7 @@
 
       taskProject.disabled = data.projects.length === 0;
       syncGanttHeaderPosition();
+      hydrateGanttFolderPreviews(bars);
       updateHiddenTaskIndicators();
       updateOverdueButton();
       requestAnimationFrame(syncHorizontalScrollbar);
@@ -9836,6 +9884,16 @@
       }
       if (document.body.classList.contains("creator-calendar-mode")) {
         scrollCreatorCalendarToToday(behavior);
+        return;
+      }
+      if (document.body.classList.contains("influencer-mode")) {
+        influencerView.scrollTo({ top: 0, behavior });
+        requestAnimationFrame(syncHorizontalScrollbar);
+        return;
+      }
+      if (document.body.classList.contains("budget-mode")) {
+        budgetView.scrollTo({ left: 0, top: 0, behavior });
+        requestAnimationFrame(syncHorizontalScrollbar);
         return;
       }
       scrollToToday(behavior);
@@ -12321,6 +12379,6 @@
       scrollToToday();
     });
   </script>
-  <script type="module" src="./email-review.js?v=2"></script>
+  <script type="module" src="./email-review.js?v=3"></script>
 </body>
 </html>
