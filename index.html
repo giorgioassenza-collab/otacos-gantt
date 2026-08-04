@@ -9827,10 +9827,45 @@
       if ([...editTaskProject.options].some((item) => item.value === previousEditTaskProject)) editTaskProject.value = previousEditTaskProject;
 
       const allPedItems = pedItems();
+      const todayKey = currentDateKey();
+      const projectOrder = new Map(data.projects.map((project, index) => [project.id, index]));
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
         return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember))
           || allPedItems.some((post) => post.projectId === project.id && (post.members || []).includes(selectedMember));
+      }).sort((left, right) => {
+        const leftPublicationsToday = allPedItems.filter((post) =>
+          post.projectId === left.id
+          && post.date === todayKey
+          && (selectedMember === "all" || (post.members || []).includes(selectedMember))
+        ).length;
+        const rightPublicationsToday = allPedItems.filter((post) =>
+          post.projectId === right.id
+          && post.date === todayKey
+          && (selectedMember === "all" || (post.members || []).includes(selectedMember))
+        ).length;
+        if (Boolean(leftPublicationsToday) !== Boolean(rightPublicationsToday)) {
+          return leftPublicationsToday ? -1 : 1;
+        }
+        if (leftPublicationsToday !== rightPublicationsToday) return rightPublicationsToday - leftPublicationsToday;
+        const leftTasksToday = data.tasks.filter((task) =>
+          task.projectId === left.id
+          && task.start
+          && task.end
+          && task.start <= todayKey
+          && task.end >= todayKey
+          && taskMatchesFilter(task, selectedMember)
+        ).length;
+        const rightTasksToday = data.tasks.filter((task) =>
+          task.projectId === right.id
+          && task.start
+          && task.end
+          && task.start <= todayKey
+          && task.end >= todayKey
+          && taskMatchesFilter(task, selectedMember)
+        ).length;
+        if (leftTasksToday !== rightTasksToday) return rightTasksToday - leftTasksToday;
+        return (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0);
       });
 
       let projectTop = 0;
