@@ -382,7 +382,7 @@
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      padding: 16px;
+      padding: 11px 16px;
       border-bottom: 1px solid var(--line-soft);
       color: #403832;
       font-size: 13px;
@@ -580,15 +580,15 @@
 
     .bar {
       position: absolute;
-      height: 26px;
+      height: 22px;
       display: flex;
       align-items: center;
-      padding: 0 10px;
-      border-radius: 7px;
+      padding: 0 8px;
+      border-radius: 6px;
       border: 2px solid currentColor;
       color: var(--ink);
       background: #fff;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       box-shadow: 0 4px 12px rgba(24, 19, 15, .08);
       white-space: nowrap;
@@ -724,7 +724,7 @@
     .gantt-ped-thumb {
       position: absolute;
       width: min(112px, calc(var(--day) - 12px));
-      height: 86px;
+      height: 74px;
       display: block;
       overflow: visible;
       border: 0;
@@ -9681,6 +9681,66 @@
         });
     }
 
+    function compactGanttRowLayouts(tasks, pedPosts, laneHeight, pedSlotHeight) {
+      const lanes = [];
+      const taskLayouts = [];
+      const pedLayouts = [];
+      const pedGroups = Object.values(pedPosts.reduce((result, post) => {
+        if (!post.date) return result;
+        result[post.date] = result[post.date] || { date: post.date, posts: [] };
+        result[post.date].posts.push(post);
+        return result;
+      }, {})).map((group) => {
+        const date = new Date(`${group.date}T00:00:00`);
+        const startIndex = dateDiffDays(timelineStart, date);
+        group.posts.sort((a, b) => normalizeHour(a.time).localeCompare(normalizeHour(b.time)));
+        return {
+          type: "ped",
+          group,
+          start: date,
+          end: date,
+          startIndex,
+          endIndex: startIndex,
+          span: Math.max(1, Math.ceil((group.posts.length * pedSlotHeight) / laneHeight))
+        };
+      }).filter((item) => !Number.isNaN(item.start.getTime()));
+      const taskItems = [...tasks].map((task) => {
+        const start = new Date(`${task.start}T00:00:00`);
+        const end = new Date(`${task.end}T00:00:00`);
+        return {
+          type: "task",
+          task,
+          start,
+          end,
+          startIndex: dateDiffDays(timelineStart, start),
+          endIndex: dateDiffDays(timelineStart, end),
+          span: 1
+        };
+      }).filter((item) => !Number.isNaN(item.start.getTime()) && !Number.isNaN(item.end.getTime()));
+      [...taskItems, ...pedGroups]
+        .sort((left, right) =>
+          left.startIndex - right.startIndex ||
+          left.endIndex - right.endIndex ||
+          (left.type === right.type ? 0 : left.type === "task" ? -1 : 1)
+        )
+        .forEach((item) => {
+          let lane = 0;
+          while (true) {
+            const canUseLane = Array.from({ length: item.span }, (_, index) => lanes[lane + index] ?? -Infinity)
+              .every((lastEndIndex) => lastEndIndex < item.startIndex);
+            if (canUseLane) break;
+            lane += 1;
+          }
+          for (let index = 0; index < item.span; index += 1) lanes[lane + index] = item.endIndex;
+          if (item.type === "task") {
+            taskLayouts.push({ task: item.task, start: item.start, end: item.end, lane });
+          } else {
+            pedLayouts.push({ ...item.group, start: item.start, lane });
+          }
+        });
+      return { taskLayouts, pedLayouts, laneCount: lanes.length };
+    }
+
     function renderBoard() {
       const previousTaskProject = taskProject.value;
       const previousEditTaskProject = editTaskProject.value;
@@ -9721,19 +9781,11 @@
           .filter((post) => post.projectId === project.id && post.date)
           .filter((post) => selectedMember === "all" || (post.members || []).includes(selectedMember))
           .sort((a, b) => `${a.date} ${normalizeHour(a.time)}`.localeCompare(`${b.date} ${normalizeHour(b.time)}`));
-        const pedPostsPerDate = visiblePedPosts.reduce((result, post) => {
-          result[post.date] = (result[post.date] || 0) + 1;
-          return result;
-        }, {});
-        const maxPedStack = Math.max(0, ...Object.values(pedPostsPerDate));
-        const taskLayouts = compactTaskLanes(visibleTasks);
-        const taskLaneCount = Math.max(0, ...taskLayouts.map((layout) => layout.lane + 1));
-        const taskLaneHeight = 30;
-        const taskBandHeight = taskLaneCount ? taskLaneCount * taskLaneHeight + 8 : 0;
-        const pedTop = taskBandHeight ? taskBandHeight + 4 : 6;
-        const pedThumbSlotHeight = 94;
-        const pedBandHeight = maxPedStack ? pedTop + maxPedStack * pedThumbSlotHeight : 0;
-        const rowHeight = Math.max(40, taskBandHeight, pedBandHeight) + 6;
+        const taskLaneHeight = 24;
+        const laneTopPadding = 6;
+        const pedThumbSlotHeight = 80;
+        const { taskLayouts, pedLayouts, laneCount } = compactGanttRowLayouts(visibleTasks, visiblePedPosts, taskLaneHeight, pedThumbSlotHeight);
+        const rowHeight = Math.max(34, laneTopPadding + laneCount * taskLaneHeight + 8);
         const row = document.createElement("div");
         row.className = "row-label";
         row.style.height = `${rowHeight}px`;
@@ -9751,7 +9803,7 @@
             }
             bar.title = `${task.nameEn || task.name}\nWho: ${(task.members || []).join(", ") || "-"}\nStatus: ${task.status || "-"}`;
             bar.style.left = `${left}px`;
-            bar.style.top = `${projectTop + lane * taskLaneHeight + 8}px`;
+            bar.style.top = `${projectTop + laneTopPadding + lane * taskLaneHeight}px`;
             bar.style.width = `${width}px`;
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
@@ -9767,21 +9819,18 @@
             bar.innerHTML = `${compactPreview ? "" : taskLabelIconMarkup(task.label)}<span class="bar-title">${escapeHtml(previewName(task.nameEn || task.name))}</span>${unassignedBadge}${subtaskBadge}<span class="bar-meta"><span class="status-swatch" style="background:${escapeHtml(statusColor(task.status))}"></span>${compactPreview ? "" : `<span class="bar-status-text">${escapeHtml(task.status)}</span>`}</span>`;
             bars.appendChild(bar);
           });
-        const pedDateCounts = {};
-        visiblePedPosts.forEach((post) => {
-          const postDate = new Date(`${post.date}T00:00:00`);
-          if (Number.isNaN(postDate.getTime())) return;
-          const dateIndex = pedDateCounts[post.date] || 0;
-          pedDateCounts[post.date] = dateIndex + 1;
-          const left = Math.max(0, dateDiffDays(timelineStart, postDate)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+        pedLayouts.forEach(({ date, posts, start, lane }) => {
+          const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+          posts.forEach((post, postIndex) => {
           const thumb = document.createElement("div");
           thumb.className = "gantt-ped-thumb";
           thumb.title = `${post.title || "PED post"}\n${post.date} ${normalizeHour(post.time)}\n${normalizePedFormat(post.format)}`;
           thumb.style.left = `calc(${left}px + 6px)`;
-          thumb.style.top = `${projectTop + pedTop + dateIndex * pedThumbSlotHeight}px`;
+          thumb.style.top = `${projectTop + laneTopPadding + lane * taskLaneHeight + postIndex * pedThumbSlotHeight}px`;
           thumb.style.borderColor = post.color || project.color;
           thumb.innerHTML = ganttPedThumbMarkup(post);
           bars.appendChild(thumb);
+          });
         });
         projectTop += rowHeight;
       });
