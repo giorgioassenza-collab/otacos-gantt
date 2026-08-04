@@ -724,7 +724,7 @@
     .gantt-ped-thumb {
       position: absolute;
       width: min(112px, calc(var(--day) - 12px));
-      height: 70px;
+      height: 86px;
       display: block;
       overflow: visible;
       border: 0;
@@ -762,7 +762,7 @@
     .gantt-ped-thumb-label {
       position: absolute;
       left: 50%;
-      bottom: -4px;
+      bottom: 0;
       z-index: 5;
       display: flex;
       align-items: center;
@@ -801,6 +801,11 @@
       background: #fff;
     }
 
+    .gantt-mock-phone.is-story {
+      width: 44px;
+      height: 72px;
+    }
+
     .gantt-mock-notch {
       position: absolute;
       top: 3px;
@@ -816,6 +821,16 @@
     .gantt-mock-phone.is-story .gantt-mock-notch {
       width: 18px;
       background: #202020;
+    }
+
+    .gantt-mock-phone.is-story .gantt-mock-content {
+      inset: 0;
+      border-radius: 10px;
+      background: #242424;
+    }
+
+    .gantt-mock-phone.is-story .gantt-mock-asset {
+      object-fit: cover;
     }
 
     .gantt-mock-content {
@@ -9663,7 +9678,7 @@
         const taskLaneHeight = 30;
         const taskBandHeight = taskLaneCount ? taskLaneCount * taskLaneHeight + 8 : 0;
         const pedTop = taskBandHeight ? taskBandHeight + 4 : 6;
-        const pedThumbSlotHeight = 78;
+        const pedThumbSlotHeight = 94;
         const pedBandHeight = maxPedStack ? pedTop + maxPedStack * pedThumbSlotHeight : 0;
         const rowHeight = Math.max(40, taskBandHeight, pedBandHeight) + 6;
         const row = document.createElement("div");
