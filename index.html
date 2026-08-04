@@ -8507,7 +8507,7 @@
 
     function ganttMockImageMarkup(src) {
       return src
-        ? `<img class="gantt-mock-asset" src="${escapeHtml(src)}" alt="" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`
+        ? `<img class="gantt-mock-asset" src="${escapeHtml(src)}" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer" onerror="${escapeHtml(assetImageFallbackScript())}">`
         : `<span class="gantt-mock-fallback">O'TACOS</span>`;
     }
 
