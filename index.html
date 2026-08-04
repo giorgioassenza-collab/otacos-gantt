@@ -3753,12 +3753,13 @@
         flex: 0 0 auto;
         height: 38px;
       }
-      #openTaskPanel { order: 6; }
-      #openProjectPanel { order: 7; }
-      #openOverdueModal { order: 8; }
-      #openPedPostPanel { order: 9; }
+      #jumpTodayButton { order: 6; }
+      #openTaskPanel { order: 7; }
+      #openProjectPanel { order: 8; }
+      #openOverdueModal { order: 9; }
+      #openPedPostPanel { order: 10; }
       .member-select {
-        order: 10;
+        order: 11;
         flex: 1 1 142px;
         width: auto;
         min-width: 142px;
@@ -3971,6 +3972,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
         </button>
       </div>
+      <button class="today-btn" id="jumpTodayButton" type="button">Today</button>
       <button class="toolbar-btn" id="openTaskPanel" type="button">Task</button>
       <button class="toolbar-btn" id="openProjectPanel" type="button">Project</button>
       <button class="toolbar-btn overdue-btn" id="openOverdueModal" type="button">Backlog 0</button>
@@ -9490,6 +9492,30 @@
       pedPostModal.classList.remove("open");
     }
 
+    function compactTaskLanes(tasks) {
+      const lanes = [];
+      return [...tasks]
+        .sort((left, right) =>
+          left.start.localeCompare(right.start) ||
+          left.end.localeCompare(right.end) ||
+          (left.nameEn || left.name || "").localeCompare(right.nameEn || right.name || "")
+        )
+        .map((task) => {
+          const start = new Date(`${task.start}T00:00:00`);
+          const end = new Date(`${task.end}T00:00:00`);
+          const startIndex = dateDiffDays(timelineStart, start);
+          const endIndex = dateDiffDays(timelineStart, end);
+          let lane = lanes.findIndex((lastEndIndex) => lastEndIndex < startIndex);
+          if (lane < 0) {
+            lane = lanes.length;
+            lanes.push(endIndex);
+          } else {
+            lanes[lane] = endIndex;
+          }
+          return { task, start, end, lane };
+        });
+    }
+
     function renderBoard() {
       const previousTaskProject = taskProject.value;
       const previousEditTaskProject = editTaskProject.value;
@@ -9535,19 +9561,21 @@
           return result;
         }, {});
         const maxPedStack = Math.max(0, ...Object.values(pedPostsPerDate));
-        const taskBandHeight = visibleTasks.length ? visibleTasks.length * 34 + 10 : 8;
-        const pedBandHeight = maxPedStack ? maxPedStack * 48 + 8 : 0;
-        const rowHeight = Math.max(48, taskBandHeight + pedBandHeight + 6);
+        const taskLayouts = compactTaskLanes(visibleTasks);
+        const taskLaneCount = Math.max(0, ...taskLayouts.map((layout) => layout.lane + 1));
+        const taskLaneHeight = 30;
+        const taskBandHeight = taskLaneCount ? taskLaneCount * taskLaneHeight + 8 : 0;
+        const pedTop = taskBandHeight ? taskBandHeight + 4 : 6;
+        const pedBandHeight = maxPedStack ? pedTop + maxPedStack * 48 : 0;
+        const rowHeight = Math.max(40, taskBandHeight, pedBandHeight) + 6;
         const row = document.createElement("div");
         row.className = "row-label";
         row.style.height = `${rowHeight}px`;
         row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
         sidebar.appendChild(row);
 
-        visibleTasks
-          .forEach((task, taskIndex) => {
-            const start = new Date(`${task.start}T00:00:00`);
-            const end = new Date(`${task.end}T00:00:00`);
+        taskLayouts
+          .forEach(({ task, start, end, lane }) => {
             const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
             const width = Math.max(1, dateDiffDays(start, end) + 1) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
             const bar = document.createElement("div");
@@ -9557,7 +9585,7 @@
             }
             bar.title = `${task.nameEn || task.name}\nWho: ${(task.members || []).join(", ") || "-"}\nStatus: ${task.status || "-"}`;
             bar.style.left = `${left}px`;
-            bar.style.top = `${projectTop + taskIndex * 34 + 11}px`;
+            bar.style.top = `${projectTop + lane * taskLaneHeight + 8}px`;
             bar.style.width = `${width}px`;
             bar.style.borderColor = project.color;
             bar.dataset.taskId = task.id;
@@ -9584,7 +9612,7 @@
           thumb.className = "gantt-ped-thumb";
           thumb.title = `${post.title || "PED post"}\n${post.date} ${normalizeHour(post.time)}\n${normalizePedFormat(post.format)}`;
           thumb.style.left = `calc(${left}px + 6px)`;
-          thumb.style.top = `${projectTop + taskBandHeight + dateIndex * 48}px`;
+          thumb.style.top = `${projectTop + pedTop + dateIndex * 48}px`;
           thumb.style.borderColor = post.color || project.color;
           thumb.innerHTML = ganttPedThumbMarkup(post);
           bars.appendChild(thumb);
@@ -9600,7 +9628,7 @@
         projectTop = 48;
       }
 
-      const bottomScrollBuffer = 260;
+      const bottomScrollBuffer = 128;
       const boardContentHeight = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + projectTop + bottomScrollBuffer;
       sidebar.style.minHeight = `${boardContentHeight}px`;
       timelineEl.style.minHeight = `${boardContentHeight}px`;
@@ -9680,6 +9708,28 @@
       requestAnimationFrame(run);
       setTimeout(run, 80);
       setTimeout(syncHorizontalScrollbar, 120);
+    }
+
+    function jumpActiveViewToToday(behavior = "smooth") {
+      if (document.body.classList.contains("ped-mode")) {
+        scrollPedToToday(behavior);
+        return;
+      }
+      if (document.body.classList.contains("creator-calendar-mode")) {
+        scrollCreatorCalendarToToday(behavior);
+        return;
+      }
+      if (document.body.classList.contains("influencer-mode")) {
+        influencerView.scrollTo({ top: 0, behavior });
+        requestAnimationFrame(syncHorizontalScrollbar);
+        return;
+      }
+      if (document.body.classList.contains("budget-mode")) {
+        budgetView.scrollTo({ left: 0, top: 0, behavior });
+        requestAnimationFrame(syncHorizontalScrollbar);
+        return;
+      }
+      scrollToToday(behavior);
     }
 
     async function startApp() {
@@ -9839,6 +9889,10 @@
         renderBoard();
         scrollToToday();
       }
+    });
+
+    document.getElementById("jumpTodayButton").addEventListener("click", () => {
+      jumpActiveViewToToday();
     });
 
     document.getElementById("openTaskPanel").addEventListener("click", () => {
