@@ -9704,7 +9704,7 @@
         });
     }
 
-    function compactGanttRowLayouts(tasks, pedPosts, laneHeight, pedSlotHeight) {
+    function compactGanttRowLayouts(tasks, pedPosts, laneHeight, pedSlotHeight, pedThumbHeight) {
       const lanes = [];
       const taskLayouts = [];
       const pedLayouts = [];
@@ -9724,7 +9724,7 @@
           end: date,
           startIndex,
           endIndex: startIndex,
-          span: Math.max(1, Math.ceil((group.posts.length * pedSlotHeight) / laneHeight))
+          span: Math.max(1, Math.ceil((((group.posts.length - 1) * pedSlotHeight) + pedThumbHeight) / laneHeight))
         };
       }).filter((item) => !Number.isNaN(item.start.getTime()));
       const taskItems = [...tasks].map((task) => {
@@ -9806,10 +9806,15 @@
           .filter((post) => selectedMember === "all" || (post.members || []).includes(selectedMember))
           .sort((a, b) => `${a.date} ${normalizeHour(a.time)}`.localeCompare(`${b.date} ${normalizeHour(b.time)}`));
         const taskLaneHeight = 24;
-        const laneTopPadding = 6;
-        const pedThumbSlotHeight = 80;
-        const { taskLayouts, pedLayouts, laneCount } = compactGanttRowLayouts(visibleTasks, visiblePedPosts, taskLaneHeight, pedThumbSlotHeight);
-        const rowHeight = Math.max(34, laneTopPadding + laneCount * taskLaneHeight + 8);
+        const taskBarHeight = 22;
+        const laneTopPadding = 4;
+        const rowBottomPadding = 4;
+        const pedThumbHeight = 74;
+        const pedThumbSlotHeight = 76;
+        const { taskLayouts, pedLayouts } = compactGanttRowLayouts(visibleTasks, visiblePedPosts, taskLaneHeight, pedThumbSlotHeight, pedThumbHeight);
+        const taskBottom = Math.max(0, ...taskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
+        const pedBottom = Math.max(0, ...pedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
+        const rowHeight = Math.max(28, taskBottom, pedBottom) + rowBottomPadding;
         const row = document.createElement("div");
         row.className = "row-label";
         row.style.height = `${rowHeight}px`;
