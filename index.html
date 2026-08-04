@@ -9768,8 +9768,8 @@
 
     function ganttVisibleDayWindow(dayWidth) {
       const width = scroller.clientWidth || window.innerWidth || dayWidth;
-      const start = Math.max(0, Math.floor(scroller.scrollLeft / dayWidth) - 1);
-      const end = Math.ceil((scroller.scrollLeft + width) / dayWidth) + 1;
+      const start = Math.max(0, Math.floor(scroller.scrollLeft / dayWidth));
+      const end = Math.max(start, Math.floor((scroller.scrollLeft + width - 1) / dayWidth));
       return { start, end, key: `${start}:${end}` };
     }
 
