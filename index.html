@@ -723,81 +723,267 @@
 
     .gantt-ped-thumb {
       position: absolute;
-      width: min(92px, calc(var(--day) - 12px));
-      height: 54px;
+      width: min(112px, calc(var(--day) - 12px));
+      height: 70px;
       display: block;
-      overflow: hidden;
-      border: 2px solid var(--ink);
-      border-radius: 7px;
-      background: #fff;
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
       color: var(--ink);
-      box-shadow: 0 6px 14px rgba(24, 19, 15, .12);
       pointer-events: none;
     }
 
     .gantt-ped-thumb-media {
       position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .gantt-mock-asset {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .gantt-mock-fallback {
       display: grid;
       place-items: center;
       width: 100%;
       height: 100%;
-      min-height: 0;
-      background: #fff5ed;
       color: var(--orange);
-    }
-
-    .gantt-ped-thumb-media img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .gantt-ped-thumb-icon svg {
-      width: 18px;
-      height: 18px;
+      background: linear-gradient(135deg, #fff2e9, #fffaf4);
+      font-size: 10px;
+      font-weight: 1000;
     }
 
     .gantt-ped-thumb-label {
       position: absolute;
-      left: 3px;
-      right: 3px;
-      bottom: 3px;
-      z-index: 2;
+      left: 50%;
+      bottom: -4px;
+      z-index: 5;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 17px;
-      padding: 2px 5px;
+      min-height: 15px;
+      max-width: 104px;
+      padding: 2px 7px;
       border: 1px solid rgba(255, 255, 255, .58);
       border-radius: 999px;
       background: var(--orange);
       color: #fff;
-      font-size: 9px;
-      font-weight: 900;
+      font-size: 8px;
+      font-weight: 1000;
       line-height: 1;
-      text-transform: none;
+      text-transform: uppercase;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      transform: translateX(-50%);
       box-shadow: 0 4px 10px rgba(24, 19, 15, .2);
     }
 
-    .gantt-ped-thumb .asset-carousel-preview,
-    .gantt-ped-thumb .asset-folder-thumb,
-    .gantt-ped-thumb .asset-video-preview {
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      border: 0;
-      border-radius: 0;
-      box-shadow: none;
+    .gantt-mock-phone {
+      position: relative;
+      width: 42px;
+      height: 68px;
+      margin: 0 auto;
+      border: 2px solid #151515;
+      border-radius: 12px;
+      background: #111;
+      box-shadow: 0 7px 16px rgba(24, 19, 15, .18);
+      overflow: hidden;
     }
 
-    .gantt-ped-thumb .asset-carousel-badge,
-    .gantt-ped-thumb .asset-folder-title,
-    .gantt-ped-thumb .asset-video-preview span:not(.asset-video-play) {
-      display: none;
+    .gantt-mock-phone.is-reel {
+      background: #fff;
+    }
+
+    .gantt-mock-notch {
+      position: absolute;
+      top: 3px;
+      left: 50%;
+      width: 14px;
+      height: 4px;
+      border-radius: 999px;
+      background: #050505;
+      transform: translateX(-50%);
+      z-index: 3;
+    }
+
+    .gantt-mock-phone.is-story .gantt-mock-notch {
+      width: 18px;
+      background: #202020;
+    }
+
+    .gantt-mock-content {
+      position: absolute;
+      inset: 8px 4px 13px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: #242424;
+    }
+
+    .gantt-mock-phone.is-reel .gantt-mock-content {
+      inset: 10px 4px 14px;
+      background: #f8f8f8;
+    }
+
+    .gantt-mock-story-top {
+      position: absolute;
+      top: 8px;
+      left: 6px;
+      right: 6px;
+      z-index: 3;
+      display: flex;
+      gap: 2px;
+    }
+
+    .gantt-mock-story-top span {
+      flex: 1;
+      height: 1px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.82);
+    }
+
+    .gantt-mock-story-bottom {
+      position: absolute;
+      left: 6px;
+      right: 6px;
+      bottom: 5px;
+      z-index: 3;
+      height: 5px;
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 999px;
+    }
+
+    .gantt-mock-reel-title {
+      position: absolute;
+      top: 10px;
+      left: 6px;
+      z-index: 3;
+      color: #111;
+      font-size: 5px;
+      font-weight: 1000;
+    }
+
+    .gantt-mock-reel-actions {
+      position: absolute;
+      right: 5px;
+      bottom: 17px;
+      z-index: 3;
+      display: grid;
+      gap: 4px;
+    }
+
+    .gantt-mock-reel-actions span {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      border: 1px solid #111;
+      background: #fff;
+    }
+
+    .gantt-mock-reel-actions span:first-child {
+      border-color: #ff3030;
+      background: #ff3030;
+    }
+
+    .gantt-mock-reel-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: 10px;
+      background: #030303;
+    }
+
+    .gantt-mock-reel-nav span {
+      width: 5px;
+      height: 5px;
+      border: 1px solid #fff;
+      border-radius: 2px;
+    }
+
+    .gantt-mock-slides {
+      position: relative;
+      width: 100%;
+      height: 66px;
+    }
+
+    .gantt-mock-slide {
+      position: absolute;
+      top: 6px;
+      width: 36px;
+      height: 54px;
+      overflow: hidden;
+      border: 1px solid #e8e1d8;
+      border-radius: 3px;
+      background: #fff;
+      box-shadow: 0 6px 12px rgba(24, 19, 15, .14);
+    }
+
+    .gantt-mock-slide:nth-child(1) { left: 0; z-index: 3; }
+    .gantt-mock-slide:nth-child(2) { left: 30px; z-index: 2; transform: scale(.94); }
+    .gantt-mock-slide:nth-child(3) { left: 58px; z-index: 1; transform: scale(.9); }
+
+    .gantt-mock-static .gantt-mock-slide {
+      left: 50%;
+      width: 48px;
+      height: 60px;
+      transform: translateX(-50%);
+    }
+
+    .gantt-mock-slide-head {
+      height: 9px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 4px;
+      background: #fff;
+    }
+
+    .gantt-mock-avatar {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: #d8d8d8;
+    }
+
+    .gantt-mock-dots {
+      margin-left: auto;
+      width: 6px;
+      height: 2px;
+      border-radius: 999px;
+      background: #c8c8c8;
+    }
+
+    .gantt-mock-slide-media {
+      height: calc(100% - 18px);
+      background: #d4d4d4;
+      overflow: hidden;
+    }
+
+    .gantt-mock-slide-foot {
+      height: 9px;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 4px;
+      background: #fff;
+    }
+
+    .gantt-mock-slide-foot span {
+      width: 4px;
+      height: 4px;
+      border: 1px solid #111;
+      border-radius: 999px;
     }
 
     .status-menu,
@@ -8268,32 +8454,83 @@
       `;
     }
 
+    function ganttPedKind(item) {
+      const raw = `${item.format || ""} ${item.title || ""}`.toLowerCase();
+      const format = normalizePedFormat(item.format);
+      if (raw.includes("story") || raw.includes("storia")) return "Story";
+      if (raw.includes("reel") || raw.includes("video") || format === "Video") return "Reel";
+      if (raw.includes("carousel") || raw.includes("carosello") || format === "Carousel") return "Carousel";
+      return "Static";
+    }
+
+    function ganttMockImageMarkup(src) {
+      return src
+        ? `<img class="gantt-mock-asset" src="${escapeHtml(src)}" alt="" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`
+        : `<span class="gantt-mock-fallback">O'TACOS</span>`;
+    }
+
+    function ganttMockSlides(item, count = 3) {
+      const links = assetLinks(item.asset).map((link) => drivePreviewUrl(link) || link).filter(Boolean);
+      const assetImages = serializableAssetItems(item.assetItems || [])
+        .filter((assetItem) => assetItem.type === "image")
+        .map((assetItem) => assetItem.src)
+        .filter(Boolean);
+      const fallback = drivePreviewUrl(item.asset);
+      const slides = [...assetImages, ...links, fallback].filter(Boolean).slice(0, count);
+      while (slides.length < count) slides.push("");
+      return slides;
+    }
+
+    function ganttMockSlideMarkup(src) {
+      return `
+        <div class="gantt-mock-slide">
+          <div class="gantt-mock-slide-head"><span class="gantt-mock-avatar"></span><span class="gantt-mock-dots"></span></div>
+          <div class="gantt-mock-slide-media">${ganttMockImageMarkup(src)}</div>
+          <div class="gantt-mock-slide-foot"><span></span><span></span><span></span></div>
+        </div>
+      `;
+    }
+
     function ganttPedThumbMarkup(item) {
+      const kind = ganttPedKind(item);
       const format = normalizePedFormat(item.format);
       const links = assetLinks(item.asset);
       const folderId = driveFolderId(item.asset);
-      const isCarousel = format === "Carousel" || folderId || links.length > 1;
+      const isCarousel = kind === "Carousel" || folderId || links.length > 1;
       const firstImage = serializableAssetItems(item.assetItems || []).find((assetItem) => assetItem.type === "image");
       const directImage = firstImage?.src || (!isCarousel && !isVideoAsset(item.asset) ? drivePreviewUrl(item.asset) : "");
-      let media = `<span class="gantt-ped-thumb-icon">${pedFormatIconMarkup(format)}</span>`;
-      if (isCarousel) {
-        media = folderId
-          ? driveFolderCoverMarkup(folderId)
-          : assetCarouselPreviewMarkup(item.asset, format);
-      } else if (directImage) {
-        media = `<img src="${escapeHtml(directImage)}" alt="" loading="lazy" onerror="${escapeHtml(assetImageFallbackScript())}">`;
-      } else if (isVideoAsset(item.asset)) {
-        media = videoAssetPreviewMarkup("Video preview");
+      const contentImage = directImage || drivePreviewUrl(item.asset);
+      let media = "";
+      if (kind === "Story") {
+        media = `
+          <div class="gantt-mock-phone is-story">
+            <span class="gantt-mock-notch"></span>
+            <div class="gantt-mock-story-top"><span></span><span></span><span></span></div>
+            <div class="gantt-mock-content">${ganttMockImageMarkup(contentImage)}</div>
+            <div class="gantt-mock-story-bottom"></div>
+          </div>
+        `;
+      } else if (kind === "Reel") {
+        media = `
+          <div class="gantt-mock-phone is-reel">
+            <span class="gantt-mock-notch"></span>
+            <span class="gantt-mock-reel-title">Reels</span>
+            <div class="gantt-mock-content">${ganttMockImageMarkup(contentImage)}</div>
+            <div class="gantt-mock-reel-actions"><span></span><span></span><span></span></div>
+            <div class="gantt-mock-reel-nav"><span></span><span></span><span></span><span></span></div>
+          </div>
+        `;
+      } else if (isCarousel) {
+        const slides = ganttMockSlides(item, 3);
+        media = `<div class="gantt-mock-slides gantt-mock-carousel">${slides.map(ganttMockSlideMarkup).join("")}</div>`;
+      } else {
+        media = `<div class="gantt-mock-slides gantt-mock-static">${ganttMockSlideMarkup(contentImage)}</div>`;
       }
       const socialLabel = (item.social || [])
         .map((socialId) => (data.socials || []).find((social) => social.id === socialId)?.label || socialId)
         .filter(Boolean)
         .slice(0, 1)[0];
-      const label = format === "Carousel" || isCarousel
-        ? `${socialLabel ? `${socialLabel} ` : ""}Carousel`
-        : format === "Video"
-          ? `${socialLabel ? `${socialLabel} ` : ""}Video`
-          : socialLabel || format;
+      const label = `${socialLabel ? `${socialLabel} ` : ""}${kind}`;
       return `
         <div class="gantt-ped-thumb-media">${media}</div>
         <div class="gantt-ped-thumb-label">${escapeHtml(label)}</div>
@@ -9426,7 +9663,8 @@
         const taskLaneHeight = 30;
         const taskBandHeight = taskLaneCount ? taskLaneCount * taskLaneHeight + 8 : 0;
         const pedTop = taskBandHeight ? taskBandHeight + 4 : 6;
-        const pedBandHeight = maxPedStack ? pedTop + maxPedStack * 48 : 0;
+        const pedThumbSlotHeight = 78;
+        const pedBandHeight = maxPedStack ? pedTop + maxPedStack * pedThumbSlotHeight : 0;
         const rowHeight = Math.max(40, taskBandHeight, pedBandHeight) + 6;
         const row = document.createElement("div");
         row.className = "row-label";
@@ -9472,7 +9710,7 @@
           thumb.className = "gantt-ped-thumb";
           thumb.title = `${post.title || "PED post"}\n${post.date} ${normalizeHour(post.time)}\n${normalizePedFormat(post.format)}`;
           thumb.style.left = `calc(${left}px + 6px)`;
-          thumb.style.top = `${projectTop + pedTop + dateIndex * 48}px`;
+          thumb.style.top = `${projectTop + pedTop + dateIndex * pedThumbSlotHeight}px`;
           thumb.style.borderColor = post.color || project.color;
           thumb.innerHTML = ganttPedThumbMarkup(post);
           bars.appendChild(thumb);
