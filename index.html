@@ -578,6 +578,27 @@
       z-index: 5;
     }
 
+    .project-dividers {
+      position: absolute;
+      inset: var(--timeline-head) 0 0;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .project-divider {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(64, 56, 50, .18);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, .72);
+    }
+
+    .project-divider.is-strong {
+      height: 2px;
+      background: rgba(64, 56, 50, .28);
+    }
+
     .bar {
       position: absolute;
       height: 22px;
@@ -4079,6 +4100,7 @@
           <div class="months" id="months"></div>
           <div class="weekends" id="weekends"></div>
           <div class="grid"></div>
+          <div class="project-dividers" id="projectDividers" aria-hidden="true"></div>
           <div class="bars" id="bars" aria-label="Progetti"></div>
         </div>
       </div>
@@ -4609,6 +4631,7 @@
     const timelineEl = document.getElementById("timeline");
     const sidebar = document.getElementById("sidebar");
     const bars = document.getElementById("bars");
+    const projectDividers = document.getElementById("projectDividers");
     const taskProject = document.getElementById("taskProject");
     const taskMembers = document.getElementById("taskMembers");
     const taskStatus = document.getElementById("taskStatus");
@@ -9746,6 +9769,7 @@
       const previousEditTaskProject = editTaskProject.value;
       sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
       bars.innerHTML = "";
+      projectDividers.innerHTML = "";
       taskProject.innerHTML = "";
       editTaskProject.innerHTML = "";
       projectList.innerHTML = "";
@@ -9791,6 +9815,10 @@
         row.style.height = `${rowHeight}px`;
         row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
         sidebar.appendChild(row);
+        const topDivider = document.createElement("div");
+        topDivider.className = `project-divider ${projectTop === 0 ? "is-strong" : ""}`;
+        topDivider.style.top = `${projectTop}px`;
+        projectDividers.appendChild(topDivider);
 
         taskLayouts
           .forEach(({ task, start, end, lane }) => {
@@ -9832,6 +9860,10 @@
           bars.appendChild(thumb);
           });
         });
+        const bottomDivider = document.createElement("div");
+        bottomDivider.className = "project-divider is-strong";
+        bottomDivider.style.top = `${projectTop + rowHeight}px`;
+        projectDividers.appendChild(bottomDivider);
         projectTop += rowHeight;
       });
 
@@ -9848,6 +9880,7 @@
       sidebar.style.minHeight = `${boardContentHeight}px`;
       timelineEl.style.minHeight = `${boardContentHeight}px`;
       bars.style.height = `${projectTop + bottomScrollBuffer}px`;
+      projectDividers.style.height = `${projectTop + bottomScrollBuffer}px`;
 
       taskProject.disabled = data.projects.length === 0;
       syncGanttHeaderPosition();
