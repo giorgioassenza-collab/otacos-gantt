@@ -4775,7 +4775,7 @@
     let undoStack = [];
     let dataVersion = 0;
     let appStarted = false;
-    let pendingGanttViewportRender = false;
+    let ganttViewportRenderTimer = null;
     let lastGanttLayoutWindowKey = "";
     let boardDb = null;
     let boardRef = null;
@@ -5852,6 +5852,31 @@
         syncPedHeaderPosition();
         updatePedHourLabels();
         syncHorizontalScrollbar();
+      }
+    }
+
+    function handleGanttWheel(event) {
+      if (document.body.classList.contains("ped-mode")
+        || document.body.classList.contains("influencer-mode")
+        || document.body.classList.contains("creator-calendar-mode")
+        || document.body.classList.contains("budget-mode")) return;
+      if (event.ctrlKey || event.metaKey || isScrollableInsidePed(event.target)) return;
+      const { x, y } = wheelPixelDelta(event);
+      const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+      if (maxLeft <= 0) return;
+      const maxTop = Math.max(0, boardEl.scrollHeight - boardEl.clientHeight);
+      const canScrollDown = boardEl.scrollTop < maxTop - 1;
+      const canScrollUp = boardEl.scrollTop > 1;
+      const verticalBlocked = y > 0 ? !canScrollDown : y < 0 ? !canScrollUp : true;
+      const horizontalIntent = Math.abs(x) > Math.abs(y) || event.shiftKey || verticalBlocked;
+      if (!horizontalIntent) return;
+      const before = scroller.scrollLeft;
+      const delta = Math.abs(x) > 0 ? x : y;
+      scroller.scrollLeft = Math.max(0, Math.min(maxLeft, before + delta));
+      if (scroller.scrollLeft !== before) {
+        event.preventDefault();
+        syncHorizontalScrollbar();
+        scheduleGanttViewportRender();
       }
     }
 
@@ -9927,13 +9952,13 @@
         || document.body.classList.contains("budget-mode")) return;
       const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       const windowKey = ganttVisibleDayWindow(dayWidth).key;
-      if (windowKey === lastGanttLayoutWindowKey || pendingGanttViewportRender) return;
-      pendingGanttViewportRender = true;
-      requestAnimationFrame(() => {
-        pendingGanttViewportRender = false;
-        const nextKey = ganttVisibleDayWindow(dayWidth).key;
+      if (windowKey === lastGanttLayoutWindowKey) return;
+      window.clearTimeout(ganttViewportRenderTimer);
+      ganttViewportRenderTimer = window.setTimeout(() => {
+        const currentDayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+        const nextKey = ganttVisibleDayWindow(currentDayWidth).key;
         if (nextKey !== lastGanttLayoutWindowKey) renderBoard();
-      });
+      }, 140);
     }
 
     function updateHiddenTaskIndicators() {
@@ -12461,6 +12486,7 @@
       updateHiddenTaskIndicators();
       syncHorizontalScrollbar();
     });
+    boardEl.addEventListener("wheel", handleGanttWheel, { passive: false });
     scroller.addEventListener("scroll", () => {
       syncHorizontalScrollbar();
       scheduleGanttViewportRender();
