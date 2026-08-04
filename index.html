@@ -8469,8 +8469,16 @@
       `;
     }
 
+    function ganttPedSocialLabel(item) {
+      return (item.social || [])
+        .map((socialId) => (data.socials || []).find((social) => social.id === socialId)?.label || socialId)
+        .filter(Boolean)
+        .slice(0, 1)[0] || "";
+    }
+
     function ganttPedKind(item) {
-      const raw = `${item.format || ""} ${item.title || ""}`.toLowerCase();
+      const socialLabel = ganttPedSocialLabel(item);
+      const raw = `${item.format || ""} ${item.title || ""} ${socialLabel}`.toLowerCase();
       const format = normalizePedFormat(item.format);
       if (raw.includes("story") || raw.includes("storia")) return "Story";
       if (raw.includes("reel") || raw.includes("video") || format === "Video") return "Reel";
@@ -8541,11 +8549,9 @@
       } else {
         media = `<div class="gantt-mock-slides gantt-mock-static">${ganttMockSlideMarkup(contentImage)}</div>`;
       }
-      const socialLabel = (item.social || [])
-        .map((socialId) => (data.socials || []).find((social) => social.id === socialId)?.label || socialId)
-        .filter(Boolean)
-        .slice(0, 1)[0];
-      const label = `${socialLabel ? `${socialLabel} ` : ""}${kind}`;
+      const socialLabel = ganttPedSocialLabel(item);
+      const socialAlreadyNamesKind = socialLabel.toLowerCase().includes(kind.toLowerCase());
+      const label = socialAlreadyNamesKind ? socialLabel : `${socialLabel ? `${socialLabel} ` : ""}${kind}`;
       return `
         <div class="gantt-ped-thumb-media">${media}</div>
         <div class="gantt-ped-thumb-label">${escapeHtml(label)}</div>
