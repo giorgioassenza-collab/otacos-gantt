@@ -4775,6 +4775,8 @@
     let undoStack = [];
     let dataVersion = 0;
     let appStarted = false;
+    let pendingGanttViewportRender = false;
+    let lastGanttLayoutWindowKey = "";
     let boardDb = null;
     let boardRef = null;
     let unsubscribeBoard = null;
@@ -9764,6 +9766,13 @@
       return { taskLayouts, pedLayouts, laneCount: lanes.length };
     }
 
+    function ganttVisibleDayWindow(dayWidth) {
+      const width = scroller.clientWidth || window.innerWidth || dayWidth;
+      const start = Math.max(0, Math.floor(scroller.scrollLeft / dayWidth) - 1);
+      const end = Math.ceil((scroller.scrollLeft + width) / dayWidth) + 1;
+      return { start, end, key: `${start}:${end}` };
+    }
+
     function renderBoard() {
       const previousTaskProject = taskProject.value;
       const previousEditTaskProject = editTaskProject.value;
@@ -9776,6 +9785,9 @@
       renderSettingsLists();
       renderPedProjectOptions();
       const selectedMember = memberFilter.value;
+      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const visibleDayWindow = ganttVisibleDayWindow(dayWidth);
+      lastGanttLayoutWindowKey = visibleDayWindow.key;
       data.projects.forEach((project, index) => {
         const item = option(project.id, project.name);
         taskProject.appendChild(item);
@@ -9812,8 +9824,17 @@
         const pedThumbHeight = 74;
         const pedThumbSlotHeight = 76;
         const { taskLayouts, pedLayouts } = compactGanttRowLayouts(visibleTasks, visiblePedPosts, taskLaneHeight, pedThumbSlotHeight, pedThumbHeight);
-        const taskBottom = Math.max(0, ...taskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
-        const pedBottom = Math.max(0, ...pedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
+        const visibleTaskLayouts = taskLayouts.filter((layout) => {
+          const startIndex = dateDiffDays(timelineStart, layout.start);
+          const endIndex = dateDiffDays(timelineStart, layout.end);
+          return endIndex >= visibleDayWindow.start && startIndex <= visibleDayWindow.end;
+        });
+        const visiblePedLayouts = pedLayouts.filter((layout) => {
+          const dayIndex = dateDiffDays(timelineStart, layout.start);
+          return dayIndex >= visibleDayWindow.start && dayIndex <= visibleDayWindow.end;
+        });
+        const taskBottom = Math.max(0, ...visibleTaskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
+        const pedBottom = Math.max(0, ...visiblePedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
         const rowHeight = Math.max(28, taskBottom, pedBottom) + rowBottomPadding;
         const row = document.createElement("div");
         row.className = "row-label";
@@ -9827,8 +9848,8 @@
 
         taskLayouts
           .forEach(({ task, start, end, lane }) => {
-            const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
-            const width = Math.max(1, dateDiffDays(start, end) + 1) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+            const left = Math.max(0, dateDiffDays(timelineStart, start)) * dayWidth;
+            const width = Math.max(1, dateDiffDays(start, end) + 1) * dayWidth;
             const bar = document.createElement("div");
             bar.className = "bar";
             if (isDoneStatus(task.status)) {
@@ -9853,7 +9874,7 @@
             bars.appendChild(bar);
           });
         pedLayouts.forEach(({ date, posts, start, lane }) => {
-          const left = Math.max(0, dateDiffDays(timelineStart, start)) * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+          const left = Math.max(0, dateDiffDays(timelineStart, start)) * dayWidth;
           posts.forEach((post, postIndex) => {
           const thumb = document.createElement("div");
           thumb.className = "gantt-ped-thumb";
@@ -9897,6 +9918,22 @@
 
     function syncGanttHeaderPosition() {
       monthsEl.style.transform = `translateY(${boardEl.scrollTop}px) translateZ(0)`;
+    }
+
+    function scheduleGanttViewportRender() {
+      if (document.body.classList.contains("ped-mode")
+        || document.body.classList.contains("influencer-mode")
+        || document.body.classList.contains("creator-calendar-mode")
+        || document.body.classList.contains("budget-mode")) return;
+      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const windowKey = ganttVisibleDayWindow(dayWidth).key;
+      if (windowKey === lastGanttLayoutWindowKey || pendingGanttViewportRender) return;
+      pendingGanttViewportRender = true;
+      requestAnimationFrame(() => {
+        pendingGanttViewportRender = false;
+        const nextKey = ganttVisibleDayWindow(dayWidth).key;
+        if (nextKey !== lastGanttLayoutWindowKey) renderBoard();
+      });
     }
 
     function updateHiddenTaskIndicators() {
@@ -12424,7 +12461,10 @@
       updateHiddenTaskIndicators();
       syncHorizontalScrollbar();
     });
-    scroller.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
+    scroller.addEventListener("scroll", () => {
+      syncHorizontalScrollbar();
+      scheduleGanttViewportRender();
+    }, { passive: true });
     pedView.addEventListener("scroll", () => {
       updatePedHiddenIndicators();
       syncPedHeaderPosition();
