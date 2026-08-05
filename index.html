@@ -5837,31 +5837,6 @@
       }
     }
 
-    function handleGanttWheel(event) {
-      if (document.body.classList.contains("ped-mode")
-        || document.body.classList.contains("influencer-mode")
-        || document.body.classList.contains("creator-calendar-mode")
-        || document.body.classList.contains("budget-mode")) return;
-      if (event.ctrlKey || event.metaKey || isScrollableInsidePed(event.target)) return;
-      const { x, y } = wheelPixelDelta(event);
-      const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-      if (maxLeft <= 0) return;
-      const maxTop = Math.max(0, boardEl.scrollHeight - boardEl.clientHeight);
-      const canScrollDown = boardEl.scrollTop < maxTop - 1;
-      const canScrollUp = boardEl.scrollTop > 1;
-      const verticalBlocked = y > 0 ? !canScrollDown : y < 0 ? !canScrollUp : true;
-      const horizontalIntent = Math.abs(x) > Math.abs(y) || event.shiftKey || verticalBlocked;
-      if (!horizontalIntent) return;
-      const before = scroller.scrollLeft;
-      const delta = Math.abs(x) > 0 ? x : y;
-      scroller.scrollLeft = Math.max(0, Math.min(maxLeft, before + delta));
-      if (scroller.scrollLeft !== before) {
-        event.preventDefault();
-        syncHorizontalScrollbar();
-        scheduleGanttViewportRender();
-      }
-    }
-
     function initials(rawValue) {
       const raw = rawValue || "";
       return raw.trim().slice(0, 2).toUpperCase();
@@ -12503,7 +12478,6 @@
       updateHiddenTaskIndicators();
       syncHorizontalScrollbar();
     });
-    boardEl.addEventListener("wheel", handleGanttWheel, { passive: false });
     scroller.addEventListener("scroll", () => {
       syncHorizontalScrollbar();
       scheduleGanttViewportRender();
