@@ -2203,6 +2203,31 @@
     .influencer-progress-track { height: 7px; overflow: hidden; border-radius: 99px; background: #eee8df; }
     .influencer-progress-bar { height: 100%; border-radius: inherit; background: var(--orange); transition: width .2s ease; }
 
+    .influencer-type-config {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fffdf9;
+    }
+
+    .influencer-type-config-head,
+    .influencer-type-config-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: end;
+      gap: 8px;
+    }
+
+    .influencer-type-config-head { grid-template-columns: 42px minmax(180px, 1fr) 34px 34px 34px; align-items: center; }
+    .influencer-type-config .mini-field { display: grid; gap: 4px; color: #746c63; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+    .influencer-type-config-fields .mini-field:last-child { grid-column: 1 / -1; }
+    .influencer-type-config input:not([type="color"]),
+    .influencer-type-config select { width: 100%; min-width: 0; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; padding: 0 8px; font-weight: 800; }
+    .influencer-visibility-toggle { height: 34px; border: 1px solid #d9d2c8; border-radius: 8px; background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 17px; }
+    .influencer-visibility-toggle.is-active { border-color: var(--orange); background: #fff1e8; color: var(--orange-dark); box-shadow: 0 0 0 2px rgba(255, 90, 20, .12); }
+
     .influencer-table-wrap {
       margin-top: 12px;
       border: 1px solid var(--line);
@@ -6465,7 +6490,11 @@
         name: option.name || option.label || "",
         color: option.color || fallbackColor,
         textColor: option.textColor || "#111827",
-        needed: Math.max(0, Math.floor(Number(option.needed) || 0))
+        needed: Math.max(0, Math.floor(Number(option.needed) || 0)),
+        previewVisible: Boolean(option.previewVisible),
+        deadline: option.deadline || "",
+        projectId: option.projectId || "",
+        progressTaskId: option.progressTaskId || ""
       };
     }
 
@@ -9456,7 +9485,7 @@
 
     function renderInfluencerProgress() {
       const container = document.getElementById("influencerProgress");
-      const types = data.influencerOptions?.type || [];
+      const types = (data.influencerOptions?.type || []).filter((type) => type.previewVisible);
       container.innerHTML = types.map((type) => {
         const assigned = (data.influencers || []).filter((row) => influencerOptionKey(row.type) === influencerOptionKey(type.name));
         const confirmed = assigned.filter(isConfirmedInfluencer).length;
@@ -9468,10 +9497,72 @@
             <span class="influencer-progress-ratio">${confirmed}/${needed}</span>
           </div>
           <div class="influencer-progress-track"><div class="influencer-progress-bar" style="width:${percentage}%; background:${escapeHtml(influencerOptionColor("type", type.name))}"></div></div>
-          <div class="influencer-progress-counts"><span>${confirmed} confirmed</span><span>${assigned.length} assigned</span></div>
+          <div class="influencer-progress-counts"><span>${confirmed} confirmed</span><span>${assigned.length} assigned</span><span>Deadline ${escapeHtml(type.deadline || "-")}</span></div>
         </article>`;
       }).join("");
       container.hidden = !types.length;
+    }
+
+    function influencerProgressCounts(type) {
+      const assigned = (data.influencers || []).filter((row) => influencerOptionKey(row.type) === influencerOptionKey(type.name));
+      return { assigned: assigned.length, confirmed: assigned.filter(isConfirmedInfluencer).length };
+    }
+
+    function syncInfluencerProgressTasks() {
+      let changed = false;
+      const types = data.influencerOptions?.type || [];
+      types.forEach((type) => {
+        let task = type.progressTaskId ? (data.tasks || []).find((item) => item.id === type.progressTaskId) : null;
+        if (!task) task = (data.tasks || []).find((item) => item.influencerProgressTypeKey === influencerOptionKey(type.name));
+        const enabled = Boolean(type.previewVisible && type.deadline && type.projectId && Number(type.needed) > 0 && validProjectId(data.projects, type.projectId));
+        if (!enabled) {
+          if (task) {
+            deleteTaskById(task.id);
+            changed = true;
+          }
+          if (type.progressTaskId) {
+            type.progressTaskId = "";
+            changed = true;
+          }
+          return;
+        }
+        const counts = influencerProgressCounts(type);
+        const taskDate = currentDateKey() <= type.deadline ? currentDateKey() : type.deadline;
+        const taskName = `INFLUENCER ${type.name} — ${counts.confirmed}/${type.needed}`;
+        const payload = {
+          projectId: type.projectId,
+          name: taskName,
+          nameEn: taskName,
+          members: [],
+          status: contactTaskStatus(),
+          start: taskDate,
+          end: taskDate,
+          info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} confirmed`,
+          label: "",
+          pedEnabled: false,
+          pedDate: "",
+          influencerProgressTypeKey: influencerOptionKey(type.name),
+          subtasks: []
+        };
+        if (task) {
+          const before = stableDataString(task);
+          Object.assign(task, payload);
+          if (stableDataString(task) !== before) {
+            touchItem(task);
+            changed = true;
+          }
+        } else {
+          const createdAt = Date.now();
+          task = { id: `t${createdAt}-influencer-progress`, ...payload, createdAt, updatedAt: createdAt };
+          data.tasks.push(task);
+          changed = true;
+        }
+        if (type.progressTaskId !== task.id) {
+          type.progressTaskId = task.id;
+          changed = true;
+        }
+      });
+      return changed;
     }
 
     function fillInfluencerSelect(selectId, key, selectedValue = "") {
@@ -9528,6 +9619,7 @@
         }
       }
       if (String(value || "") !== String(previousValue || "")) moveInfluencerToBottom(rowId);
+      syncInfluencerProgressTasks();
       saveData();
       renderBoard();
       renderInfluencers();
@@ -9652,10 +9744,24 @@
         { key: "where", list: "influencerWhereList" },
         { key: "when", list: "influencerWhenList" }
       ].forEach(({ key, list }) => {
-        document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => `
+        document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => key === "type" ? `
+          <div class="influencer-type-config">
+            <div class="influencer-type-config-head">
+              <button class="influencer-visibility-toggle ${item.previewVisible ? "is-active" : ""}" type="button" aria-label="${item.previewVisible ? "Hide" : "Show"} ${escapeHtml(item.name)} in preview" title="${item.previewVisible ? "Visible in preview" : "Hidden from preview"}" data-toggle-influencer-type="${escapeHtml(item.name)}">&#128065;</button>
+              <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="type" data-old-option="${escapeHtml(item.name)}">
+              <input type="color" value="${escapeHtml(influencerOptionColor(key, item.name))}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="type" data-option-name="${escapeHtml(item.name)}">
+              <input type="color" value="${escapeHtml(influencerOptionTextColor(key, item.name))}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="type" data-option-name="${escapeHtml(item.name)}">
+              <button type="button" aria-label="Delete ${escapeHtml(item.name)}" data-delete-influencer-option="type" data-option-name="${escapeHtml(item.name)}">x</button>
+            </div>
+            <div class="influencer-type-config-fields">
+              <label class="mini-field">Influencer needed<input type="number" min="1" step="1" value="${Math.max(0, Number(item.needed) || 0)}" data-influencer-type-needed="${escapeHtml(item.name)}"></label>
+              <label class="mini-field">Deadline<input type="date" value="${escapeHtml(item.deadline || "")}" data-influencer-type-deadline="${escapeHtml(item.name)}"></label>
+              <label class="mini-field">Gantt project<select data-influencer-type-project="${escapeHtml(item.name)}"><option value="">-</option>${(data.projects || []).map((project) => `<option value="${escapeHtml(project.id)}" ${project.id === item.projectId ? "selected" : ""}>${escapeHtml(project.name)}</option>`).join("")}</select></label>
+            </div>
+          </div>
+        ` : `
           <div class="project-pill">
             <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="${escapeHtml(key)}" data-old-option="${escapeHtml(item.name)}">
-            ${key === "type" ? `<input type="number" min="0" step="1" value="${Math.max(0, Number(item.needed) || 0)}" aria-label="Influencer needed for ${escapeHtml(item.name)}" title="Influencer needed" data-influencer-type-needed="${escapeHtml(item.name)}">` : ""}
             <input type="color" value="${escapeHtml(influencerOptionColor(key, item.name))}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
             <input type="color" value="${escapeHtml(influencerOptionTextColor(key, item.name))}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">
             <button type="button" aria-label="Delete ${escapeHtml(item.name)}" data-delete-influencer-option="${escapeHtml(key)}" data-option-name="${escapeHtml(item.name)}">x</button>
@@ -10156,8 +10262,9 @@
       document.body.classList.add("is-authenticated");
       data = await loadData();
       const automaticPedChanged = syncAutomaticPedPostsForTasks();
+      const automaticInfluencerChanged = syncInfluencerProgressTasks();
       committedData = structuredClone(data);
-      if (automaticPedChanged) await saveData(true);
+      if (automaticPedChanged || automaticInfluencerChanged) await saveData(true);
       updateUndoButton();
       renderTimeline();
       updateZoom();
@@ -10170,6 +10277,7 @@
       void (async () => {
         try {
           await importInfluencerSeedIfNeeded();
+          if (syncInfluencerProgressTasks()) await saveData(true);
           renderInfluencers();
           renderBoard();
         } catch (error) {
@@ -10184,6 +10292,12 @@
       retryPendingLocalSave();
       setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
+      setInterval(() => {
+        if (!syncInfluencerProgressTasks()) return;
+        saveData(true);
+        renderBoard();
+        renderInfluencers();
+      }, 60000);
     }
 
     window.addEventListener("beforeunload", (event) => {
@@ -10607,6 +10721,7 @@
         moveInfluencerToBottom(id);
       }
       syncInfluencerContactTask(row);
+      syncInfluencerProgressTasks();
       saveData();
       renderBoard();
       renderInfluencers();
@@ -10617,6 +10732,7 @@
       const id = document.getElementById("influencerId").value;
       if (!id) return;
       deleteInfluencerById(id);
+      syncInfluencerProgressTasks();
       saveData();
       renderBoard();
       renderInfluencers();
@@ -10641,7 +10757,7 @@
       data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(name));
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => influencerOptionKey(item.name) === influencerOptionKey(name))) {
-        data.influencerOptions[key].push({ name, color, textColor, ...(key === "type" ? { needed } : {}) });
+        data.influencerOptions[key].push({ name, color, textColor, ...(key === "type" ? { needed, previewVisible: false, deadline: "", projectId: "", progressTaskId: "" } : {}) });
       }
       nameInput.value = defaultName;
       colorInput.value = defaultColor;
@@ -10656,6 +10772,7 @@
       data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
       applyInfluencerDeletedOptionsToRows(data);
       ensureInfluencerOptionsFromRows(data);
+      syncInfluencerProgressTasks();
       data.settingsUpdatedAt = data.settingsUpdatedAt || {};
       data.settingsUpdatedAt.influencerOptions = Date.now();
       data.settingsUpdatedAt.influencerDeletedOptions = Date.now();
@@ -10714,9 +10831,33 @@
         if (neededInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(neededInput.dataset.influencerTypeNeeded));
           if (optionItem) optionItem.needed = Math.max(0, Math.floor(Number(neededInput.value) || 0));
+          syncInfluencerProgressTasks();
           saveData();
           renderInfluencerSettings();
           renderInfluencers();
+          renderBoard();
+          return;
+        }
+        const deadlineInput = event.target.closest("[data-influencer-type-deadline]");
+        if (deadlineInput) {
+          const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(deadlineInput.dataset.influencerTypeDeadline));
+          if (optionItem) optionItem.deadline = deadlineInput.value;
+          syncInfluencerProgressTasks();
+          saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          renderBoard();
+          return;
+        }
+        const projectInput = event.target.closest("[data-influencer-type-project]");
+        if (projectInput) {
+          const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(projectInput.dataset.influencerTypeProject));
+          if (optionItem) optionItem.projectId = projectInput.value;
+          syncInfluencerProgressTasks();
+          saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          renderBoard();
           return;
         }
         const nameInput = event.target.closest("[data-edit-influencer-option]");
@@ -10732,9 +10873,11 @@
           data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(newName));
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => influencerOptionKey(item.name) === influencerOptionKey(oldName) ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(oldName) ? { ...row, [key]: newName } : row);
+          syncInfluencerProgressTasks();
           saveData();
           renderInfluencerSettings();
           renderInfluencers();
+          renderBoard();
           return;
         }
         const textColorInput = event.target.closest("[data-influencer-option-text-color]");
@@ -10758,19 +10901,39 @@
       });
 
       document.getElementById(listId).addEventListener("click", (event) => {
+        const visibilityButton = event.target.closest("[data-toggle-influencer-type]");
+        if (visibilityButton) {
+          const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityButton.dataset.toggleInfluencerType));
+          if (!optionItem) return;
+          if (!optionItem.previewVisible && (!optionItem.deadline || !optionItem.projectId || Number(optionItem.needed) < 1)) {
+            setSyncMessage("Set target, deadline and Gantt project before showing this event");
+            return;
+          }
+          optionItem.previewVisible = !optionItem.previewVisible;
+          syncInfluencerProgressTasks();
+          saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          renderBoard();
+          return;
+        }
         const button = event.target.closest("[data-delete-influencer-option]");
         if (!button) return;
         const key = button.dataset.deleteInfluencerOption;
         const name = button.dataset.optionName;
+        const deletedOption = (data.influencerOptions[key] || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(name));
+        if (key === "type" && deletedOption?.progressTaskId) deleteTaskById(deletedOption.progressTaskId);
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
         if (!data.influencerDeletedOptions[key].some((item) => influencerOptionKey(item) === influencerOptionKey(name))) {
           data.influencerDeletedOptions[key].push(name);
         }
         data.influencerOptions[key] = (data.influencerOptions[key] || []).filter((item) => influencerOptionKey(item.name) !== influencerOptionKey(name));
         data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(name) ? { ...row, [key]: "" } : row);
+        syncInfluencerProgressTasks();
         saveData();
         renderInfluencerSettings();
         renderInfluencers();
+        renderBoard();
       });
     });
 
