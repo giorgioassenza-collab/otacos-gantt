@@ -2220,13 +2220,20 @@
       gap: 8px;
     }
 
-    .influencer-type-config-head { grid-template-columns: 42px minmax(180px, 1fr) 34px 34px 34px; align-items: center; }
+    .influencer-type-config-head { grid-template-columns: 34px minmax(0, 1fr) 28px 28px 28px; align-items: center; }
     .influencer-type-config .mini-field { display: grid; gap: 4px; color: #746c63; font-size: 10px; font-weight: 900; text-transform: uppercase; }
     .influencer-type-config-fields .mini-field:last-child { grid-column: 1 / -1; }
     .influencer-type-config input:not([type="color"]),
     .influencer-type-config select { width: 100%; min-width: 0; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; padding: 0 8px; font-weight: 800; }
+    .influencer-type-config input[type="color"] { width: 28px; min-width: 28px; height: 28px; padding: 2px; }
+    .influencer-type-config-head > button:last-child { width: 28px; height: 28px; }
     .influencer-visibility-toggle { height: 34px; border: 1px solid #d9d2c8; border-radius: 8px; background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 17px; }
     .influencer-visibility-toggle.is-active { border-color: var(--orange); background: #fff1e8; color: var(--orange-dark); box-shadow: 0 0 0 2px rgba(255, 90, 20, .12); }
+    .influencer-deadline-control { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 5px; }
+    .influencer-deadline-control input { cursor: pointer; }
+    .influencer-calendar-button { width: 34px; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; background: #fff; cursor: pointer; font-size: 15px; }
+    #influencerSettingsPanel { width: min(420px, calc(100vw - 32px)); }
+    #influencerTypeList { max-height: none; overflow: visible; padding-right: 0; }
 
     .influencer-table-wrap {
       margin-top: 12px;
@@ -3943,6 +3950,7 @@
         overflow-y: auto;
         transform: none;
       }
+      #influencerSettingsPanel { width: auto; }
       .panel-footer {
         position: sticky;
         bottom: 0;
@@ -9755,7 +9763,7 @@
             </div>
             <div class="influencer-type-config-fields">
               <label class="mini-field">Influencer needed<input type="number" min="1" step="1" value="${Math.max(0, Number(item.needed) || 0)}" data-influencer-type-needed="${escapeHtml(item.name)}"></label>
-              <label class="mini-field">Deadline<input type="date" value="${escapeHtml(item.deadline || "")}" data-influencer-type-deadline="${escapeHtml(item.name)}"></label>
+              <label class="mini-field">Deadline<span class="influencer-deadline-control"><input type="date" min="${currentDateKey()}" inputmode="none" value="${escapeHtml(item.deadline || "")}" data-influencer-type-deadline="${escapeHtml(item.name)}"><button class="influencer-calendar-button" type="button" aria-label="Open deadline calendar for ${escapeHtml(item.name)}" data-open-influencer-deadline="${escapeHtml(item.name)}">&#128197;</button></span></label>
               <label class="mini-field">Gantt project<select data-influencer-type-project="${escapeHtml(item.name)}"><option value="">-</option>${(data.projects || []).map((project) => `<option value="${escapeHtml(project.id)}" ${project.id === item.projectId ? "selected" : ""}>${escapeHtml(project.name)}</option>`).join("")}</select></label>
             </div>
           </div>
@@ -10901,6 +10909,15 @@
       });
 
       document.getElementById(listId).addEventListener("click", (event) => {
+        const deadlineTarget = event.target.closest("[data-open-influencer-deadline], [data-influencer-type-deadline]");
+        if (deadlineTarget) {
+          event.preventDefault();
+          const name = deadlineTarget.dataset.openInfluencerDeadline || deadlineTarget.dataset.influencerTypeDeadline;
+          const input = document.querySelector(`[data-influencer-type-deadline="${CSS.escape(name)}"]`);
+          if (input?.showPicker) input.showPicker();
+          else input?.focus();
+          return;
+        }
         const visibilityButton = event.target.closest("[data-toggle-influencer-type]");
         if (visibilityButton) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityButton.dataset.toggleInfluencerType));
@@ -10935,6 +10952,14 @@
         renderInfluencers();
         renderBoard();
       });
+    });
+
+    document.getElementById("influencerTypeList").addEventListener("keydown", (event) => {
+      if (event.target.closest("[data-influencer-type-deadline]")) event.preventDefault();
+    });
+
+    document.getElementById("influencerTypeList").addEventListener("paste", (event) => {
+      if (event.target.closest("[data-influencer-type-deadline]")) event.preventDefault();
     });
 
     document.getElementById("taskForm").addEventListener("submit", async (event) => {
