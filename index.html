@@ -6496,7 +6496,7 @@
 
     function applyLocalInfluencerPreviewVisibility(source) {
       const localPreference = readLocalInfluencerPreviewVisibility();
-      if (!localPreference || localPreference.updatedAt < settingUpdatedAt(source, "influencerPreviewVisibility")) return;
+      if (!localPreference) return;
       source.influencerPreviewVisibility = {
         ...(source.influencerPreviewVisibility || {}),
         ...localPreference.values
