@@ -4769,6 +4769,7 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
+    const influencerPreviewStorageKey = "tacos-influencer-preview-visibility-v1";
     const viewStorageKey = "tacos-gantt-board-active-view-v1";
     const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget"];
     const maxHistoryEntries = 10;
@@ -6450,6 +6451,7 @@
         }
         item.previewVisible = Boolean(normalized.influencerPreviewVisibility[key]);
       });
+      applyLocalInfluencerPreviewVisibility(normalized);
       return normalized;
     }
 
@@ -6469,6 +6471,37 @@
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
+    }
+
+    function readLocalInfluencerPreviewVisibility() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(influencerPreviewStorageKey) || "null");
+        if (!saved || typeof saved !== "object") return null;
+        return { values: { ...(saved.values || {}) }, updatedAt: Number(saved.updatedAt || 0) };
+      } catch {
+        return null;
+      }
+    }
+
+    function persistLocalInfluencerPreviewVisibility(source = data, updatedAt = Date.now()) {
+      try {
+        localStorage.setItem(influencerPreviewStorageKey, JSON.stringify({
+          values: { ...(source?.influencerPreviewVisibility || {}) },
+          updatedAt: Number(updatedAt || Date.now())
+        }));
+      } catch {}
+    }
+
+    function applyLocalInfluencerPreviewVisibility(source) {
+      const localPreference = readLocalInfluencerPreviewVisibility();
+      if (!localPreference || localPreference.updatedAt < settingUpdatedAt(source, "influencerPreviewVisibility")) return;
+      source.influencerPreviewVisibility = {
+        ...(source.influencerPreviewVisibility || {}),
+        ...localPreference.values
+      };
+      (source.influencerOptions?.type || []).forEach((item) => {
+        item.previewVisible = Boolean(source.influencerPreviewVisibility[influencerOptionKey(item.name)]);
+      });
     }
 
     function applyInfluencerDeletedOptionsToRows(normalized) {
@@ -10907,8 +10940,12 @@
           if (!optionItem) return;
           data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
           data.influencerPreviewVisibility[influencerOptionKey(optionItem.name)] = visibilityInput.checked;
+          const visibilityUpdatedAt = Date.now();
+          data.settingsUpdatedAt = data.settingsUpdatedAt || {};
+          data.settingsUpdatedAt.influencerPreviewVisibility = visibilityUpdatedAt;
           optionItem.previewVisible = visibilityInput.checked;
-          optionItem.previewUpdatedAt = Date.now();
+          optionItem.previewUpdatedAt = visibilityUpdatedAt;
+          persistLocalInfluencerPreviewVisibility(data, visibilityUpdatedAt);
           syncInfluencerProgressTasks();
           const toggle = visibilityInput.closest(".influencer-visibility-toggle");
           toggle?.classList.toggle("is-active", visibilityInput.checked);
@@ -10973,6 +11010,7 @@
               data.influencerPreviewVisibility[newKey] = data.influencerPreviewVisibility[oldKey];
               delete data.influencerPreviewVisibility[oldKey];
             }
+            persistLocalInfluencerPreviewVisibility(data);
           }
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => influencerOptionKey(item.name) === influencerOptionKey(oldName) ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(oldName) ? { ...row, [key]: newName } : row);
@@ -11022,6 +11060,7 @@
         if (key === "type") {
           data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
           delete data.influencerPreviewVisibility[influencerOptionKey(name)];
+          persistLocalInfluencerPreviewVisibility(data);
         }
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
         if (!data.influencerDeletedOptions[key].some((item) => influencerOptionKey(item) === influencerOptionKey(name))) {
