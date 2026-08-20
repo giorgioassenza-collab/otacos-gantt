@@ -2200,8 +2200,10 @@
     .influencer-progress-title { font-size: 12px; font-weight: 900; }
     .influencer-progress-ratio { color: var(--orange-dark); font-size: 16px; font-weight: 950; }
     .influencer-progress-counts { color: #746c63; font-size: 11px; font-weight: 800; }
-    .influencer-progress-track { height: 7px; overflow: hidden; border-radius: 99px; background: #eee8df; }
-    .influencer-progress-bar { height: 100%; border-radius: inherit; background: var(--orange); transition: width .2s ease; }
+    .influencer-progress-track { display: flex; height: 8px; overflow: hidden; border-radius: 99px; background: #eee8df; }
+    .influencer-progress-bar { height: 100%; transition: width .2s ease; }
+    .influencer-progress-bar.is-booked { background: #22c55e; }
+    .influencer-progress-bar.is-contacted { background: #facc15; }
 
     .influencer-type-config {
       display: grid;
@@ -9582,6 +9584,10 @@
       return ["BOOKED", "CONFIRMED", "CONFERMATO", "CONFERMATA"].includes(String(row.status || "").trim().toUpperCase());
     }
 
+    function isContactedInfluencer(row) {
+      return String(row?.status || "").trim().toUpperCase() === "CONTACTED";
+    }
+
     function influencerTypeIsVisible(type, source = data) {
       const key = influencerOptionKey(type?.name);
       const visibility = source?.influencerPreviewVisibility || {};
@@ -9595,16 +9601,18 @@
       const types = (data.influencerOptions?.type || []).filter((type) => influencerTypeIsVisible(type));
       container.innerHTML = types.map((type) => {
         const assigned = (data.influencers || []).filter((row) => influencerOptionKey(row.type) === influencerOptionKey(type.name));
-        const confirmed = assigned.filter(isConfirmedInfluencer).length;
+        const booked = assigned.filter(isConfirmedInfluencer).length;
+        const contacted = assigned.filter(isContactedInfluencer).length;
         const needed = Math.max(0, Number(type.needed) || 0);
-        const percentage = needed ? Math.min(100, Math.round((confirmed / needed) * 100)) : 0;
+        const bookedPercentage = needed ? Math.min(100, (booked / needed) * 100) : 0;
+        const contactedPercentage = needed ? Math.min(100 - bookedPercentage, (contacted / needed) * 100) : 0;
         return `<article class="influencer-progress-card">
           <div class="influencer-progress-head">
             <span class="influencer-progress-title">${escapeHtml(type.name)}</span>
-            <span class="influencer-progress-ratio">${confirmed}/${needed}</span>
+            <span class="influencer-progress-ratio">${booked}/${needed}</span>
           </div>
-          <div class="influencer-progress-track"><div class="influencer-progress-bar" style="width:${percentage}%; background:${escapeHtml(influencerOptionColor("type", type.name))}"></div></div>
-          <div class="influencer-progress-counts"><span>${confirmed} booked</span><span>${assigned.length} assigned</span><span>Deadline ${escapeHtml(type.deadline || "-")}</span></div>
+          <div class="influencer-progress-track" title="${booked} booked · ${contacted} contacted"><div class="influencer-progress-bar is-booked" style="width:${bookedPercentage}%"></div><div class="influencer-progress-bar is-contacted" style="width:${contactedPercentage}%"></div></div>
+          <div class="influencer-progress-counts"><span>🟢 ${booked} booked</span><span>🟡 ${contacted} contacted</span><span>${assigned.length} assigned</span><span>Deadline ${escapeHtml(type.deadline || "-")}</span></div>
         </article>`;
       }).join("");
       container.hidden = !types.length;
@@ -9612,7 +9620,11 @@
 
     function influencerProgressCounts(type) {
       const assigned = (data.influencers || []).filter((row) => influencerOptionKey(row.type) === influencerOptionKey(type.name));
-      return { assigned: assigned.length, confirmed: assigned.filter(isConfirmedInfluencer).length };
+      return {
+        assigned: assigned.length,
+        confirmed: assigned.filter(isConfirmedInfluencer).length,
+        contacted: assigned.filter(isContactedInfluencer).length
+      };
     }
 
     function syncInfluencerProgressTasks() {
@@ -9635,7 +9647,7 @@
         }
         const counts = influencerProgressCounts(type);
         const taskDate = currentDateKey() <= type.deadline ? currentDateKey() : type.deadline;
-        const taskName = `INFLUENCER ${type.name} — ${counts.confirmed}/${type.needed}`;
+        const taskName = `INFLUENCER ${type.name} — ${counts.confirmed}/${type.needed} booked · ${counts.contacted} contacted`;
         const payload = {
           projectId: type.projectId,
           name: taskName,
@@ -9644,7 +9656,7 @@
           status: contactTaskStatus(),
           start: taskDate,
           end: taskDate,
-          info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} booked`,
+          info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} booked · ${counts.contacted} contacted`,
           label: "",
           pedEnabled: false,
           pedDate: "",
