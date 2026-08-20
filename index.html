@@ -4812,6 +4812,7 @@
       pedPosts: [],
       influencers: [],
       influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
+      influencerPreviewVisibility: {},
       influencerDeletedOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
       influencerColumnLabels: {}
     };
@@ -5112,6 +5113,7 @@
       "projects",
       "socials",
       "influencerOptions",
+      "influencerPreviewVisibility",
       "influencerDeletedOptions",
       "influencerColumnLabels"
     ];
@@ -5487,6 +5489,7 @@
         projects: mergeProjects(local.projects || [], remote.projects || [], settingUpdatedAt(local, "projects"), settingUpdatedAt(remote, "projects")),
         socials: mergeSocials(local.socials || [], remote.socials || [], settingUpdatedAt(local, "socials"), settingUpdatedAt(remote, "socials")),
         influencerOptions: mergeInfluencerOptions(local.influencerOptions || {}, remote.influencerOptions || {}, settingUpdatedAt(local, "influencerOptions"), settingUpdatedAt(remote, "influencerOptions")),
+        influencerPreviewVisibility: mergePlainObjectSettings(local.influencerPreviewVisibility || {}, remote.influencerPreviewVisibility || {}, settingUpdatedAt(local, "influencerPreviewVisibility"), settingUpdatedAt(remote, "influencerPreviewVisibility")),
         influencerDeletedOptions: mergeInfluencerDeletedOptions(local.influencerDeletedOptions || {}, remote.influencerDeletedOptions || {}, settingUpdatedAt(local, "influencerDeletedOptions"), settingUpdatedAt(remote, "influencerDeletedOptions")),
         influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
         tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
@@ -6439,6 +6442,14 @@
       normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       applyInfluencerDeletedOptionsToRows(normalized);
       ensureInfluencerOptionsFromRows(normalized);
+      normalized.influencerPreviewVisibility = { ...(normalized.influencerPreviewVisibility || {}) };
+      (normalized.influencerOptions?.type || []).forEach((item) => {
+        const key = influencerOptionKey(item.name);
+        if (!Object.prototype.hasOwnProperty.call(normalized.influencerPreviewVisibility, key)) {
+          normalized.influencerPreviewVisibility[key] = Boolean(item.previewVisible);
+        }
+        item.previewVisible = Boolean(normalized.influencerPreviewVisibility[key]);
+      });
       return normalized;
     }
 
@@ -9538,9 +9549,17 @@
       return ["BOOKED", "CONFIRMED", "CONFERMATO", "CONFERMATA"].includes(String(row.status || "").trim().toUpperCase());
     }
 
+    function influencerTypeIsVisible(type, source = data) {
+      const key = influencerOptionKey(type?.name);
+      const visibility = source?.influencerPreviewVisibility || {};
+      return Object.prototype.hasOwnProperty.call(visibility, key)
+        ? Boolean(visibility[key])
+        : Boolean(type?.previewVisible);
+    }
+
     function renderInfluencerProgress() {
       const container = document.getElementById("influencerProgress");
-      const types = (data.influencerOptions?.type || []).filter((type) => type.previewVisible);
+      const types = (data.influencerOptions?.type || []).filter((type) => influencerTypeIsVisible(type));
       container.innerHTML = types.map((type) => {
         const assigned = (data.influencers || []).filter((row) => influencerOptionKey(row.type) === influencerOptionKey(type.name));
         const confirmed = assigned.filter(isConfirmedInfluencer).length;
@@ -9569,7 +9588,7 @@
       types.forEach((type) => {
         let task = type.progressTaskId ? (data.tasks || []).find((item) => item.id === type.progressTaskId) : null;
         if (!task) task = (data.tasks || []).find((item) => item.influencerProgressTypeKey === influencerOptionKey(type.name));
-        const enabled = Boolean(type.previewVisible && type.deadline && type.projectId && Number(type.needed) > 0 && validProjectId(data.projects, type.projectId));
+        const enabled = Boolean(influencerTypeIsVisible(type) && type.deadline && type.projectId && Number(type.needed) > 0 && validProjectId(data.projects, type.projectId));
         if (!enabled) {
           if (task) {
             deleteTaskById(task.id);
@@ -9802,7 +9821,7 @@
         document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => key === "type" ? `
           <div class="influencer-type-config">
             <div class="influencer-type-config-head">
-              <label class="influencer-visibility-toggle ${item.previewVisible ? "is-active" : ""}" aria-label="${item.previewVisible ? "Hide" : "Show"} ${escapeHtml(item.name)} in preview" title="${item.previewVisible ? "Visible in preview" : "Hidden from preview"}"><input type="checkbox" hidden ${item.previewVisible ? "checked" : ""} data-influencer-type-visibility="${escapeHtml(item.name)}"><span aria-hidden="true">&#128065;</span></label>
+              <label class="influencer-visibility-toggle ${influencerTypeIsVisible(item) ? "is-active" : ""}" aria-label="${influencerTypeIsVisible(item) ? "Hide" : "Show"} ${escapeHtml(item.name)} in preview" title="${influencerTypeIsVisible(item) ? "Visible in preview" : "Hidden from preview"}"><input type="checkbox" hidden ${influencerTypeIsVisible(item) ? "checked" : ""} data-influencer-type-visibility="${escapeHtml(item.name)}"><span aria-hidden="true">&#128065;</span></label>
               <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="type" data-old-option="${escapeHtml(item.name)}">
               <input type="color" value="${escapeHtml(influencerOptionColor(key, item.name))}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="type" data-option-name="${escapeHtml(item.name)}">
               <input type="color" value="${escapeHtml(influencerOptionTextColor(key, item.name))}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="type" data-option-name="${escapeHtml(item.name)}">
@@ -10886,6 +10905,8 @@
         if (visibilityInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityInput.dataset.influencerTypeVisibility));
           if (!optionItem) return;
+          data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
+          data.influencerPreviewVisibility[influencerOptionKey(optionItem.name)] = visibilityInput.checked;
           optionItem.previewVisible = visibilityInput.checked;
           optionItem.previewUpdatedAt = Date.now();
           syncInfluencerProgressTasks();
@@ -10944,6 +10965,15 @@
           }
           data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
           data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(newName));
+          if (key === "type") {
+            const oldKey = influencerOptionKey(oldName);
+            const newKey = influencerOptionKey(newName);
+            data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
+            if (Object.prototype.hasOwnProperty.call(data.influencerPreviewVisibility, oldKey)) {
+              data.influencerPreviewVisibility[newKey] = data.influencerPreviewVisibility[oldKey];
+              delete data.influencerPreviewVisibility[oldKey];
+            }
+          }
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => influencerOptionKey(item.name) === influencerOptionKey(oldName) ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(oldName) ? { ...row, [key]: newName } : row);
           syncInfluencerProgressTasks();
@@ -10989,6 +11019,10 @@
         const name = button.dataset.optionName;
         const deletedOption = (data.influencerOptions[key] || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(name));
         if (key === "type" && deletedOption?.progressTaskId) deleteTaskById(deletedOption.progressTaskId);
+        if (key === "type") {
+          data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
+          delete data.influencerPreviewVisibility[influencerOptionKey(name)];
+        }
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
         if (!data.influencerDeletedOptions[key].some((item) => influencerOptionKey(item) === influencerOptionKey(name))) {
           data.influencerDeletedOptions[key].push(name);
