@@ -4832,6 +4832,7 @@
     let pendingLocalData = null;
     let pendingSaveCommittedAt = 0;
     let syncedRenderTimer = null;
+    let influencerFilterRenderFrame = null;
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], summary: null, error: "" };
     let budgetMonthSortMode = "spend";
@@ -9454,13 +9455,13 @@
       return [...(data.influencers || [])].sort((left, right) => influencerSortValue(left) - influencerSortValue(right));
     }
 
-    function filteredInfluencers() {
+    function filteredInfluencers(orderedRows = orderedInfluencers()) {
       const query = document.getElementById("influencerSearch").value.trim().toLowerCase();
       const city = document.getElementById("influencerCityFilter").value;
       const target = document.getElementById("influencerTargetFilter").value;
       const status = document.getElementById("influencerStatusFilter").value;
       const where = document.getElementById("influencerWhereFilter").value;
-      return orderedInfluencers().filter((row) => {
+      return orderedRows.filter((row) => {
         const searchable = influencerColumns.map((column) => row[column.key] || "").join(" ").toLowerCase();
         if (query && !searchable.includes(query)) return false;
         if (city !== "all" && row.city !== city) return false;
@@ -9471,20 +9472,22 @@
       });
     }
 
-    function renderInfluencers() {
+    function renderInfluencers({ includeProgress = true, refreshFilters = true } = {}) {
       if (appStarted && !isViewActive("influencer")) return;
       const head = document.getElementById("influencerHead");
       const body = document.getElementById("influencerBody");
       const empty = document.getElementById("influencerEmpty");
-      fillInfluencerFilter("influencerCityFilter", "city", "All cities");
-      fillInfluencerFilter("influencerTargetFilter", "target", "All targets");
-      fillInfluencerFilter("influencerStatusFilter", "status", "All status");
-      fillInfluencerFilter("influencerWhereFilter", "where", "All where");
+      if (refreshFilters) {
+        fillInfluencerFilter("influencerCityFilter", "city", "All cities");
+        fillInfluencerFilter("influencerTargetFilter", "target", "All targets");
+        fillInfluencerFilter("influencerStatusFilter", "status", "All status");
+        fillInfluencerFilter("influencerWhereFilter", "where", "All where");
+      }
       const visibleColumns = influencerColumns.filter((column) => !column.hidden);
-      renderInfluencerProgress();
+      if (includeProgress) renderInfluencerProgress();
       head.innerHTML = `<tr><th class="row-number-head">#</th>${visibleColumns.map((column) => `<th>${escapeHtml(influencerColumnLabel(column))}</th>`).join("")}</tr>`;
-      const rows = filteredInfluencers();
       const orderedRows = orderedInfluencers();
+      const rows = filteredInfluencers(orderedRows);
       body.innerHTML = rows.map((row) => `
         ${(() => {
           const duplicate = duplicateInfluencerInfo(row);
@@ -9500,6 +9503,15 @@
       `).join("");
       empty.hidden = rows.length > 0;
       requestAnimationFrame(syncHorizontalScrollbar);
+    }
+
+    function scheduleInfluencerTableRender() {
+      if (influencerFilterRenderFrame) cancelAnimationFrame(influencerFilterRenderFrame);
+      influencerFilterRenderFrame = requestAnimationFrame(() => {
+        influencerFilterRenderFrame = null;
+        influencerView.scrollTop = 0;
+        renderInfluencers({ includeProgress: false, refreshFilters: false });
+      });
     }
 
     function isConfirmedInfluencer(row) {
@@ -10663,8 +10675,8 @@
     document.getElementById("openInfluencerPanel").addEventListener("click", () => openInfluencerEditor());
 
     ["influencerSearch", "influencerCityFilter", "influencerTargetFilter", "influencerStatusFilter", "influencerWhereFilter"].forEach((id) => {
-      document.getElementById(id).addEventListener("input", renderInfluencers);
-      document.getElementById(id).addEventListener("change", renderInfluencers);
+      document.getElementById(id).addEventListener("input", scheduleInfluencerTableRender);
+      document.getElementById(id).addEventListener("change", scheduleInfluencerTableRender);
     });
 
     document.getElementById("influencerBody").addEventListener("click", (event) => {
