@@ -4856,6 +4856,17 @@
       syncIndicator.classList.remove("is-error");
     }
 
+    function isViewActive(view) {
+      if (view === "ped") return document.body.classList.contains("ped-mode");
+      if (view === "influencer") return document.body.classList.contains("influencer-mode");
+      if (view === "creator-calendar") return document.body.classList.contains("creator-calendar-mode");
+      if (view === "budget") return document.body.classList.contains("budget-mode");
+      return !document.body.classList.contains("ped-mode")
+        && !document.body.classList.contains("influencer-mode")
+        && !document.body.classList.contains("creator-calendar-mode")
+        && !document.body.classList.contains("budget-mode");
+    }
+
     function renderSyncedViews() {
       if (document.body.classList.contains("ped-mode")) {
         renderPed();
@@ -7082,6 +7093,7 @@
     }
 
     function renderBudget() {
+      if (appStarted && !isViewActive("budget")) return;
       if (!budgetShell) return;
       if (budgetState.loading) {
         budgetShell.innerHTML = `<div class="budget-empty">Loading budget...</div>`;
@@ -9042,6 +9054,7 @@
     }
 
     function renderPed() {
+      if (appStarted && !isViewActive("ped")) return;
       pedCalendar.innerHTML = "";
       applyTodayColumn(pedCalendar);
       const items = pedItems();
@@ -9248,6 +9261,7 @@
     }
 
     function renderCreatorCalendar() {
+      if (appStarted && !isViewActive("creator-calendar")) return;
       creatorCalendar.innerHTML = "";
       applyTodayColumn(creatorCalendar);
       const items = creatorCalendarItems();
@@ -9458,6 +9472,7 @@
     }
 
     function renderInfluencers() {
+      if (appStarted && !isViewActive("influencer")) return;
       const head = document.getElementById("influencerHead");
       const body = document.getElementById("influencerBody");
       const empty = document.getElementById("influencerEmpty");
@@ -9979,72 +9994,72 @@
       return { start, end, key: `${start}:${end}` };
     }
 
-    function renderBoard() {
+    function renderBoard(viewportOnly = false) {
+      if (appStarted && !isViewActive("gantt")) return;
       const previousTaskProject = taskProject.value;
       const previousEditTaskProject = editTaskProject.value;
       sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
       bars.innerHTML = "";
       projectDividers.innerHTML = "";
-      taskProject.innerHTML = "";
-      editTaskProject.innerHTML = "";
-      projectList.innerHTML = "";
-      renderSettingsLists();
-      renderPedProjectOptions();
+      if (!viewportOnly) {
+        taskProject.innerHTML = "";
+        editTaskProject.innerHTML = "";
+        projectList.innerHTML = "";
+        renderSettingsLists();
+        renderPedProjectOptions();
+      }
       const selectedMember = memberFilter.value;
       const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
       const visibleDayWindow = ganttVisibleDayWindow(dayWidth);
       lastGanttLayoutWindowKey = visibleDayWindow.key;
-      data.projects.forEach((project, index) => {
-        const item = option(project.id, project.name);
-        taskProject.appendChild(item);
-        editTaskProject.appendChild(option(project.id, project.name));
+      if (!viewportOnly) {
+        data.projects.forEach((project, index) => {
+          const item = option(project.id, project.name);
+          taskProject.appendChild(item);
+          editTaskProject.appendChild(option(project.id, project.name));
 
-        const pill = document.createElement("div");
-        pill.className = "project-pill";
-        pill.innerHTML = `<input value="${escapeHtml(project.name)}" aria-label="Edit ${escapeHtml(project.name)}" data-edit-project="${escapeHtml(project.id)}"><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
-        projectList.appendChild(pill);
-      });
-      if ([...taskProject.options].some((item) => item.value === previousTaskProject)) taskProject.value = previousTaskProject;
-      if ([...editTaskProject.options].some((item) => item.value === previousEditTaskProject)) editTaskProject.value = previousEditTaskProject;
+          const pill = document.createElement("div");
+          pill.className = "project-pill";
+          pill.innerHTML = `<input value="${escapeHtml(project.name)}" aria-label="Edit ${escapeHtml(project.name)}" data-edit-project="${escapeHtml(project.id)}"><input type="color" value="${escapeHtml(project.color)}" aria-label="Color ${escapeHtml(project.name)}" data-project-color="${escapeHtml(project.id)}"><button class="move-btn" type="button" aria-label="Move up ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="-1" ${index === 0 ? "disabled" : ""}>Up</button><button class="move-btn" type="button" aria-label="Move down ${escapeHtml(project.name)}" data-move-project="${escapeHtml(project.id)}" data-move-direction="1" ${index === data.projects.length - 1 ? "disabled" : ""}>Down</button><button type="button" aria-label="Delete ${escapeHtml(project.name)}" data-delete-project="${escapeHtml(project.id)}">x</button>`;
+          projectList.appendChild(pill);
+        });
+        if ([...taskProject.options].some((item) => item.value === previousTaskProject)) taskProject.value = previousTaskProject;
+        if ([...editTaskProject.options].some((item) => item.value === previousEditTaskProject)) editTaskProject.value = previousEditTaskProject;
+      }
 
       const allPedItems = pedItems();
       const todayKey = currentDateKey();
       const projectOrder = new Map(data.projects.map((project, index) => [project.id, index]));
+      const matchingTaskProjectIds = new Set();
+      const matchingPedProjectIds = new Set();
+      const publicationsTodayByProject = new Map();
+      const tasksTodayByProject = new Map();
+      data.tasks.forEach((task) => {
+        if (!taskMatchesFilter(task, selectedMember)) return;
+        matchingTaskProjectIds.add(task.projectId);
+        if (task.start && task.end && task.start <= todayKey && task.end >= todayKey) {
+          tasksTodayByProject.set(task.projectId, (tasksTodayByProject.get(task.projectId) || 0) + 1);
+        }
+      });
+      allPedItems.forEach((post) => {
+        if (selectedMember !== "all" && !(post.members || []).includes(selectedMember)) return;
+        matchingPedProjectIds.add(post.projectId);
+        if (post.date === todayKey) {
+          publicationsTodayByProject.set(post.projectId, (publicationsTodayByProject.get(post.projectId) || 0) + 1);
+        }
+      });
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
-        return data.tasks.some((task) => task.projectId === project.id && taskMatchesFilter(task, selectedMember))
-          || allPedItems.some((post) => post.projectId === project.id && (post.members || []).includes(selectedMember));
+        return matchingTaskProjectIds.has(project.id) || matchingPedProjectIds.has(project.id);
       }).sort((left, right) => {
-        const leftPublicationsToday = allPedItems.filter((post) =>
-          post.projectId === left.id
-          && post.date === todayKey
-          && (selectedMember === "all" || (post.members || []).includes(selectedMember))
-        ).length;
-        const rightPublicationsToday = allPedItems.filter((post) =>
-          post.projectId === right.id
-          && post.date === todayKey
-          && (selectedMember === "all" || (post.members || []).includes(selectedMember))
-        ).length;
+        const leftPublicationsToday = publicationsTodayByProject.get(left.id) || 0;
+        const rightPublicationsToday = publicationsTodayByProject.get(right.id) || 0;
         if (Boolean(leftPublicationsToday) !== Boolean(rightPublicationsToday)) {
           return leftPublicationsToday ? -1 : 1;
         }
         if (leftPublicationsToday !== rightPublicationsToday) return rightPublicationsToday - leftPublicationsToday;
-        const leftTasksToday = data.tasks.filter((task) =>
-          task.projectId === left.id
-          && task.start
-          && task.end
-          && task.start <= todayKey
-          && task.end >= todayKey
-          && taskMatchesFilter(task, selectedMember)
-        ).length;
-        const rightTasksToday = data.tasks.filter((task) =>
-          task.projectId === right.id
-          && task.start
-          && task.end
-          && task.start <= todayKey
-          && task.end >= todayKey
-          && taskMatchesFilter(task, selectedMember)
-        ).length;
+        const leftTasksToday = tasksTodayByProject.get(left.id) || 0;
+        const rightTasksToday = tasksTodayByProject.get(right.id) || 0;
         if (leftTasksToday !== rightTasksToday) return rightTasksToday - leftTasksToday;
         return (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0);
       });
@@ -10173,8 +10188,8 @@
       ganttViewportRenderTimer = window.setTimeout(() => {
         const currentDayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
         const nextKey = ganttVisibleDayWindow(currentDayWidth).key;
-        if (nextKey !== lastGanttLayoutWindowKey) renderBoard();
-      }, 140);
+        if (nextKey !== lastGanttLayoutWindowKey) renderBoard(true);
+      }, 220);
     }
 
     function updateHiddenTaskIndicators() {
@@ -10834,17 +10849,22 @@
     });
 
     ["influencerCityList", "influencerTargetList", "influencerTypeList", "influencerStatusList", "influencerWhereList", "influencerWhenList"].forEach((listId) => {
-      document.getElementById(listId).addEventListener("change", async (event) => {
+      document.getElementById(listId).addEventListener("change", (event) => {
         const visibilityInput = event.target.closest("[data-influencer-type-visibility]");
         if (visibilityInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityInput.dataset.influencerTypeVisibility));
           if (!optionItem) return;
           optionItem.previewVisible = visibilityInput.checked;
           syncInfluencerProgressTasks();
-          await saveData();
-          renderInfluencerSettings();
+          const toggle = visibilityInput.closest(".influencer-visibility-toggle");
+          toggle?.classList.toggle("is-active", visibilityInput.checked);
+          if (toggle) {
+            toggle.title = visibilityInput.checked ? "Visible in preview" : "Hidden from preview";
+            toggle.setAttribute("aria-label", `${visibilityInput.checked ? "Hide" : "Show"} ${optionItem.name} in preview`);
+          }
           renderInfluencers();
           renderBoard();
+          saveData();
           if (visibilityInput.checked && (!optionItem.deadline || !optionItem.projectId || Number(optionItem.needed) < 1)) {
             setSyncMessage("Preview shown. Set target, deadline and Gantt project to create its Gantt task");
           }
@@ -10856,7 +10876,6 @@
           if (optionItem) optionItem.needed = Math.max(0, Math.floor(Number(neededInput.value) || 0));
           syncInfluencerProgressTasks();
           saveData();
-          renderInfluencerSettings();
           renderInfluencers();
           renderBoard();
           return;
@@ -10867,7 +10886,6 @@
           if (optionItem) optionItem.deadline = deadlineInput.value;
           syncInfluencerProgressTasks();
           saveData();
-          renderInfluencerSettings();
           renderInfluencers();
           renderBoard();
           return;
@@ -10878,7 +10896,6 @@
           if (optionItem) optionItem.projectId = projectInput.value;
           syncInfluencerProgressTasks();
           saveData();
-          renderInfluencerSettings();
           renderInfluencers();
           renderBoard();
           return;
@@ -12781,7 +12798,7 @@
       renderPed();
     });
 
-    memberFilter.addEventListener("change", renderBoard);
+    memberFilter.addEventListener("change", () => renderBoard());
     boardEl.addEventListener("scroll", () => {
       syncGanttHeaderPosition();
       updateHiddenTaskIndicators();
