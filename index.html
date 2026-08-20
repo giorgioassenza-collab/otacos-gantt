@@ -5433,7 +5433,26 @@
     function mergeInfluencerOptions(localOptions = {}, remoteOptions = {}, localTime = 0, remoteTime = 0) {
       const keys = [...new Set([...Object.keys(remoteOptions || {}), ...Object.keys(localOptions || {})])];
       return keys.reduce((result, key) => {
-        result[key] = mergeStatusSettings(localOptions[key] || [], remoteOptions[key] || [], localTime, remoteTime);
+        const localList = localOptions[key] || [];
+        const remoteList = remoteOptions[key] || [];
+        result[key] = mergeStatusSettings(localList, remoteList, localTime, remoteTime);
+        if (key === "type") {
+          result[key] = result[key].map((item) => {
+            const optionKey = influencerOptionKey(item.name);
+            const localItem = localList.find((candidate) => influencerOptionKey(statusName(candidate)) === optionKey);
+            const remoteItem = remoteList.find((candidate) => influencerOptionKey(statusName(candidate)) === optionKey);
+            const localPreviewTime = Number(localItem?.previewUpdatedAt || 0);
+            const remotePreviewTime = Number(remoteItem?.previewUpdatedAt || 0);
+            const previewSource = localPreviewTime === remotePreviewTime
+              ? (localTime >= remoteTime ? localItem : remoteItem)
+              : (localPreviewTime > remotePreviewTime ? localItem : remoteItem);
+            return {
+              ...item,
+              previewVisible: Boolean(previewSource?.previewVisible),
+              previewUpdatedAt: Math.max(localPreviewTime, remotePreviewTime)
+            };
+          });
+        }
         return result;
       }, {});
     }
@@ -6512,6 +6531,7 @@
         textColor: option.textColor || "#111827",
         needed: Math.max(0, Math.floor(Number(option.needed) || 0)),
         previewVisible: Boolean(option.previewVisible),
+        previewUpdatedAt: Number(option.previewUpdatedAt || (option.previewVisible ? 1 : 0)),
         deadline: option.deadline || "",
         projectId: option.projectId || "",
         progressTaskId: option.progressTaskId || ""
@@ -10792,7 +10812,7 @@
       data.influencerDeletedOptions[key] = (data.influencerDeletedOptions[key] || []).filter((item) => influencerOptionKey(item) !== influencerOptionKey(name));
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => influencerOptionKey(item.name) === influencerOptionKey(name))) {
-        data.influencerOptions[key].push({ name, color, textColor, ...(key === "type" ? { needed, previewVisible: false, deadline: "", projectId: "", progressTaskId: "" } : {}) });
+        data.influencerOptions[key].push({ name, color, textColor, ...(key === "type" ? { needed, previewVisible: false, previewUpdatedAt: 0, deadline: "", projectId: "", progressTaskId: "" } : {}) });
       }
       nameInput.value = defaultName;
       colorInput.value = defaultColor;
@@ -10867,6 +10887,7 @@
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityInput.dataset.influencerTypeVisibility));
           if (!optionItem) return;
           optionItem.previewVisible = visibilityInput.checked;
+          optionItem.previewUpdatedAt = Date.now();
           syncInfluencerProgressTasks();
           const toggle = visibilityInput.closest(".influencer-visibility-toggle");
           toggle?.classList.toggle("is-active", visibilityInput.checked);
