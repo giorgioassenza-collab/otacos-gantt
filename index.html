@@ -2227,7 +2227,7 @@
     .influencer-type-config select { width: 100%; min-width: 0; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; padding: 0 8px; font-weight: 800; }
     .influencer-type-config input[type="color"] { width: 28px; min-width: 28px; height: 28px; padding: 2px; }
     .influencer-type-config-head > button:last-child { width: 28px; height: 28px; }
-    .influencer-visibility-toggle { height: 34px; border: 1px solid #d9d2c8; border-radius: 8px; background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 17px; }
+    .influencer-visibility-toggle { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px solid #d9d2c8; border-radius: 8px; background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 17px; }
     .influencer-visibility-toggle.is-active { border-color: var(--orange); background: #fff1e8; color: var(--orange-dark); box-shadow: 0 0 0 2px rgba(255, 90, 20, .12); }
     .influencer-deadline-control { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 5px; }
     .influencer-deadline-control input { cursor: pointer; }
@@ -9488,7 +9488,7 @@
     }
 
     function isConfirmedInfluencer(row) {
-      return ["CONFIRMED", "CONFERMATO", "CONFERMATA"].includes(String(row.status || "").trim().toUpperCase());
+      return ["BOOKED", "CONFIRMED", "CONFERMATO", "CONFERMATA"].includes(String(row.status || "").trim().toUpperCase());
     }
 
     function renderInfluencerProgress() {
@@ -9505,7 +9505,7 @@
             <span class="influencer-progress-ratio">${confirmed}/${needed}</span>
           </div>
           <div class="influencer-progress-track"><div class="influencer-progress-bar" style="width:${percentage}%; background:${escapeHtml(influencerOptionColor("type", type.name))}"></div></div>
-          <div class="influencer-progress-counts"><span>${confirmed} confirmed</span><span>${assigned.length} assigned</span><span>Deadline ${escapeHtml(type.deadline || "-")}</span></div>
+          <div class="influencer-progress-counts"><span>${confirmed} booked</span><span>${assigned.length} assigned</span><span>Deadline ${escapeHtml(type.deadline || "-")}</span></div>
         </article>`;
       }).join("");
       container.hidden = !types.length;
@@ -9545,7 +9545,7 @@
           status: contactTaskStatus(),
           start: taskDate,
           end: taskDate,
-          info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} confirmed`,
+          info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} booked`,
           label: "",
           pedEnabled: false,
           pedDate: "",
@@ -9755,7 +9755,7 @@
         document.getElementById(list).innerHTML = (data.influencerOptions?.[key] || []).map((item) => key === "type" ? `
           <div class="influencer-type-config">
             <div class="influencer-type-config-head">
-              <button class="influencer-visibility-toggle ${item.previewVisible ? "is-active" : ""}" type="button" aria-label="${item.previewVisible ? "Hide" : "Show"} ${escapeHtml(item.name)} in preview" title="${item.previewVisible ? "Visible in preview" : "Hidden from preview"}" data-toggle-influencer-type="${escapeHtml(item.name)}">&#128065;</button>
+              <label class="influencer-visibility-toggle ${item.previewVisible ? "is-active" : ""}" aria-label="${item.previewVisible ? "Hide" : "Show"} ${escapeHtml(item.name)} in preview" title="${item.previewVisible ? "Visible in preview" : "Hidden from preview"}"><input type="checkbox" hidden ${item.previewVisible ? "checked" : ""} data-influencer-type-visibility="${escapeHtml(item.name)}"><span aria-hidden="true">&#128065;</span></label>
               <input value="${escapeHtml(item.name)}" aria-label="Edit ${escapeHtml(item.name)}" data-edit-influencer-option="type" data-old-option="${escapeHtml(item.name)}">
               <input type="color" value="${escapeHtml(influencerOptionColor(key, item.name))}" aria-label="Color ${escapeHtml(item.name)}" data-influencer-option-color="type" data-option-name="${escapeHtml(item.name)}">
               <input type="color" value="${escapeHtml(influencerOptionTextColor(key, item.name))}" aria-label="Font color ${escapeHtml(item.name)}" data-influencer-option-text-color="type" data-option-name="${escapeHtml(item.name)}">
@@ -10834,7 +10834,22 @@
     });
 
     ["influencerCityList", "influencerTargetList", "influencerTypeList", "influencerStatusList", "influencerWhereList", "influencerWhenList"].forEach((listId) => {
-      document.getElementById(listId).addEventListener("change", (event) => {
+      document.getElementById(listId).addEventListener("change", async (event) => {
+        const visibilityInput = event.target.closest("[data-influencer-type-visibility]");
+        if (visibilityInput) {
+          const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityInput.dataset.influencerTypeVisibility));
+          if (!optionItem) return;
+          optionItem.previewVisible = visibilityInput.checked;
+          syncInfluencerProgressTasks();
+          await saveData();
+          renderInfluencerSettings();
+          renderInfluencers();
+          renderBoard();
+          if (visibilityInput.checked && (!optionItem.deadline || !optionItem.projectId || Number(optionItem.needed) < 1)) {
+            setSyncMessage("Preview shown. Set target, deadline and Gantt project to create its Gantt task");
+          }
+          return;
+        }
         const neededInput = event.target.closest("[data-influencer-type-needed]");
         if (neededInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(neededInput.dataset.influencerTypeNeeded));
@@ -10916,22 +10931,6 @@
           const input = document.querySelector(`[data-influencer-type-deadline="${CSS.escape(name)}"]`);
           if (input?.showPicker) input.showPicker();
           else input?.focus();
-          return;
-        }
-        const visibilityButton = event.target.closest("[data-toggle-influencer-type]");
-        if (visibilityButton) {
-          const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(visibilityButton.dataset.toggleInfluencerType));
-          if (!optionItem) return;
-          if (!optionItem.previewVisible && (!optionItem.deadline || !optionItem.projectId || Number(optionItem.needed) < 1)) {
-            setSyncMessage("Set target, deadline and Gantt project before showing this event");
-            return;
-          }
-          optionItem.previewVisible = !optionItem.previewVisible;
-          syncInfluencerProgressTasks();
-          saveData();
-          renderInfluencerSettings();
-          renderInfluencers();
-          renderBoard();
           return;
         }
         const button = event.target.closest("[data-delete-influencer-option]");
