@@ -5162,6 +5162,32 @@
       });
     }
 
+    const influencerMergeMetadataKeys = new Set(["id", "updatedAt", "fieldUpdatedAt"]);
+
+    function influencerDataKeys(...rows) {
+      return [...new Set(rows.flatMap((row) => Object.keys(row || {})))]
+        .filter((key) => !influencerMergeMetadataKeys.has(key));
+    }
+
+    function stampChangedInfluencerFields(items = [], previousItems = []) {
+      const previous = collectionById(previousItems);
+      const now = Date.now();
+      (items || []).forEach((item) => {
+        if (!item?.id) return;
+        const previousItem = previous.get(item.id);
+        const previousTime = itemUpdatedAt(previousItem);
+        const fieldUpdatedAt = { ...(previousItem?.fieldUpdatedAt || {}), ...(item.fieldUpdatedAt || {}) };
+        influencerDataKeys(item, previousItem).forEach((key) => {
+          if (!fieldUpdatedAt[key] && previousTime) fieldUpdatedAt[key] = previousTime;
+          if (!previousItem || stableDataString(item[key]) !== stableDataString(previousItem[key])) fieldUpdatedAt[key] = now;
+        });
+        item.fieldUpdatedAt = fieldUpdatedAt;
+        if (!previousItem || influencerDataKeys(item, previousItem).some((key) => Number(fieldUpdatedAt[key] || 0) === now)) {
+          item.updatedAt = now;
+        }
+      });
+    }
+
     function stampChangedData(currentData, previousData) {
       if (!currentData || !previousData) return;
       const now = Date.now();
@@ -5173,7 +5199,7 @@
       });
       stampChangedItems(currentData.tasks, previousData.tasks);
       stampChangedItems(currentData.pedPosts, previousData.pedPosts);
-      stampChangedItems(currentData.influencers, previousData.influencers);
+      stampChangedInfluencerFields(currentData.influencers, previousData.influencers);
     }
 
     function changedCollectionIds(currentItems = [], previousItems = []) {
@@ -5251,8 +5277,30 @@
       return order.map((id) => merged.get(id)).filter(Boolean);
     }
 
+    function mergeInfluencerRow(localItem, remoteItem) {
+      if (!localItem) return remoteItem;
+      if (!remoteItem) return localItem;
+      const merged = { ...remoteItem };
+      const mergedFieldUpdatedAt = {};
+      influencerDataKeys(localItem, remoteItem).forEach((key) => {
+        const localTime = Number(localItem.fieldUpdatedAt?.[key] || itemUpdatedAt(localItem));
+        const remoteTime = Number(remoteItem.fieldUpdatedAt?.[key] || itemUpdatedAt(remoteItem));
+        if (localTime >= remoteTime) merged[key] = localItem[key];
+        mergedFieldUpdatedAt[key] = Math.max(localTime, remoteTime);
+      });
+      merged.id = localItem.id || remoteItem.id;
+      merged.updatedAt = Math.max(itemUpdatedAt(localItem), itemUpdatedAt(remoteItem));
+      merged.fieldUpdatedAt = mergedFieldUpdatedAt;
+      return merged;
+    }
+
     function mergeInfluencersById(localItems = [], remoteItems = []) {
-      const merged = collectionById(mergeById(localItems, remoteItems));
+      const localById = collectionById(localItems);
+      const remoteById = collectionById(remoteItems);
+      const merged = new Map();
+      new Set([...remoteById.keys(), ...localById.keys()]).forEach((id) => {
+        merged.set(id, mergeInfluencerRow(localById.get(id), remoteById.get(id)));
+      });
       const localChangedIds = changedCollectionIds(localItems, remoteItems);
       const shouldUseLocalOrder = localChangedIds.size > 0;
       const orderSource = shouldUseLocalOrder ? localItems : remoteItems;
@@ -5766,9 +5814,10 @@
           }
           saveLocalSnapshot(pendingLocalData || snapshotData, historyEntries, Math.max(pendingLocalRevision || 0, nextRevision));
           applyingRemoteUpdate = true;
+          const hadNewerPendingBeforeCommit = Boolean(pendingLocalData && !sameData(pendingLocalData, snapshotData));
           const committed = await commitBoardData(snapshotData, historyEntries, nextRevision, dirtyIds);
           const committedClean = cleanForFirestore(committed.data);
-          const hasNewerPending = pendingLocalRevision && pendingLocalRevision > nextRevision && !sameData(pendingLocalData, committedClean);
+          const hasNewerPending = hadNewerPendingBeforeCommit || Boolean(pendingLocalData && !sameData(pendingLocalData, snapshotData) && !sameData(pendingLocalData, committedClean));
           if (!hasNewerPending) {
             data = committed.data;
           }
@@ -6525,6 +6574,7 @@
       return {
         id: source.id || `inf${Date.now()}${Math.random()}`,
         updatedAt: Number(source.updatedAt || 0),
+        fieldUpdatedAt: { ...(source.fieldUpdatedAt || {}) },
         sortOrder: Number.isFinite(sortOrder) ? sortOrder : fallbackSortOrder,
         name: source.name || source.NAME || "",
         city: source.city || source.CITY || "",
