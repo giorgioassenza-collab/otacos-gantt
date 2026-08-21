@@ -4814,6 +4814,7 @@
       tasks: [],
       pedPosts: [],
       influencers: [],
+      influencerFieldLedger: {},
       influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
       influencerPreviewVisibility: {},
       influencerDeletedOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
@@ -5169,8 +5170,11 @@
         .filter((key) => !influencerMergeMetadataKeys.has(key));
     }
 
-    function stampChangedInfluencerFields(items = [], previousItems = []) {
+    function stampChangedInfluencerFields(currentData = {}, previousData = {}) {
+      const items = currentData.influencers || [];
+      const previousItems = previousData.influencers || [];
       const previous = collectionById(previousItems);
+      currentData.influencerFieldLedger = mergeInfluencerFieldLedgers(currentData.influencerFieldLedger, previousData.influencerFieldLedger);
       const now = Date.now();
       (items || []).forEach((item) => {
         if (!item?.id) return;
@@ -5179,7 +5183,11 @@
         const fieldUpdatedAt = { ...(previousItem?.fieldUpdatedAt || {}), ...(item.fieldUpdatedAt || {}) };
         influencerDataKeys(item, previousItem).forEach((key) => {
           if (!fieldUpdatedAt[key] && previousTime) fieldUpdatedAt[key] = previousTime;
-          if (!previousItem || stableDataString(item[key]) !== stableDataString(previousItem[key])) fieldUpdatedAt[key] = now;
+          if (!previousItem || stableDataString(item[key]) !== stableDataString(previousItem[key])) {
+            fieldUpdatedAt[key] = now;
+            currentData.influencerFieldLedger[item.id] = currentData.influencerFieldLedger[item.id] || {};
+            currentData.influencerFieldLedger[item.id][key] = { value: cleanForFirestore(item[key] ?? ""), updatedAt: now };
+          }
         });
         item.fieldUpdatedAt = fieldUpdatedAt;
         if (!previousItem || influencerDataKeys(item, previousItem).some((key) => Number(fieldUpdatedAt[key] || 0) === now)) {
@@ -5199,7 +5207,7 @@
       });
       stampChangedItems(currentData.tasks, previousData.tasks);
       stampChangedItems(currentData.pedPosts, previousData.pedPosts);
-      stampChangedInfluencerFields(currentData.influencers, previousData.influencers);
+      stampChangedInfluencerFields(currentData, previousData);
     }
 
     function changedCollectionIds(currentItems = [], previousItems = []) {
@@ -5292,6 +5300,49 @@
       merged.updatedAt = Math.max(itemUpdatedAt(localItem), itemUpdatedAt(remoteItem));
       merged.fieldUpdatedAt = mergedFieldUpdatedAt;
       return merged;
+    }
+
+    function normalizeInfluencerFieldLedger(ledger = {}) {
+      return Object.entries(ledger || {}).reduce((result, [id, fields]) => {
+        if (!id || !fields || typeof fields !== "object") return result;
+        const normalizedFields = Object.entries(fields).reduce((fieldResult, [key, entry]) => {
+          if (!key || !entry || typeof entry !== "object") return fieldResult;
+          fieldResult[key] = { value: entry.value ?? "", updatedAt: Number(entry.updatedAt || 0) };
+          return fieldResult;
+        }, {});
+        if (Object.keys(normalizedFields).length) result[id] = normalizedFields;
+        return result;
+      }, {});
+    }
+
+    function mergeInfluencerFieldLedgers(localLedger = {}, remoteLedger = {}) {
+      const local = normalizeInfluencerFieldLedger(localLedger);
+      const remote = normalizeInfluencerFieldLedger(remoteLedger);
+      const merged = structuredClone(remote);
+      Object.entries(local).forEach(([id, fields]) => {
+        merged[id] = merged[id] || {};
+        Object.entries(fields).forEach(([key, entry]) => {
+          const remoteEntry = merged[id][key];
+          if (!remoteEntry || Number(entry.updatedAt || 0) >= Number(remoteEntry.updatedAt || 0)) merged[id][key] = entry;
+        });
+      });
+      return merged;
+    }
+
+    function applyInfluencerFieldLedger(source) {
+      const ledger = normalizeInfluencerFieldLedger(source.influencerFieldLedger);
+      source.influencerFieldLedger = ledger;
+      source.influencers = (source.influencers || []).map((row) => {
+        const fields = ledger[row.id];
+        if (!fields) return row;
+        const next = { ...row, fieldUpdatedAt: { ...(row.fieldUpdatedAt || {}) } };
+        Object.entries(fields).forEach(([key, entry]) => {
+          if (influencerMergeMetadataKeys.has(key)) return;
+          next[key] = entry.value;
+          next.fieldUpdatedAt[key] = Math.max(Number(next.fieldUpdatedAt[key] || 0), Number(entry.updatedAt || 0));
+        });
+        return next;
+      });
     }
 
     function mergeInfluencersById(localItems = [], remoteItems = []) {
@@ -5543,6 +5594,7 @@
         influencerPreviewVisibility: mergePlainObjectSettings(local.influencerPreviewVisibility || {}, remote.influencerPreviewVisibility || {}, settingUpdatedAt(local, "influencerPreviewVisibility"), settingUpdatedAt(remote, "influencerPreviewVisibility")),
         influencerDeletedOptions: mergeInfluencerDeletedOptions(local.influencerDeletedOptions || {}, remote.influencerDeletedOptions || {}, settingUpdatedAt(local, "influencerDeletedOptions"), settingUpdatedAt(remote, "influencerDeletedOptions")),
         influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
+        influencerFieldLedger: mergeInfluencerFieldLedgers(local.influencerFieldLedger || {}, remote.influencerFieldLedger || {}),
         tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
         pedPosts: filterDeleted(mergeById(local.pedPosts || [], remote.pedPosts || []), deletedSet({ deletedIds: mergedDeletedIds }, "pedPosts")),
         influencers: filterDeleted(mergeInfluencersById(local.influencers || [], remote.influencers || []), deletedSet({ deletedIds: mergedDeletedIds }, "influencers"))
@@ -6489,7 +6541,9 @@
           done: Boolean(subtask.done)
         }))
       })), deletedPedPostIds);
-      normalized.influencers = filterDeleted(applyInfluencerStatusAging((normalized.influencers || []).map((row, index) => normalizeInfluencerRow(row, index)).filter((row) => influencerColumns.some((column) => row[column.key]))), deletedInfluencerIds)
+      normalized.influencers = filterDeleted((normalized.influencers || []).map((row, index) => normalizeInfluencerRow(row, index)).filter((row) => influencerColumns.some((column) => row[column.key])), deletedInfluencerIds);
+      applyInfluencerFieldLedger(normalized);
+      normalized.influencers = applyInfluencerStatusAging(normalized.influencers)
         .sort((left, right) => influencerSortValue(left) - influencerSortValue(right));
       normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       applyInfluencerDeletedOptionsToRows(normalized);
@@ -7419,7 +7473,7 @@
             next.igLink = imported.igLink;
             changed = true;
           }
-          if (imported.type && next.type !== imported.type) {
+          if (!next.type && imported.type) {
             next.type = imported.type;
             changed = true;
           }
