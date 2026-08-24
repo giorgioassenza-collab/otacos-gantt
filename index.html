@@ -4771,7 +4771,6 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
-    const influencerPreviewStorageKey = "tacos-influencer-preview-visibility-v1";
     const viewStorageKey = "tacos-gantt-board-active-view-v1";
     const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget"];
     const maxHistoryEntries = 10;
@@ -4815,6 +4814,7 @@
       pedPosts: [],
       influencers: [],
       influencerFieldLedger: {},
+      influencerTypeProgressConfig: {},
       influencerOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
       influencerPreviewVisibility: {},
       influencerDeletedOptions: { city: [], target: [], type: [], status: [], where: [], when: [] },
@@ -5345,6 +5345,69 @@
       });
     }
 
+    const influencerTypeProgressFields = ["visible", "needed", "deadline", "projectId"];
+
+    function normalizeInfluencerTypeProgressConfig(config = {}) {
+      return Object.entries(config || {}).reduce((result, [typeKey, fields]) => {
+        if (!typeKey || !fields || typeof fields !== "object") return result;
+        result[typeKey] = influencerTypeProgressFields.reduce((fieldResult, field) => {
+          const entry = fields[field];
+          if (entry && typeof entry === "object") {
+            fieldResult[field] = { value: entry.value ?? (field === "visible" ? false : ""), updatedAt: Number(entry.updatedAt || 0) };
+          }
+          return fieldResult;
+        }, {});
+        return result;
+      }, {});
+    }
+
+    function mergeInfluencerTypeProgressConfigs(localConfig = {}, remoteConfig = {}) {
+      const local = normalizeInfluencerTypeProgressConfig(localConfig);
+      const remote = normalizeInfluencerTypeProgressConfig(remoteConfig);
+      const merged = structuredClone(remote);
+      Object.entries(local).forEach(([typeKey, fields]) => {
+        merged[typeKey] = merged[typeKey] || {};
+        Object.entries(fields).forEach(([field, entry]) => {
+          const remoteEntry = merged[typeKey][field];
+          if (!remoteEntry || Number(entry.updatedAt || 0) >= Number(remoteEntry.updatedAt || 0)) merged[typeKey][field] = entry;
+        });
+      });
+      return merged;
+    }
+
+    function setInfluencerTypeProgressField(typeName, field, value, source = data) {
+      if (!influencerTypeProgressFields.includes(field)) return;
+      const typeKey = influencerOptionKey(typeName);
+      const updatedAt = Date.now();
+      source.influencerTypeProgressConfig = normalizeInfluencerTypeProgressConfig(source.influencerTypeProgressConfig);
+      source.influencerTypeProgressConfig[typeKey] = source.influencerTypeProgressConfig[typeKey] || {};
+      source.influencerTypeProgressConfig[typeKey][field] = { value, updatedAt };
+    }
+
+    function applyInfluencerTypeProgressConfig(source) {
+      source.influencerTypeProgressConfig = normalizeInfluencerTypeProgressConfig(source.influencerTypeProgressConfig);
+      source.influencerPreviewVisibility = { ...(source.influencerPreviewVisibility || {}) };
+      (source.influencerOptions?.type || []).forEach((item) => {
+        const typeKey = influencerOptionKey(item.name);
+        const config = source.influencerTypeProgressConfig[typeKey] || {};
+        const legacyValues = {
+          visible: Object.prototype.hasOwnProperty.call(source.influencerPreviewVisibility, typeKey) ? Boolean(source.influencerPreviewVisibility[typeKey]) : Boolean(item.previewVisible),
+          needed: Math.max(0, Number(item.needed) || 0),
+          deadline: item.deadline || "",
+          projectId: item.projectId || ""
+        };
+        source.influencerTypeProgressConfig[typeKey] = config;
+        influencerTypeProgressFields.forEach((field) => {
+          if (!config[field]) config[field] = { value: legacyValues[field], updatedAt: 1 };
+        });
+        item.previewVisible = Boolean(config.visible.value);
+        item.needed = Math.max(0, Number(config.needed.value) || 0);
+        item.deadline = String(config.deadline.value || "");
+        item.projectId = String(config.projectId.value || "");
+        source.influencerPreviewVisibility[typeKey] = item.previewVisible;
+      });
+    }
+
     function mergeInfluencersById(localItems = [], remoteItems = []) {
       const localById = collectionById(localItems);
       const remoteById = collectionById(remoteItems);
@@ -5595,6 +5658,7 @@
         influencerDeletedOptions: mergeInfluencerDeletedOptions(local.influencerDeletedOptions || {}, remote.influencerDeletedOptions || {}, settingUpdatedAt(local, "influencerDeletedOptions"), settingUpdatedAt(remote, "influencerDeletedOptions")),
         influencerColumnLabels: mergePlainObjectSettings(local.influencerColumnLabels || {}, remote.influencerColumnLabels || {}, settingUpdatedAt(local, "influencerColumnLabels"), settingUpdatedAt(remote, "influencerColumnLabels")),
         influencerFieldLedger: mergeInfluencerFieldLedgers(local.influencerFieldLedger || {}, remote.influencerFieldLedger || {}),
+        influencerTypeProgressConfig: mergeInfluencerTypeProgressConfigs(local.influencerTypeProgressConfig || {}, remote.influencerTypeProgressConfig || {}),
         tasks: filterDeleted(mergeById(local.tasks, remote.tasks), deletedSet({ deletedIds: mergedDeletedIds }, "tasks")),
         pedPosts: filterDeleted(mergeById(local.pedPosts || [], remote.pedPosts || []), deletedSet({ deletedIds: mergedDeletedIds }, "pedPosts")),
         influencers: filterDeleted(mergeInfluencersById(local.influencers || [], remote.influencers || []), deletedSet({ deletedIds: mergedDeletedIds }, "influencers"))
@@ -6548,6 +6612,7 @@
       normalized.influencerDeletedOptions = normalizeInfluencerDeletedOptions(normalized.influencerDeletedOptions);
       applyInfluencerDeletedOptionsToRows(normalized);
       ensureInfluencerOptionsFromRows(normalized);
+      applyInfluencerTypeProgressConfig(normalized);
       normalized.influencerPreviewVisibility = { ...(normalized.influencerPreviewVisibility || {}) };
       (normalized.influencerOptions?.type || []).forEach((item) => {
         const key = influencerOptionKey(item.name);
@@ -6556,7 +6621,6 @@
         }
         item.previewVisible = Boolean(normalized.influencerPreviewVisibility[key]);
       });
-      applyLocalInfluencerPreviewVisibility(normalized);
       return normalized;
     }
 
@@ -6576,37 +6640,6 @@
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
-    }
-
-    function readLocalInfluencerPreviewVisibility() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(influencerPreviewStorageKey) || "null");
-        if (!saved || typeof saved !== "object") return null;
-        return { values: { ...(saved.values || {}) }, updatedAt: Number(saved.updatedAt || 0) };
-      } catch {
-        return null;
-      }
-    }
-
-    function persistLocalInfluencerPreviewVisibility(source = data, updatedAt = Date.now()) {
-      try {
-        localStorage.setItem(influencerPreviewStorageKey, JSON.stringify({
-          values: { ...(source?.influencerPreviewVisibility || {}) },
-          updatedAt: Number(updatedAt || Date.now())
-        }));
-      } catch {}
-    }
-
-    function applyLocalInfluencerPreviewVisibility(source) {
-      const localPreference = readLocalInfluencerPreviewVisibility();
-      if (!localPreference) return;
-      source.influencerPreviewVisibility = {
-        ...(source.influencerPreviewVisibility || {}),
-        ...localPreference.values
-      };
-      (source.influencerOptions?.type || []).forEach((item) => {
-        item.previewVisible = Boolean(source.influencerPreviewVisibility[influencerOptionKey(item.name)]);
-      });
     }
 
     function applyInfluencerDeletedOptionsToRows(normalized) {
@@ -7449,41 +7482,14 @@
 
     async function importInfluencerSeedIfNeeded() {
       try {
+        if ((data.influencers || []).length) return;
         const importedRows = await loadInfluencerRowsFromSheet();
         if (!importedRows.length) return;
-        if (!(data.influencers || []).length) {
-          data.influencers = applyInfluencerStatusAging(importedRows);
-          data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
-          applyInfluencerDeletedOptionsToRows(data);
-          ensureInfluencerOptionsFromRows(data);
-          await saveData(true);
-          return;
-        }
-        const importedByKey = new Map(importedRows.map((row) => [rowMatchKey(row), row]));
-        let changed = false;
-        data.influencers = (data.influencers || []).map((row) => {
-          const imported = importedByKey.get(rowMatchKey(row));
-          if (!imported) return row;
-          const next = { ...row };
-          if (!next.ttLink && imported.ttLink) {
-            next.ttLink = imported.ttLink;
-            changed = true;
-          }
-          if (!next.igLink && imported.igLink) {
-            next.igLink = imported.igLink;
-            changed = true;
-          }
-          if (!next.type && imported.type) {
-            next.type = imported.type;
-            changed = true;
-          }
-          return next;
-        });
-        data.influencers = applyInfluencerStatusAging(data.influencers);
+        data.influencers = applyInfluencerStatusAging(importedRows);
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
         applyInfluencerDeletedOptionsToRows(data);
         ensureInfluencerOptionsFromRows(data);
-        if (changed) await saveData(true);
+        await saveData(true);
       } catch {
         data.influencers = data.influencers || [];
       }
@@ -10981,6 +10987,12 @@
       data.influencerOptions[key] = data.influencerOptions[key] || [];
       if (!data.influencerOptions[key].some((item) => influencerOptionKey(item.name) === influencerOptionKey(name))) {
         data.influencerOptions[key].push({ name, color, textColor, ...(key === "type" ? { needed, previewVisible: false, previewUpdatedAt: 0, deadline: "", projectId: "", progressTaskId: "" } : {}) });
+        if (key === "type") {
+          setInfluencerTypeProgressField(name, "visible", false);
+          setInfluencerTypeProgressField(name, "needed", needed);
+          setInfluencerTypeProgressField(name, "deadline", "");
+          setInfluencerTypeProgressField(name, "projectId", "");
+        }
       }
       nameInput.value = defaultName;
       colorInput.value = defaultColor;
@@ -11056,12 +11068,12 @@
           if (!optionItem) return;
           data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
           data.influencerPreviewVisibility[influencerOptionKey(optionItem.name)] = visibilityInput.checked;
+          setInfluencerTypeProgressField(optionItem.name, "visible", visibilityInput.checked);
           const visibilityUpdatedAt = Date.now();
           data.settingsUpdatedAt = data.settingsUpdatedAt || {};
           data.settingsUpdatedAt.influencerPreviewVisibility = visibilityUpdatedAt;
           optionItem.previewVisible = visibilityInput.checked;
           optionItem.previewUpdatedAt = visibilityUpdatedAt;
-          persistLocalInfluencerPreviewVisibility(data, visibilityUpdatedAt);
           syncInfluencerProgressTasks();
           const toggle = visibilityInput.closest(".influencer-visibility-toggle");
           toggle?.classList.toggle("is-active", visibilityInput.checked);
@@ -11080,7 +11092,10 @@
         const neededInput = event.target.closest("[data-influencer-type-needed]");
         if (neededInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(neededInput.dataset.influencerTypeNeeded));
-          if (optionItem) optionItem.needed = Math.max(0, Math.floor(Number(neededInput.value) || 0));
+          if (optionItem) {
+            optionItem.needed = Math.max(0, Math.floor(Number(neededInput.value) || 0));
+            setInfluencerTypeProgressField(optionItem.name, "needed", optionItem.needed);
+          }
           syncInfluencerProgressTasks();
           saveData();
           renderInfluencers();
@@ -11090,7 +11105,10 @@
         const deadlineInput = event.target.closest("[data-influencer-type-deadline]");
         if (deadlineInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(deadlineInput.dataset.influencerTypeDeadline));
-          if (optionItem) optionItem.deadline = deadlineInput.value;
+          if (optionItem) {
+            optionItem.deadline = deadlineInput.value;
+            setInfluencerTypeProgressField(optionItem.name, "deadline", optionItem.deadline);
+          }
           syncInfluencerProgressTasks();
           saveData();
           renderInfluencers();
@@ -11100,7 +11118,10 @@
         const projectInput = event.target.closest("[data-influencer-type-project]");
         if (projectInput) {
           const optionItem = (data.influencerOptions.type || []).find((item) => influencerOptionKey(item.name) === influencerOptionKey(projectInput.dataset.influencerTypeProject));
-          if (optionItem) optionItem.projectId = projectInput.value;
+          if (optionItem) {
+            optionItem.projectId = projectInput.value;
+            setInfluencerTypeProgressField(optionItem.name, "projectId", optionItem.projectId);
+          }
           syncInfluencerProgressTasks();
           saveData();
           renderInfluencers();
@@ -11126,7 +11147,11 @@
               data.influencerPreviewVisibility[newKey] = data.influencerPreviewVisibility[oldKey];
               delete data.influencerPreviewVisibility[oldKey];
             }
-            persistLocalInfluencerPreviewVisibility(data);
+            data.influencerTypeProgressConfig = normalizeInfluencerTypeProgressConfig(data.influencerTypeProgressConfig);
+            if (data.influencerTypeProgressConfig[oldKey]) {
+              data.influencerTypeProgressConfig[newKey] = data.influencerTypeProgressConfig[oldKey];
+              delete data.influencerTypeProgressConfig[oldKey];
+            }
           }
           data.influencerOptions[key] = (data.influencerOptions[key] || []).map((item) => influencerOptionKey(item.name) === influencerOptionKey(oldName) ? { ...item, name: newName } : item);
           data.influencers = (data.influencers || []).map((row) => influencerOptionKey(row[key]) === influencerOptionKey(oldName) ? { ...row, [key]: newName } : row);
@@ -11176,7 +11201,8 @@
         if (key === "type") {
           data.influencerPreviewVisibility = { ...(data.influencerPreviewVisibility || {}) };
           delete data.influencerPreviewVisibility[influencerOptionKey(name)];
-          persistLocalInfluencerPreviewVisibility(data);
+          data.influencerTypeProgressConfig = normalizeInfluencerTypeProgressConfig(data.influencerTypeProgressConfig);
+          delete data.influencerTypeProgressConfig[influencerOptionKey(name)];
         }
         data.influencerDeletedOptions = normalizeInfluencerDeletedOptions(data.influencerDeletedOptions);
         if (!data.influencerDeletedOptions[key].some((item) => influencerOptionKey(item) === influencerOptionKey(name))) {
