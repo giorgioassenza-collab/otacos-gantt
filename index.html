@@ -4771,6 +4771,10 @@
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
+    const safetyDbName = "otacos-workflow-safety-v1";
+    const safetyStoreName = "snapshots";
+    const safetyLatestKey = "latest";
+    const safetyLocalStorageKey = "tacos-gantt-board-safety-latest-v1";
     const viewStorageKey = "tacos-gantt-board-active-view-v1";
     const validViews = ["gantt", "ped", "influencer", "creator-calendar", "budget"];
     const maxHistoryEntries = 10;
@@ -4830,6 +4834,7 @@
     let lastGanttLayoutWindowKey = "";
     let boardDb = null;
     let boardRef = null;
+    let boardSafetyRef = null;
     let unsubscribeBoard = null;
     let applyingRemoteUpdate = false;
     let suppressRemoteUntil = 0;
@@ -4838,6 +4843,8 @@
     let pendingSaveCommittedAt = 0;
     let syncedRenderTimer = null;
     let influencerFilterRenderFrame = null;
+    let safetyBackupQueue = Promise.resolve();
+    let lastSafetyBackupKey = "";
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], summary: null, error: "" };
     let budgetMonthSortMode = "spend";
@@ -4976,6 +4983,7 @@
           const db = getFirestore(app);
           boardDb = db;
           boardRef = doc(db, "boards", "default");
+          boardSafetyRef = doc(db, "boardSafety", "latest");
           const snapshot = await getDoc(boardRef);
           if (!snapshot.exists()) {
             await setDoc(boardRef, {
@@ -5034,16 +5042,16 @@
             const remoteRevision = Number(snapshotData.revision || 0);
             historyEntries = normalizeHistory(JSON.parse(localStorage.getItem(historyStorageKey) || "[]"));
             const remoteData = normalizeData(snapshotData.data);
-            const localSnapshot = readLocalSnapshot();
-            const localRevision = Number(localSnapshot?.revision || 0);
-            if (localSnapshot?.data && localRevision > remoteRevision && !sameData(localSnapshot.data, remoteData)) {
-              dataVersion = localRevision;
-              pendingLocalData = cleanForFirestore(localSnapshot.data);
-              pendingLocalRevision = localRevision;
+            const safest = await safestStartupSnapshot(remoteData, remoteRevision);
+            if (safest?.data && (Number(safest.revision || 0) > remoteRevision || !sameData(safest.data, remoteData))) {
+              dataVersion = Number(safest.revision || 0);
+              pendingLocalData = cleanForFirestore(safest.data);
+              pendingLocalRevision = dataVersion;
               suppressRemoteUntil = Date.now() + 30000;
-              setSyncMessage("Recupero modifiche locali non ancora sincronizzate...");
+              saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
+              setSyncMessage(`Recupero dati dalla copia di sicurezza: ${safest.source}`);
               setTimeout(retryPendingLocalSave, 250);
-              return normalizeData(localSnapshot.data);
+              return normalizeData(safest.data);
             }
             dataVersion = remoteRevision;
             pendingLocalData = null;
@@ -5056,16 +5064,24 @@
         }
         setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
         const localSnapshot = readLocalSnapshot();
-        historyEntries = localSnapshot?.history || [];
-        dataVersion = localSnapshot?.revision || 0;
-        return localSnapshot?.data || normalizeData(starterData);
+        const localSafety = await readLatestLocalSafetyBackup();
+        const bestLocal = [localSnapshot, localSafety]
+          .filter((entry) => entry?.data)
+          .sort((left, right) => Number(right.revision || 0) - Number(left.revision || 0))[0];
+        historyEntries = bestLocal?.history || [];
+        dataVersion = bestLocal?.revision || 0;
+        return bestLocal?.data || normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
         setSyncMessage(`Non riesco a leggere i dati condivisi: ${error?.code || error?.message || "errore Firebase"}`, true);
         const localSnapshot = readLocalSnapshot();
-        historyEntries = localSnapshot?.history || [];
-        dataVersion = localSnapshot?.revision || 0;
-        return localSnapshot?.data || normalizeData(starterData);
+        const localSafety = await readLatestLocalSafetyBackup();
+        const bestLocal = [localSnapshot, localSafety]
+          .filter((entry) => entry?.data)
+          .sort((left, right) => Number(right.revision || 0) - Number(left.revision || 0))[0];
+        historyEntries = bestLocal?.history || [];
+        dataVersion = bestLocal?.revision || 0;
+        return bestLocal?.data || normalizeData(starterData);
       }
     }
 
@@ -5077,10 +5093,213 @@
       return JSON.parse(JSON.stringify(value));
     }
 
+    function snapshotSafetyScore(snapshot = {}) {
+      const tasks = Array.isArray(snapshot.tasks) ? snapshot.tasks : [];
+      const pedPosts = Array.isArray(snapshot.pedPosts) ? snapshot.pedPosts : [];
+      const influencers = Array.isArray(snapshot.influencers) ? snapshot.influencers : [];
+      const textWeight = JSON.stringify([
+        pedPosts.map((post) => [post.title, post.asset, post.copy, post.comments]),
+        tasks.map((task) => [task.name, task.info, task.pedAsset]),
+        influencers.map((influencer) => [influencer.name, influencer.price, influencer.notes])
+      ]).length;
+      return (tasks.length * 25) + (pedPosts.length * 35) + (influencers.length * 10) + textWeight;
+    }
+
+    function createSafetyBackup(snapshotData = data, history = historyEntries, revision = dataVersion, source = "save") {
+      const cleanData = cleanForFirestore(snapshotData || starterData);
+      const safeRevision = Number(revision || Date.now());
+      const savedAt = new Date().toISOString();
+      return {
+        id: `${safeRevision}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        revision: safeRevision,
+        savedAt,
+        source,
+        summary: historySummary(cleanData),
+        score: snapshotSafetyScore(cleanData),
+        data: cleanData,
+        history: normalizeHistory(history)
+      };
+    }
+
+    function openSafetyDb() {
+      if (!("indexedDB" in window)) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        const request = indexedDB.open(safetyDbName, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(safetyStoreName)) {
+            const store = db.createObjectStore(safetyStoreName, { keyPath: "id" });
+            store.createIndex("revision", "revision");
+            store.createIndex("savedAt", "savedAt");
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+        request.onblocked = () => resolve(null);
+      });
+    }
+
+    async function putSafetyBackup(backup) {
+      localStorage.setItem(safetyLocalStorageKey, JSON.stringify(backup));
+      const db = await openSafetyDb();
+      if (!db) return;
+      await new Promise((resolve) => {
+        const transaction = db.transaction(safetyStoreName, "readwrite");
+        const store = transaction.objectStore(safetyStoreName);
+        store.put(backup);
+        store.put({ ...backup, id: safetyLatestKey });
+        transaction.oncomplete = resolve;
+        transaction.onerror = resolve;
+        transaction.onabort = resolve;
+      });
+      db.close();
+    }
+
+    function queueSafetyBackup(snapshotData = data, history = historyEntries, revision = dataVersion, source = "save") {
+      const cleanData = cleanForFirestore(snapshotData || starterData);
+      const key = `${revision || 0}:${source}:${historySummary(cleanData)}:${snapshotSafetyScore(cleanData)}`;
+      if (key === lastSafetyBackupKey) return;
+      lastSafetyBackupKey = key;
+      const backup = createSafetyBackup(cleanData, history, revision, source);
+      safetyBackupQueue = safetyBackupQueue
+        .catch(() => {})
+        .then(() => putSafetyBackup(backup))
+        .catch((error) => console.warn("Safety backup failed", error));
+    }
+
+    async function readLatestLocalSafetyBackup() {
+      const candidates = [];
+      try {
+        const saved = localStorage.getItem(safetyLocalStorageKey);
+        if (saved) candidates.push(JSON.parse(saved));
+      } catch {}
+      const db = await openSafetyDb();
+      if (db) {
+        await new Promise((resolve) => {
+          const transaction = db.transaction(safetyStoreName, "readonly");
+          const request = transaction.objectStore(safetyStoreName).get(safetyLatestKey);
+          request.onsuccess = () => {
+            if (request.result) candidates.push(request.result);
+          };
+          transaction.oncomplete = resolve;
+          transaction.onerror = resolve;
+          transaction.onabort = resolve;
+        });
+        db.close();
+      }
+      return candidates
+        .filter((entry) => entry?.data && Number(entry.revision || 0))
+        .sort((left, right) => Number(right.revision || 0) - Number(left.revision || 0))[0] || null;
+    }
+
+    async function readLocalSafetyBackups(limit = 60) {
+      const backups = [];
+      try {
+        const saved = localStorage.getItem(safetyLocalStorageKey);
+        if (saved) backups.push(JSON.parse(saved));
+      } catch {}
+      const db = await openSafetyDb();
+      if (db) {
+        await new Promise((resolve) => {
+          const transaction = db.transaction(safetyStoreName, "readonly");
+          const request = transaction.objectStore(safetyStoreName).getAll();
+          request.onsuccess = () => backups.push(...(request.result || []));
+          transaction.oncomplete = resolve;
+          transaction.onerror = resolve;
+          transaction.onabort = resolve;
+        });
+        db.close();
+      }
+      const seen = new Set();
+      return backups
+        .filter((entry) => entry?.id && entry.id !== safetyLatestKey && entry?.data && Number(entry.revision || 0))
+        .sort((left, right) => Number(right.revision || 0) - Number(left.revision || 0))
+        .filter((entry) => {
+          const key = `${entry.revision}:${entry.summary}:${entry.score}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, limit);
+    }
+
+    async function readLocalSafetyBackupById(id) {
+      if (!id) return null;
+      const db = await openSafetyDb();
+      if (db) {
+        const found = await new Promise((resolve) => {
+          const transaction = db.transaction(safetyStoreName, "readonly");
+          const request = transaction.objectStore(safetyStoreName).get(id);
+          request.onsuccess = () => resolve(request.result || null);
+          transaction.onerror = () => resolve(null);
+          transaction.onabort = () => resolve(null);
+        });
+        db.close();
+        if (found?.data) return found;
+      }
+      try {
+        const saved = JSON.parse(localStorage.getItem(safetyLocalStorageKey) || "null");
+        if (saved?.id === id && saved?.data) return saved;
+      } catch {}
+      return null;
+    }
+
+    async function readLatestRemoteSafetyBackup() {
+      if (!boardSafetyRef) return null;
+      try {
+        const snapshot = await getDoc(boardSafetyRef);
+        const backup = snapshot.exists() ? snapshot.data() : null;
+        return backup?.data && Number(backup.revision || 0) ? backup : null;
+      } catch (error) {
+        console.warn("Remote safety backup read failed", error);
+        return null;
+      }
+    }
+
+    async function safestStartupSnapshot(remoteData, remoteRevision) {
+      const candidates = [{
+        data: normalizeData(remoteData || starterData),
+        revision: Number(remoteRevision || 0),
+        source: "Firestore"
+      }];
+      const localSnapshot = readLocalSnapshot();
+      if (localSnapshot?.data) {
+        candidates.push({
+          data: normalizeData(localSnapshot.data),
+          revision: Number(localSnapshot.revision || 0),
+          source: "localStorage"
+        });
+      }
+      const localSafety = await readLatestLocalSafetyBackup();
+      if (localSafety?.data) {
+        candidates.push({
+          data: normalizeData(localSafety.data),
+          revision: Number(localSafety.revision || 0),
+          source: "local safety backup"
+        });
+      }
+      const remoteSafety = await readLatestRemoteSafetyBackup();
+      if (remoteSafety?.data) {
+        candidates.push({
+          data: normalizeData(remoteSafety.data),
+          revision: Number(remoteSafety.revision || 0),
+          source: "remote safety backup"
+        });
+      }
+      return candidates
+        .sort((left, right) => {
+          const revisionDelta = Number(right.revision || 0) - Number(left.revision || 0);
+          if (revisionDelta) return revisionDelta;
+          return snapshotSafetyScore(right.data) - snapshotSafetyScore(left.data);
+        })[0];
+    }
+
     function saveLocalSnapshot(snapshotData = data, history = historyEntries, revision = dataVersion) {
-      localStorage.setItem(storageKey, JSON.stringify(cleanForFirestore(snapshotData)));
+      const cleanSnapshot = cleanForFirestore(snapshotData);
+      localStorage.setItem(storageKey, JSON.stringify(cleanSnapshot));
       localStorage.setItem(historyStorageKey, JSON.stringify(cleanForFirestore(history)));
       localStorage.setItem(revisionStorageKey, String(revision || 0));
+      queueSafetyBackup(cleanSnapshot, history, revision, "local");
     }
 
     function readLocalSnapshot() {
@@ -5789,7 +6008,7 @@
       `;
     }
 
-    function renderHistoryList() {
+    async function renderHistoryList() {
       if (!historyList) return;
       historyList.innerHTML = "";
       if (!historyEntries.length) {
@@ -5797,7 +6016,6 @@
         empty.className = "history-row";
         empty.innerHTML = "<strong>No saved history yet</strong><small>History starts from the next saved change.</small>";
         historyList.appendChild(empty);
-        return;
       }
       historyEntries.forEach((entry, index) => {
         const row = document.createElement("div");
@@ -5810,6 +6028,34 @@
             <button type="button" data-restore-history="${escapeHtml(entry.id)}">Restore</button>
           </div>
           <div class="history-preview" data-history-preview="${escapeHtml(entry.id)}" hidden>${historyPreviewMarkup(entry, index)}</div>
+        `;
+        historyList.appendChild(row);
+      });
+      const safetyBackups = await readLocalSafetyBackups();
+      if (!safetyBackups.length) return;
+      const safetyTitle = document.createElement("div");
+      safetyTitle.className = "history-row";
+      safetyTitle.innerHTML = "<strong>Safety backups</strong><small>Automatic protected snapshots saved in this browser.</small>";
+      historyList.appendChild(safetyTitle);
+      safetyBackups.forEach((backup) => {
+        const row = document.createElement("div");
+        row.className = "history-row";
+        row.innerHTML = `
+          <strong>${escapeHtml(formatHistoryDate(backup.savedAt))}</strong>
+          <small>${escapeHtml(backup.source || "safety")} · rev ${escapeHtml(String(backup.revision || 0))} · ${escapeHtml(backup.summary || historySummary(backup.data))}</small>
+          <div class="history-actions">
+            <button class="secondary-history-btn" type="button" data-preview-safety="${escapeHtml(backup.id)}">Preview</button>
+            <button type="button" data-restore-safety="${escapeHtml(backup.id)}">Restore</button>
+          </div>
+          <div class="history-preview" data-safety-preview="${escapeHtml(backup.id)}" hidden>
+            <section>
+              <h3>Snapshot contents</h3>
+              <ul>
+                <li>${escapeHtml(historySummary(backup.data))}</li>
+                <li>Safety score: ${escapeHtml(String(backup.score || snapshotSafetyScore(backup.data)))}</li>
+              </ul>
+            </section>
+          </div>
         `;
         historyList.appendChild(row);
       });
@@ -5833,14 +6079,14 @@
           pendingLocalData = cleanForFirestore(data);
           saveLocalSnapshot(pendingLocalData, historyEntries, nextRevision);
           applyingRemoteUpdate = true;
-          await setDoc(boardRef, {
-            data: pendingLocalData,
-            history: [],
-            revision: nextRevision,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
-          pendingLocalData = null;
-          pendingLocalRevision = 0;
+          const restored = await commitBoardData(pendingLocalData, historyEntries, nextRevision);
+          data = restored.data;
+          historyEntries = restored.history;
+          dataVersion = restored.revision;
+          pendingLocalData = cleanForFirestore(data);
+          pendingLocalRevision = dataVersion;
+          pendingSaveCommittedAt = Date.now();
+          saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
           setTimeout(() => {
             applyingRemoteUpdate = false;
           }, 250);
@@ -5861,6 +6107,56 @@
         pendingLocalRevision = 0;
         console.error("Restore failed", error);
         setSyncMessage(`Restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
+      }
+    }
+
+    async function restoreSafetyBackup(id) {
+      const backup = await readLocalSafetyBackupById(id);
+      if (!backup?.data) return;
+      if (!window.confirm(`Restore the safety backup from ${formatHistoryDate(backup.savedAt)}?`)) return;
+      historyEntries = withHistoryEntry(historyEntries, data, "Before safety restore");
+      data = normalizeData(backup.data);
+      undoStack.push(structuredClone(committedData));
+      if (undoStack.length > 30) undoStack.shift();
+      updateUndoButton();
+      try {
+        if (boardRef) {
+          const nextRevision = Math.max(dataVersion + 1, Date.now());
+          dataVersion = nextRevision;
+          suppressRemoteUntil = Date.now() + 30000;
+          pendingLocalRevision = nextRevision;
+          pendingLocalData = cleanForFirestore(data);
+          saveLocalSnapshot(pendingLocalData, historyEntries, nextRevision);
+          applyingRemoteUpdate = true;
+          const restored = await commitBoardData(pendingLocalData, historyEntries, nextRevision);
+          data = restored.data;
+          historyEntries = restored.history;
+          dataVersion = restored.revision;
+          pendingLocalData = cleanForFirestore(data);
+          pendingLocalRevision = dataVersion;
+          pendingSaveCommittedAt = Date.now();
+          saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
+          setTimeout(() => {
+            applyingRemoteUpdate = false;
+          }, 250);
+        } else {
+          saveLocalSnapshot(data, historyEntries, dataVersion);
+        }
+        committedData = structuredClone(data);
+        renderBoard();
+        renderPed();
+        renderInfluencers();
+        renderCreatorCalendar();
+        await renderHistoryList();
+        historyModal.classList.remove("open");
+        setSyncMessage("Safety backup restored");
+      } catch (error) {
+        applyingRemoteUpdate = false;
+        pendingLocalData = null;
+        pendingLocalRevision = 0;
+        pendingSaveCommittedAt = 0;
+        console.error("Safety restore failed", error);
+        setSyncMessage(`Safety restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
       }
     }
 
@@ -5899,12 +6195,18 @@
         }
         commitData = applyDirtyLocalItems(commitData, localData, dirtyIds);
         const commitRevision = Math.max(revision, Number(latestSnapshot.data()?.revision || 0) + 1, Date.now());
+        const safetyBackup = createSafetyBackup(commitData, [], commitRevision, "remote");
         transaction.set(boardRef, {
           data: cleanForFirestore(commitData),
           history: [],
           revision: commitRevision,
+          safetyRevision: commitRevision,
           updatedAt: serverTimestamp()
         }, { merge: true });
+        if (boardSafetyRef) {
+          transaction.set(boardSafetyRef, safetyBackup, { merge: false });
+          transaction.set(doc(boardDb, "boardSafetyBackups", String(commitRevision)), safetyBackup, { merge: false });
+        }
         return { data: commitData, history: normalizeHistory(localHistory), revision: commitRevision };
       });
     }
@@ -10615,6 +10917,17 @@
       if (previewButton) {
         const preview = historyList.querySelector(`[data-history-preview="${CSS.escape(previewButton.dataset.previewHistory)}"]`);
         if (preview) preview.hidden = !preview.hidden;
+        return;
+      }
+      const safetyPreviewButton = event.target.closest("[data-preview-safety]");
+      if (safetyPreviewButton) {
+        const preview = historyList.querySelector(`[data-safety-preview="${CSS.escape(safetyPreviewButton.dataset.previewSafety)}"]`);
+        if (preview) preview.hidden = !preview.hidden;
+        return;
+      }
+      const safetyButton = event.target.closest("[data-restore-safety]");
+      if (safetyButton) {
+        restoreSafetyBackup(safetyButton.dataset.restoreSafety);
         return;
       }
       const button = event.target.closest("[data-restore-history]");
