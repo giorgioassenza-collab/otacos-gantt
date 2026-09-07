@@ -4781,7 +4781,7 @@
     const influencerCsvUrl = "https://docs.google.com/spreadsheets/d/1l70YY3at2sBeIO9iET6bypMRxWkgVD8APzsQY7PhR7I/export?format=csv&gid=429623991";
     const budgetWorkbookUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=xlsx";
     const budgetCsvUrl = "https://docs.google.com/spreadsheets/d/10DAdDOdvTOiJWx-a8pP1DwigGyggWM3wDIhEUHFOG-Q/export?format=csv&gid=43583683";
-    const budgetSheetNames = ["JULY26", "JUL26", "JUNE26", "GIU26", "JUN26", "MAY26", "APR26", "MAR26", "FEB26", "GEN26", "JAN26", "DIC25", "DEC25", "NOV25", "OCT25", "SEP25", "AUG25", "JUL25"];
+    const budgetSheetNames = ["AUG26", "JULY26", "JUL26", "JUNE26", "GIU26", "JUN26", "MAY26", "APR26", "MAR26", "FEB26", "GEN26", "JAN26", "DIC25", "DEC25", "NOV25", "OCT25", "SEP25", "AUG25", "JUL25"];
     const pedFormatOptions = ["Video", "Static", "Carousel"];
     const influencerColumns = [
       { key: "name", label: "NAME" },
@@ -7425,8 +7425,17 @@
       const totalSheetName = workbook.SheetNames.find((sheetName) => /^TOT(AL)?$/i.test(String(sheetName || "").trim()));
       const totalSheet = workbook.Sheets[totalSheetName] || workbook.Sheets.TOTAL || workbook.Sheets.TOT;
       const summary = parseBudgetTotals(budgetRowsFromWorksheet(totalSheet));
-      const totalSpentFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F24");
-      const remainingFromTotalCell = budgetWorksheetCellNumber(totalSheet, "F25");
+      // Resolve summary rows by label: adding months or fees moves their addresses.
+      const totalRows = budgetRowsFromWorksheet(totalSheet);
+      const expenseHeader = totalRows.find((row) => row.some((cell) => /^EXPENSES$/i.test(String(cell).trim())));
+      const expenseColumn = expenseHeader?.findIndex((cell) => /^EXPENSES$/i.test(String(cell).trim())) ?? -1;
+      const readTotal = (label) => {
+        const row = totalRows.find((row) => label.test(String(row[0] || "").trim()));
+        const value = row?.[expenseColumn];
+        return value === undefined || String(value).trim() === "" ? null : budgetNumberFromCell(value);
+      };
+      const totalSpentFromTotalCell = readTotal(/^TOTAL$/i);
+      const remainingFromTotalCell = readTotal(/^REMAINING BUDGET$/i);
       if (summary) {
         if (Number.isFinite(totalSpentFromTotalCell)) summary.totalSpentFromTotalCell = totalSpentFromTotalCell;
         if (Number.isFinite(remainingFromTotalCell)) summary.remainingFromTotalCell = remainingFromTotalCell;
@@ -7621,8 +7630,8 @@
       });
       const summary = budgetState.summary || {};
       const totalBudget = summary.totalBudget || 90000;
-      const totalExpenses = summary.totalExpenses || rows.reduce((sum, item) => sum + (item.amount || 0), 0);
-      const totalSpent = summary.totalSpent || totalExpenses;
+      const totalExpenses = summary.totalExpenses ?? rows.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const totalSpent = summary.totalSpent ?? totalExpenses;
       const remaining = summary.remaining ?? Math.max(0, totalBudget - totalSpent);
       const workingBudget = summary.workingBudget || totalBudget;
       const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -7649,7 +7658,7 @@
           <div class="budget-title">
             <h2>Budget</h2>
             <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
-            <p>*The July 2026 fee was taken from the total budget.</p>
+            <p>Totals include the extension fees recorded in the source sheet.</p>
           </div>
           <div class="budget-kpi"><span>Total budget</span><strong>${escapeHtml(budgetCurrency(totalBudget))}</strong></div>
           <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
