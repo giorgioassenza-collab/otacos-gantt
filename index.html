@@ -6564,11 +6564,15 @@
       if (!task) return;
       task.status = ganttStatusByName("DONE", "#d1d5db");
       touchItem(task);
-      await saveData();
+      const savePromise = saveData();
+      renderOverdueList();
+      updateOverdueButton();
       renderBoard();
       renderPed();
       renderCreatorCalendar();
+      await savePromise;
       renderOverdueList();
+      updateOverdueButton();
     }
 
     function escapeHtml(value) {
@@ -10074,7 +10078,7 @@
           name: taskName,
           nameEn: taskName,
           members: [],
-          status: contactTaskStatus(),
+          status: task?.status || contactTaskStatus(),
           start: taskDate,
           end: taskDate,
           info: `Deadline ${type.deadline} · ${counts.assigned} assigned · ${counts.confirmed}/${type.needed} booked · ${counts.contacted} contacted`,
@@ -10247,7 +10251,7 @@
         name: taskName,
         nameEn: taskName,
         members: [row.contactMember],
-        status: contactTaskStatus(),
+        status: existingTask?.status || contactTaskStatus(),
         start: row.contactDate,
         end: row.contactDate,
         info: row.ttLink || row.igLink || "",
