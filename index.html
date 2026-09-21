@@ -7911,7 +7911,6 @@
           ${budgetSelectMarkup("budgetCategoryFilter", "Category", categories, categoryFilter, "All categories")}
           <button class="toolbar-btn" type="button" data-budget-refresh>Refresh</button>
         </section>
-        ${budgetWaterfallMarkup(summary)}
         <section class="budget-panel">
           <h3>Selected month by category</h3>
           ${budgetBarsMarkup(byCategory, selectedSpent)}
@@ -7936,6 +7935,7 @@
             </table>
           </div>
         </section>
+        ${budgetWaterfallMarkup(summary)}
         <details class="budget-panel budget-overview">
           <summary><h3>Overview</h3></summary>
           ${budgetMonthMatrixMarkup(summary.monthRows || byMonth.map((item) => ({ month: item.name, total: item.amount, categories: [] })))}
