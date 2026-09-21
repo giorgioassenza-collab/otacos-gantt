@@ -2678,7 +2678,33 @@
     .budget-waterfall-negative td { color: #dc2626; font-weight: 600; }
     .budget-waterfall-highlight td { font-weight: 700; }
     .budget-waterfall-muted { opacity: 0.6; font-size: 12px; }
-    .budget-empty {
+.budget-kpi-primary {
+      background: #fff1e8;
+      border-color: #ff8a4c;
+    }
+
+    .budget-kpi-primary strong {
+      font-size: 28px;
+      color: #c2410c;
+    }
+
+    .budget-kpi-negative {
+      background: #fef2f2;
+      border-color: #dc2626;
+    }
+
+    .budget-kpi-negative strong {
+      color: #dc2626;
+    }
+
+    .budget-hero-note {
+      margin: -6px 0 14px;
+      font-size: 13px;
+      opacity: 0.75;
+      max-width: 760px;
+    }
+
+        .budget-empty {
       padding: 26px;
       border: 1px dashed #d9d2c8;
       border-radius: 12px;
@@ -7284,13 +7310,11 @@
           amount: budgetNumberFromCell(row[indexes[category.key]])
         }));
         const expenses = budgetNumberFromCell(row[indexes.expenses]);
-        if (categories.some((category) => category.amount) || expenses) {
-          monthRows.push({
-            month: budgetMonthLabelFromName(label),
-            categories,
-            total: expenses
-          });
-        }
+        monthRows.push({
+          month: budgetMonthLabelFromName(label),
+          categories,
+          total: expenses
+        });
       });
       if (!totalYearRow) totalYearRow = rows.find((row) => /^TOTAL YEAR$/i.test(String(row[0] || "").trim()));
       const totalExpenses = budgetNumberFromCell(totalYearRow?.[indexes.expenses]);
@@ -7479,7 +7503,22 @@
           return { sheetName, ...parsed };
         })
         .filter((sheet) => sheet.transactions.length || sheet.forecast.length);
-      const transactions = parsedSheets.flatMap((sheet) => sheet.transactions);
+      const feeTransactions = [
+        { sheetName: "JUL26", amount: summary?.julFee },
+        { sheetName: "AUG26", amount: summary?.augFee },
+        { sheetName: "SEP26", amount: summary?.septFee }
+      ]
+        .filter((item) => Number.isFinite(item.amount) && item.amount)
+        .map((item) => ({
+          sheet: item.sheetName,
+          category: "Fee",
+          date: "",
+          why: "Fee di gestione",
+          what: "Fee mensile NOku (proroga)",
+          amount: item.amount,
+          month: budgetMonthLabelFromSheetName(item.sheetName)
+        }));
+      const transactions = parsedSheets.flatMap((sheet) => sheet.transactions).concat(feeTransactions);
       return {
         title: budgetTitleFromSheets(parsedSheets),
         transactions,
@@ -7560,6 +7599,16 @@
       `;
     }
 
+    function budgetTodayBalance(summary) {
+      if (!Number.isFinite(summary?.residualAtJune)) return null;
+      const steps = [
+        (summary?.extensionJul || 0) + (summary?.julFee || 0),
+        (summary?.extensionAug || 0) + (summary?.augFee || 0),
+        (summary?.extensionSept || 0) + (summary?.septFee || 0)
+      ];
+      return steps.reduce((balance, spend) => balance - spend, summary.residualAtJune);
+    }
+
     function budgetWaterfallMarkup(summary) {
       const contractMonths = summary?.contractMonthRows || [];
       if (!contractMonths.length && !Number.isFinite(summary?.residualAtJune)) return "";
@@ -7570,7 +7619,7 @@
           <tr>
             <td>${escapeHtml(month.month)}</td>
             <td>${escapeHtml(budgetCurrency(month.total || 0))}</td>
-            <td class="budget-waterfall-muted">€5.000 (fatturata a parte)</td>
+            <td class="budget-waterfall-muted">–</td>
             <td>${escapeHtml(budgetCurrency(balance))}</td>
           </tr>
         `;
@@ -7595,12 +7644,20 @@
           </tr>
         `;
       }).join("");
+      const todayRowHtml = `
+        <tr class="budget-waterfall-highlight ${extBalance < 0 ? "budget-waterfall-negative" : ""}">
+          <td>= Residuo disponibile OGGI (fine settembre)</td>
+          <td>-</td>
+          <td>-</td>
+          <td>${escapeHtml(budgetCurrency(extBalance))}</td>
+        </tr>
+      `;
       const newBudgetHtml = Number.isFinite(summary?.newQuarterBudget) ? `
-        <tr class="budget-waterfall-highlight">
-          <td>+ Nuovo plafond ott-dic (3 x €4.470)</td>
+        <tr class="budget-waterfall-muted">
+          <td>+ Nuovo plafond ott-dic, in arrivo da ottobre (3 x €4.470)</td>
           <td>-</td>
           <td>-</td>
-          <td>${escapeHtml(budgetCurrency(extBalance + summary.newQuarterBudget))}</td>
+          <td>${escapeHtml(budgetCurrency(extBalance + summary.newQuarterBudget))} <span class="budget-waterfall-muted">(proiezione a fine dicembre)</span></td>
         </tr>
       ` : "";
       return `
@@ -7617,7 +7674,7 @@
           <div class="budget-table-wrap">
             <table class="budget-month-matrix">
               <thead><tr><th>Mese</th><th>Spesa</th><th>Fee</th><th>Residuo</th></tr></thead>
-              <tbody>${extensionRowsHtml}${newBudgetHtml}</tbody>
+              <tbody>${extensionRowsHtml}${todayRowHtml}${newBudgetHtml}</tbody>
             </table>
           </div>
         </section>
@@ -7729,6 +7786,8 @@
       const totalExpenses = summary.totalExpenses ?? rows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const totalSpent = summary.totalSpent ?? totalExpenses;
       const remaining = summary.remaining ?? Math.max(0, totalBudget - totalSpent);
+      const todayBalanceRaw = budgetTodayBalance(summary);
+      const todayBalance = Number.isFinite(todayBalanceRaw) ? todayBalanceRaw : remaining;
       const workingBudget = summary.workingBudget || totalBudget;
       const selectedSpent = filteredRows.reduce((sum, item) => sum + (item.amount || 0), 0);
       const byCategory = aggregateBudget(filteredRows, "category");
@@ -7756,10 +7815,11 @@
             <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
             <p>Totals include the extension fees recorded in the source sheet.</p>
           </div>
-          <div class="budget-kpi"><span>Total budget</span><strong>${escapeHtml(budgetCurrency(totalBudget))}</strong></div>
-          <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
-          <div class="budget-kpi"><span>Remaining</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
+          <div class="budget-kpi budget-kpi-primary ${todayBalance < 0 ? "budget-kpi-negative" : ""}"><span>Residuo disponibile OGGI (fine settembre)</span><strong>${escapeHtml(budgetCurrency(todayBalance))}</strong></div>
+          <div class="budget-kpi"><span>Proiezione a fine dicembre (con nuovo plafond ott-dic)</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
+          <div class="budget-kpi"><span>Speso in totale (spese + fee, da lug 2025)</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
         </section>
+        <p class="budget-hero-note">Il primo numero e' la situazione reale di oggi. Il secondo include gia' il nuovo plafond di ottobre-dicembre, che pero' non e' ancora arrivato: e' solo una proiezione (dettaglio mese per mese qui sotto).</p>
         ${budgetWaterfallMarkup(summary)}
         <section class="budget-filters">
           ${budgetSelectMarkup("budgetMonthFilter", "Month", months, monthFilter, "All months")}
