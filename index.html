@@ -4837,7 +4837,12 @@
     const root = document.documentElement;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const timelineStart = new Date(2026, 5, 1);
+    // Rolling anchor: the calendar always shows a fixed-length window that
+    // starts a few months in the past relative to today, so it keeps working
+    // indefinitely instead of running out of future months once a hardcoded
+    // year/month is passed.
+    const timelineAnchorMonthsBack = 3;
+    const timelineStart = new Date(today.getFullYear(), today.getMonth() - timelineAnchorMonthsBack, 1);
     const storageKey = "tacos-gantt-board-data-v5";
     const historyStorageKey = "tacos-gantt-board-history-v1";
     const revisionStorageKey = "tacos-gantt-board-revision-v1";
@@ -4911,6 +4916,7 @@
     let pendingLocalRevision = 0;
     let pendingLocalData = null;
     let pendingSaveCommittedAt = 0;
+    let hasUnsyncedChanges = false;
     let syncedRenderTimer = null;
     let influencerFilterRenderFrame = null;
     let safetyBackupQueue = Promise.resolve();
@@ -4931,8 +4937,8 @@
     function setSyncMessage(message, isError = false) {
       if (isError) {
         console.warn("Workflow background sync notice:", message);
-        syncIndicator.textContent = "";
-        syncIndicator.classList.remove("is-error");
+        syncIndicator.textContent = message;
+        syncIndicator.classList.add("is-error");
         return;
       }
       syncIndicator.textContent = message;
@@ -5079,6 +5085,7 @@
               pendingLocalData = null;
               pendingLocalRevision = 0;
               pendingSaveCommittedAt = 0;
+              hasUnsyncedChanges = false;
               updateUndoButton();
               setSyncMessage("Sincronizzato live");
               return;
@@ -5366,9 +5373,15 @@
 
     function saveLocalSnapshot(snapshotData = data, history = historyEntries, revision = dataVersion) {
       const cleanSnapshot = cleanForFirestore(snapshotData);
-      localStorage.setItem(storageKey, JSON.stringify(cleanSnapshot));
-      localStorage.setItem(historyStorageKey, JSON.stringify(cleanForFirestore(history)));
-      localStorage.setItem(revisionStorageKey, String(revision || 0));
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(cleanSnapshot));
+        localStorage.setItem(historyStorageKey, JSON.stringify(cleanForFirestore(history)));
+        localStorage.setItem(revisionStorageKey, String(revision || 0));
+      } catch (error) {
+        // A full localStorage (quota exceeded) must never block the real
+        // (Firestore) save below - it's only a local backup copy.
+        console.warn("Local snapshot backup failed", error);
+      }
       queueSafetyBackup(cleanSnapshot, history, revision, "local");
     }
 
@@ -6235,17 +6248,26 @@
     }
 
     async function saveData(skipUndo = false) {
-      stampChangedData(data, committedData);
-      const dirtyIds = dirtyIdsForSave(data, committedData);
-      const localRevision = Math.max(dataVersion + 1, Date.now());
-      dataVersion = localRevision;
-      const saveSnapshotData = cleanForFirestore(data);
-      pendingLocalData = saveSnapshotData;
-      pendingLocalRevision = localRevision;
-      pendingSaveCommittedAt = 0;
-      saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
-      saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(saveSnapshotData, localRevision, skipUndo, dirtyIds));
-      return saveQueue;
+      hasUnsyncedChanges = true;
+      try {
+        stampChangedData(data, committedData);
+        const dirtyIds = dirtyIdsForSave(data, committedData);
+        const localRevision = Math.max(dataVersion + 1, Date.now());
+        dataVersion = localRevision;
+        const saveSnapshotData = cleanForFirestore(data);
+        pendingLocalData = saveSnapshotData;
+        pendingLocalRevision = localRevision;
+        pendingSaveCommittedAt = 0;
+        saveLocalSnapshot(pendingLocalData, historyEntries, localRevision);
+        saveQueue = saveQueue.catch(() => {}).then(() => performSaveData(saveSnapshotData, localRevision, skipUndo, dirtyIds));
+        return saveQueue;
+      } catch (error) {
+        // Whatever went wrong (bad data, storage error, etc.), never let it
+        // vanish as a silent, unhandled failure - always tell the user.
+        console.error("saveData failed before queueing", error);
+        setSyncMessage(`Salvataggio non riuscito: ${error?.message || "errore sconosciuto"}. Ricarica la pagina e riprova.`, true);
+        throw error;
+      }
     }
 
     let remoteSafetyBackupUnavailable = false;
@@ -6337,6 +6359,7 @@
           }, 250);
           if (!hasNewerPending) {
             committedData = structuredClone(data);
+            hasUnsyncedChanges = false;
           }
           updateUndoButton();
           setSyncMessage("Sincronizzato live");
@@ -6345,10 +6368,12 @@
         saveLocalSnapshot(snapshotData, historyEntries, dataVersion);
         data = snapshotData;
         committedData = structuredClone(snapshotData);
+        hasUnsyncedChanges = false;
         updateUndoButton();
         setSyncMessage("Firebase non configurato: salvato solo locale", true);
       } catch (error) {
         applyingRemoteUpdate = false;
+        hasUnsyncedChanges = true;
         const fallbackRevision = Math.max(dataVersion + 1, Date.now());
         dataVersion = fallbackRevision;
         pendingLocalData = cleanForFirestore(saveSnapshotData || data);
@@ -6359,7 +6384,7 @@
         committedData = structuredClone(normalizeData(pendingLocalData));
         updateUndoButton();
         console.error("Firestore save failed", error);
-        setSyncMessage(`Salvataggio non sincronizzato: ${error?.code || error?.message || "errore Firestore"}`, true);
+        setSyncMessage(`Salvataggio non sincronizzato, riprovo automaticamente: ${error?.code || error?.message || "errore Firestore"}`, true);
       }
     }
 
@@ -6378,6 +6403,7 @@
         pendingLocalData = cleanForFirestore(data);
         pendingLocalRevision = dataVersion;
         pendingSaveCommittedAt = Date.now();
+        hasUnsyncedChanges = false;
         saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
         setSyncMessage("Sincronizzato live");
       } catch (error) {
@@ -6425,7 +6451,7 @@
       applyTodayColumn(timelineEl);
       let dayOffset = 0;
       for (let i = 0; i < 13; i += 1) {
-        const date = new Date(2026, 5 + i, 1);
+        const date = new Date(timelineStart.getFullYear(), timelineStart.getMonth() + i, 1);
         const year = date.getFullYear();
         const month = date.getMonth();
         const total = daysInMonth(year, month);
@@ -7619,10 +7645,10 @@
     function budgetBarsMarkup(items, total) {
       if (!items.length) return `<div class="budget-empty">No data yet.</div>`;
       const max = Math.max(...items.map((item) => item.amount), 1);
-      return `<div class="budget-bars">${items.map((item) => `
+      return `<div class="budget-bars">${items.map((item, index) => `
         <div class="budget-bar">
           <span>${escapeHtml(item.name)}</span>
-          <div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.max(4, (item.amount / max) * 100)}%"></div></div>
+          <div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.max(4, (item.amount / max) * 100)}%;background:${budgetCategoryColor(item.name, index)}"></div></div>
           <strong>${escapeHtml(budgetCurrency(item.amount))}</strong>
         </div>
       `).join("")}</div>`;
@@ -8047,7 +8073,8 @@
         applyInfluencerDeletedOptionsToRows(data);
         ensureInfluencerOptionsFromRows(data);
         await saveData(true);
-      } catch {
+      } catch (error) {
+        console.warn("Influencer seed import failed", error);
         data.influencers = data.influencers || [];
       }
     }
@@ -8533,7 +8560,12 @@
       let changed = false;
       (tasks || []).forEach((task) => {
         if (!shouldAutoCreatePedPost(task)) return;
-        const expectedDate = task.start || task.pedDate || currentDateKey();
+        // Prefer a PED date the user already set (manually, or from a Gantt
+        // drag that already wrote it) over the task's Start date - only fall
+        // back to Start for a task that has never had a PED date at all.
+        // Falling back to Start unconditionally used to silently overwrite
+        // any custom PED date on every save and every periodic background sync.
+        const expectedDate = task.pedDate || task.start || currentDateKey();
         if (!task.pedEnabled) {
           task.pedEnabled = true;
           changed = true;
@@ -9721,7 +9753,12 @@
           timeoutValue(22000, [])
         ]);
         if (!assetViewerModal.classList.contains("open")) return;
-        if (assetViewerStage.dataset.loadingToken === loadingToken) delete assetViewerStage.dataset.loadingToken;
+        // If the user opened a different post's carousel while this fetch
+        // was in flight, the loading token was overwritten by that newer
+        // request - discard this stale response instead of applying it (and
+        // saving it) onto whatever is now open.
+        if (assetViewerStage.dataset.loadingToken !== loadingToken) return;
+        delete assetViewerStage.dataset.loadingToken;
         if (folderItems.length) {
           assetViewerItems = folderItems;
           assetViewerIndex = 0;
@@ -9816,7 +9853,7 @@
       const postsByDate = {};
       const postsByDateHour = {};
       for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
-        const date = new Date(2026, 5 + monthOffset, 1);
+        const date = new Date(timelineStart.getFullYear(), timelineStart.getMonth() + monthOffset, 1);
         const year = date.getFullYear();
         const month = date.getMonth();
         const total = daysInMonth(year, month);
@@ -9985,7 +10022,7 @@
             color: project?.color || statusColor(task.status),
             date: task.start,
             publicationDate: publication?.start || "",
-            status: task.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : ""),
+            status: task.creatorStatus || ((data.creatorStatuses || [])[0] ? statusName(data.creatorStatuses[0]) : ""),
             store: task.creatorStore || "",
             time: task.creatorTime || "10:00",
             members: task.members || []
@@ -10010,7 +10047,7 @@
       let dayOffset = 0;
       const cardsByDate = {};
       for (let monthOffset = 0; monthOffset < 13; monthOffset += 1) {
-        const date = new Date(2026, 5 + monthOffset, 1);
+        const date = new Date(timelineStart.getFullYear(), timelineStart.getMonth() + monthOffset, 1);
         const year = date.getFullYear();
         const month = date.getMonth();
         const total = daysInMonth(year, month);
@@ -10099,7 +10136,7 @@
       document.getElementById("creatorCalendarTitle").value = task.name || task.nameEn || "";
       document.getElementById("creatorCalendarDate").value = task.start || "";
       document.getElementById("creatorCalendarPublicationDate").value = publication?.start || "";
-      creatorCalendarStatus.value = task.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "");
+      creatorCalendarStatus.value = task.creatorStatus || ((data.creatorStatuses || [])[0] ? statusName(data.creatorStatuses[0]) : "");
       creatorCalendarStore.value = task.creatorStore || "";
       document.getElementById("creatorCalendarTime").value = task.creatorTime || "10:00";
       creatorCalendarModal.classList.add("open");
@@ -10247,12 +10284,19 @@
       });
     }
 
+    // Matches by substring (not exact equality) so the progress counters
+    // keep working even if someone tweaks a status label's wording,
+    // capitalization or adds an emoji/punctuation in Settings (e.g.
+    // "Confirmed ✅" or "Booked!") - only a full rename to something
+    // unrelated would stop matching.
     function isConfirmedInfluencer(row) {
-      return ["BOOKED", "CONFIRMED", "CONFERMATO", "CONFERMATA"].includes(String(row.status || "").trim().toUpperCase());
+      const status = String(row?.status || "").trim().toUpperCase();
+      return ["BOOKED", "CONFIRMED", "CONFERMAT"].some((needle) => status.includes(needle));
     }
 
     function isContactedInfluencer(row) {
-      return String(row?.status || "").trim().toUpperCase() === "CONTACTED";
+      const status = String(row?.status || "").trim().toUpperCase();
+      return status.includes("CONTACT") || status.includes("CONTATTAT");
     }
 
     function influencerTypeIsVisible(type, source = data) {
@@ -11087,9 +11131,18 @@
     }
 
     window.addEventListener("beforeunload", (event) => {
-      if (!pendingLocalData) return;
+      if (!hasUnsyncedChanges) return;
       event.preventDefault();
       event.returnValue = "";
+    });
+
+    // Last-resort safety net: if any save-related promise rejects without
+    // being caught anywhere above, make sure it is never silent - surface it
+    // in the same red banner used for every other sync error.
+    window.addEventListener("unhandledrejection", (event) => {
+      console.error("Unhandled error", event.reason);
+      hasUnsyncedChanges = true;
+      setSyncMessage("Si è verificato un errore imprevisto: alcune modifiche potrebbero non essere salvate. Ricarica la pagina.", true);
     });
 
     function handleLogin() {
@@ -11528,6 +11581,7 @@
     document.getElementById("deleteInfluencerButton").addEventListener("click", () => {
       const id = document.getElementById("influencerId").value;
       if (!id) return;
+      if (!confirmDelete("Delete this influencer?")) return;
       deleteInfluencerById(id);
       syncInfluencerProgressTasks();
       saveData();
@@ -11787,6 +11841,10 @@
     });
 
     document.getElementById("influencerTypeList").addEventListener("keydown", (event) => {
+      // Block manual typing into the deadline field (it's meant to be set via
+      // the calendar button/picker only), but never trap keyboard navigation:
+      // Tab/Shift+Tab must still be able to move focus out of the field.
+      if (event.key === "Tab") return;
       if (event.target.closest("[data-influencer-type-deadline]")) event.preventDefault();
     });
 
@@ -11955,6 +12013,10 @@
     }
 
     function startDragState(details) {
+      // Defensive: never start a new drag on top of one that's still active
+      // (e.g. a stuck/abandoned drag from a tab switch mid-gesture) without
+      // first cleaning up the old element's visual state.
+      if (dragState) cancelDrag();
       const rect = details.element.getBoundingClientRect();
       dragState = {
         ...details,
@@ -12117,6 +12179,14 @@
 
     document.addEventListener("pointerup", finishDrag);
     document.addEventListener("pointercancel", cancelDrag);
+    // If the tab is hidden mid-drag (alt-tab, switching windows, the OS
+    // never delivering a pointerup to a background tab), cancel the drag
+    // instead of leaving it stuck - otherwise the next unrelated click
+    // anywhere on the page could silently finalize and save a stale move.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) cancelDrag();
+    });
+    window.addEventListener("blur", () => cancelDrag());
     function touchDragId(touch) {
       return `touch-${touch.identifier}`;
     }
@@ -12461,7 +12531,7 @@
         updatedAt: createdAt
       };
       if (action === "video-store") {
-        task.creatorStatus = options.creatorStatus || (data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "");
+        task.creatorStatus = options.creatorStatus || ((data.creatorStatuses || [])[0] ? statusName(data.creatorStatuses[0]) : "");
         task.creatorStore = options.creatorStore || "";
         task.creatorTime = options.creatorTime || "10:00";
         syncCreatorStatusToGantt(task);
@@ -13333,10 +13403,13 @@
       const button = event.target.closest("[data-delete-status]");
       if (!button) return;
       const status = button.dataset.deleteStatus;
+      if (data.statuses.length <= 1) {
+        window.alert("Non puoi eliminare l'ultimo status rimasto: ogni task deve averne uno.");
+        return;
+      }
       data.statuses = data.statuses.filter((item) => statusName(item) !== status);
       const fallback = data.statuses[0] ? statusName(data.statuses[0]) : "";
       data.tasks = data.tasks.map((task) => task.status === status ? { ...task, status: fallback } : task);
-      if (!fallback) data.tasks = [];
       saveData();
       renderBoard();
     });
@@ -13496,7 +13569,7 @@
       if (!deleteButton) return;
       const status = deleteButton.dataset.deleteCreatorStatus;
       data.creatorStatuses = (data.creatorStatuses || []).filter((item) => statusName(item) !== status);
-      const fallback = data.creatorStatuses[0] ? statusName(data.creatorStatuses[0]) : "";
+      const fallback = (data.creatorStatuses || [])[0] ? statusName(data.creatorStatuses[0]) : "";
       data.tasks = (data.tasks || []).map((task) => task.creatorStatus === status ? { ...task, creatorStatus: fallback } : task);
       saveData();
       renderSettingsLists();
@@ -13656,6 +13729,7 @@
     setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
+      if (!confirmDelete("Sei sicuro? Questo cancella TUTTI i dati (task, PED, influencer) e non si può annullare. Continuare?")) return;
       data = structuredClone(starterData);
       saveData();
       renderBoard();
