@@ -7727,72 +7727,76 @@
       return steps.reduce((balance, spend) => balance - spend, summary.residualAtJune);
     }
 
-    function budgetWaterfallMarkup(summary) {
-      const contractMonths = summary?.contractMonthRows || [];
-      if (!contractMonths.length && !Number.isFinite(summary?.residualAtJune)) return "";
+    function budgetWaterfallMarkup(summary, rows = []) {
+      if (!rows.length && !Number.isFinite(summary?.residualAtJune)) return "";
+      // Single source of truth for every month's Spend/Fee: the same clean
+      // transaction data used by the "By month" chart above (not the raw
+      // TOTAL-tab row dump, which also contains non-month summary lines like
+      // "RESIDUAL AT 30/06/26" and used to leak into this table as if they
+      // were extra months).
+      const extensionMonths = new Set(["Jul 2026", "Aug 2026", "Sep 2026"]);
+      const byMonth = aggregateBudget(rows, "month")
+        .map((item) => ({
+          month: item.name,
+          spend: rows.filter((row) => row.month === item.name && row.category !== "Fee").reduce((sum, row) => sum + (row.amount || 0), 0),
+          fee: rows.filter((row) => row.month === item.name && row.category === "Fee").reduce((sum, row) => sum + (row.amount || 0), 0)
+        }))
+        .filter((item) => budgetMonthSortValue(item.month) < 999999)
+        .sort((left, right) => budgetMonthSortValue(left.month) - budgetMonthSortValue(right.month));
+      if (!byMonth.length) return "";
       let balance = 90000;
-      const contractRowsHtml = contractMonths.map((month) => {
-        balance -= (month.total || 0);
-        return `
-          <tr>
-            <td>${escapeHtml(month.month)}</td>
-            <td>${escapeHtml(budgetCurrency(month.total || 0))}</td>
-            <td class="budget-waterfall-muted">–</td>
+      const bodyRows = [];
+      byMonth.forEach((item) => {
+        const isExtension = extensionMonths.has(item.month);
+        if (isExtension && item.month === "Jul 2026" && Number.isFinite(summary?.residualAtJune)) {
+          // Anchor the running balance to the confirmed residual at the
+          // contract/extension handover instead of trusting rounding built
+          // up over 12 months of spend.
+          balance = summary.residualAtJune;
+          bodyRows.push(`
+            <tr class="budget-waterfall-muted">
+              <td colspan="3">Residual carried into extension (from 1 Jul 2026, fee now deducted here too)</td>
+              <td>${escapeHtml(budgetCurrency(balance))}</td>
+            </tr>
+          `);
+        }
+        balance -= item.spend + (isExtension ? item.fee : 0);
+        const rowClass = isExtension && balance < 0 ? "budget-waterfall-negative" : "";
+        bodyRows.push(`
+          <tr class="${rowClass}">
+            <td>${escapeHtml(item.month)}</td>
+            <td>${escapeHtml(budgetCurrency(item.spend))}</td>
+            <td>${isExtension ? escapeHtml(budgetCurrency(item.fee)) : `<span class="budget-waterfall-muted">–</span>`}</td>
             <td>${escapeHtml(budgetCurrency(balance))}</td>
           </tr>
-        `;
-      }).join("");
-      const extensionSteps = [
-        { label: "Jul 2026", spend: summary?.extensionJul, fee: summary?.julFee },
-        { label: "Aug 2026", spend: summary?.extensionAug, fee: summary?.augFee },
-        { label: "Sep 2026", spend: summary?.extensionSept, fee: summary?.septFee }
-      ];
-      let extBalance = Number.isFinite(summary?.residualAtJune) ? summary.residualAtJune : balance;
-      const extensionRowsHtml = extensionSteps.map((step) => {
-        const spend = step.spend || 0;
-        const fee = step.fee || 0;
-        extBalance -= spend + fee;
-        const rowClass = extBalance < 0 ? "budget-waterfall-negative" : "";
-        return `
-          <tr class="${rowClass}">
-            <td>${escapeHtml(step.label)}</td>
-            <td>${escapeHtml(budgetCurrency(spend))}</td>
-            <td>${escapeHtml(budgetCurrency(fee))}</td>
-            <td>${escapeHtml(budgetCurrency(extBalance))}</td>
+        `);
+      });
+      bodyRows.push(`
+        <tr class="budget-waterfall-highlight ${balance < 0 ? "budget-waterfall-negative" : ""}">
+          <td>= Available balance TODAY</td>
+          <td>-</td>
+          <td>-</td>
+          <td>${escapeHtml(budgetCurrency(balance))}</td>
+        </tr>
+      `);
+      if (Number.isFinite(summary?.newQuarterBudget)) {
+        bodyRows.push(`
+          <tr class="budget-waterfall-muted">
+            <td>+ New Oct-Dec allowance, starting October (3 x €4,470)</td>
+            <td>-</td>
+            <td>-</td>
+            <td>${escapeHtml(budgetCurrency(balance + summary.newQuarterBudget))} <span class="budget-waterfall-muted">(projected by December)</span></td>
           </tr>
-        `;
-      }).join("");
-      const todayRowHtml = `
-        <tr class="budget-waterfall-highlight ${extBalance < 0 ? "budget-waterfall-negative" : ""}">
-          <td>= Available balance TODAY (end of September)</td>
-          <td>-</td>
-          <td>-</td>
-          <td>${escapeHtml(budgetCurrency(extBalance))}</td>
-        </tr>
-      `;
-      const newBudgetHtml = Number.isFinite(summary?.newQuarterBudget) ? `
-        <tr class="budget-waterfall-muted">
-          <td>+ New Oct-Dec allowance, starting October (3 x €4,470)</td>
-          <td>-</td>
-          <td>-</td>
-          <td>${escapeHtml(budgetCurrency(extBalance + summary.newQuarterBudget))} <span class="budget-waterfall-muted">(projected by December)</span></td>
-        </tr>
-      ` : "";
+        `);
+      }
       return `
         <section class="budget-panel budget-waterfall">
           <h3>Month-by-month breakdown</h3>
-          <p class="budget-waterfall-note">Expense budget 1 Jul 2025 - 30 Jun 2026: €90,000 (management fee €5,000/month invoiced separately, not deducted here).</p>
+          <p class="budget-waterfall-note">1 Jul 2025 - 30 Jun 2026: €90,000 expense budget, fee €5,000/month invoiced separately (fee column shows "–"). From 1 Jul 2026: fee is deducted from the same balance as expenses.</p>
           <div class="budget-table-wrap">
             <table class="budget-month-matrix">
               <thead><tr><th>Month</th><th>Spend</th><th>Fee</th><th>Balance</th></tr></thead>
-              <tbody>${contractRowsHtml}</tbody>
-            </table>
-          </div>
-          <p class="budget-waterfall-note">From 1 July 2026 (extension): the fee is deducted from the same balance together with expenses.</p>
-          <div class="budget-table-wrap">
-            <table class="budget-month-matrix">
-              <thead><tr><th>Month</th><th>Spend</th><th>Fee</th><th>Balance</th></tr></thead>
-              <tbody>${extensionRowsHtml}${todayRowHtml}${newBudgetHtml}</tbody>
+              <tbody>${bodyRows.join("")}</tbody>
             </table>
           </div>
         </section>
@@ -7982,7 +7986,7 @@
             </table>
           </div>
         </section>
-        ${budgetWaterfallMarkup(summary)}
+        ${budgetWaterfallMarkup(summary, rows)}
         <details class="budget-panel budget-overview">
           <summary><h3>Overview</h3></summary>
           ${budgetMonthMatrixMarkup(summary.monthRows || byMonth.map((item) => ({ month: item.name, total: item.amount, categories: [] })))}
