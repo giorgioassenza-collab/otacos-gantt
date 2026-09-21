@@ -7601,6 +7601,21 @@
         .sort((left, right) => right.amount - left.amount);
     }
 
+    const BUDGET_CATEGORY_COLORS = {
+      Influencer: "#ff4b14",
+      Media: "#111827",
+      Events: "#0ea5e9",
+      Fee: "#22c55e",
+      General: "#f59e0b",
+      Forecast: "#a855f7"
+    };
+    const BUDGET_FALLBACK_COLORS = ["#f59e0b", "#a855f7", "#ec4899", "#64748b"];
+
+    function budgetCategoryColor(name, fallbackIndex) {
+      if (BUDGET_CATEGORY_COLORS[name]) return BUDGET_CATEGORY_COLORS[name];
+      return BUDGET_FALLBACK_COLORS[fallbackIndex % BUDGET_FALLBACK_COLORS.length];
+    }
+
     function budgetBarsMarkup(items, total) {
       if (!items.length) return `<div class="budget-empty">No data yet.</div>`;
       const max = Math.max(...items.map((item) => item.amount), 1);
@@ -7616,29 +7631,36 @@
     function budgetMonthBarsMarkup(monthItems, rows) {
       if (!monthItems.length) return `<div class="budget-empty">No data yet.</div>`;
       const max = Math.max(...monthItems.map((item) => item.amount), 1);
+      const CATEGORY_ORDER = ["Influencer", "Media", "Events", "Fee"];
+      const presentCategories = [...new Set(rows.map((row) => row.category || "-"))];
+      const orderedCategories = [
+        ...CATEGORY_ORDER.filter((name) => presentCategories.includes(name)),
+        ...presentCategories.filter((name) => !CATEGORY_ORDER.includes(name))
+      ];
       const bars = monthItems.map((month) => {
-        const feeAmount = rows
-          .filter((row) => row.month === month.name && row.category === "Fee")
-          .reduce((sum, row) => sum + (row.amount || 0), 0);
-        const restAmount = Math.max(0, (month.amount || 0) - feeAmount);
-        const restPct = Math.max(restAmount ? 4 : 0, (restAmount / max) * 100);
-        const feePct = Math.max(feeAmount ? 4 : 0, (feeAmount / max) * 100);
+        const monthRows = rows.filter((row) => row.month === month.name);
+        const segments = orderedCategories.map((name, index) => {
+          const amount = monthRows
+            .filter((row) => (row.category || "-") === name)
+            .reduce((sum, row) => sum + (row.amount || 0), 0);
+          if (!amount) return "";
+          const pct = Math.max(4, (amount / max) * 100);
+          const color = budgetCategoryColor(name, index);
+          return `<div class="budget-bar-fill" style="width:${pct}%;background:${color}"></div>`;
+        }).join("");
         return `
           <div class="budget-bar">
             <span>${escapeHtml(month.name)}</span>
-            <div class="budget-bar-track budget-bar-track-stacked">
-              <div class="budget-bar-fill" style="width:${restPct}%"></div>
-              ${feeAmount ? `<div class="budget-bar-fill budget-bar-fill-fee" style="width:${feePct}%"></div>` : ""}
-            </div>
+            <div class="budget-bar-track budget-bar-track-stacked">${segments}</div>
             <strong>${escapeHtml(budgetCurrency(month.amount))}</strong>
           </div>
         `;
       }).join("");
-      const hasFee = rows.some((row) => row.category === "Fee");
-      const legend = hasFee ? `
+      const legend = orderedCategories.length ? `
         <div class="budget-bar-legend">
-          <span><span class="budget-dot" style="background:var(--orange)"></span>Spend</span>
-          <span><span class="budget-dot" style="background:#22c55e"></span>Fee (Jul-Sep 2026, invoiced separately)</span>
+          ${orderedCategories.map((name, index) => `
+            <span><span class="budget-dot" style="background:${budgetCategoryColor(name, index)}"></span>${escapeHtml(name === "Fee" ? "Fee (Jul-Sep 2026, invoiced separately)" : name)}</span>
+          `).join("")}
         </div>
       ` : "";
       return `${legend}<div class="budget-bars">${bars}</div>`;
@@ -7646,18 +7668,17 @@
 
     function budgetPieMarkup(items, total) {
       if (!items.length || !total) return `<div class="budget-empty">No budget split available.</div>`;
-      const colors = ["#ff4b14", "#111827", "#0ea5e9", "#22c55e", "#f59e0b", "#a855f7"];
       let cursor = 0;
       const segments = items.map((item, index) => {
         const start = cursor;
         const size = Math.max(0, (item.amount || 0) / total * 100);
         cursor += size;
-        return `${colors[index % colors.length]} ${start}% ${cursor}%`;
+        return `${budgetCategoryColor(item.name, index)} ${start}% ${cursor}%`;
       });
       if (cursor < 100) segments.push(`#ede7df ${cursor}% 100%`);
       const legendItems = items.map((item, index) => `
         <div class="budget-legend-item">
-          <span class="budget-dot" style="background:${colors[index % colors.length]}"></span>
+          <span class="budget-dot" style="background:${budgetCategoryColor(item.name, index)}"></span>
           <span>${escapeHtml(item.name)}</span>
           <strong>${escapeHtml(budgetCurrency(item.amount))}</strong>
         </div>
