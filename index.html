@@ -2626,7 +2626,7 @@
     }
 
     .budget-bar-fill-fee {
-      background: #111827;
+      background: #22c55e;
     }
 
     .budget-bar-legend {
@@ -7638,7 +7638,7 @@
       const legend = hasFee ? `
         <div class="budget-bar-legend">
           <span><span class="budget-dot" style="background:var(--orange)"></span>Spend</span>
-          <span><span class="budget-dot" style="background:#111827"></span>Fee (Jul-Sep 2026, invoiced separately)</span>
+          <span><span class="budget-dot" style="background:#22c55e"></span>Fee (Jul-Sep 2026, invoiced separately)</span>
         </div>
       ` : "";
       return `${legend}<div class="budget-bars">${bars}</div>`;
@@ -7872,12 +7872,13 @@
       const monthPieItems = (selectedMonthSummary?.categories || byCategory)
         .filter((item) => categoryFilter === "all" || item.name === categoryFilter)
         .filter((item) => item.amount);
-      const totalPieItems = [
-        ...(summary.categoryTotals || aggregateBudget(rows, "category")),
-        { name: "Remaining operating budget", amount: remaining }
-      ].filter((item) => categoryFilter === "all" || item.name === categoryFilter || item.name === "Remaining operating budget").filter((item) => item.amount);
+      const totalPieItems = (summary.categoryTotals || aggregateBudget(rows, "category"))
+        .filter((item) => categoryFilter === "all" || item.name === categoryFilter)
+        .filter((item) => item.amount);
       const pieItems = monthFilter === "all" ? totalPieItems : monthPieItems;
-      const pieTotal = monthFilter === "all" ? workingBudget : monthPieItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const pieTotal = monthFilter === "all"
+        ? totalPieItems.reduce((sum, item) => sum + (item.amount || 0), 0)
+        : monthPieItems.reduce((sum, item) => sum + (item.amount || 0), 0);
       const pieTitle = monthFilter === "all" ? "Operating budget split" : `${monthFilter} split`;
       budgetShell.innerHTML = `
         <section class="budget-hero">
