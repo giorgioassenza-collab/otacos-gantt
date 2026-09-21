@@ -7888,10 +7888,9 @@
             <p>Totals include the extension fees recorded in the source sheet.</p>
           </div>
           <div class="budget-kpi budget-kpi-primary ${todayBalance < 0 ? "budget-kpi-negative" : ""}"><span>Available balance TODAY (end of September)</span><strong>${escapeHtml(budgetCurrency(todayBalance))}</strong></div>
-          <div class="budget-kpi"><span>Projected balance by December (new Oct-Dec allowance included)</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
           <div class="budget-kpi"><span>Total spent (expenses + fee, since Jul 2025)</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
         </section>
-        <p class="budget-hero-note">The first number is today's real position. The second already includes the new October-December allowance, which hasn't arrived yet - it's only a projection (month-by-month breakdown below).</p>
+        <p class="budget-hero-note">This is today's real position. The upcoming October-December allowance (not yet arrived) is shown separately in the month-by-month breakdown below.</p>
         <section class="budget-panel">
           <h3>${escapeHtml(pieTitle)}</h3>
           ${budgetPieMarkup(pieItems, pieTotal)}
