@@ -2674,6 +2674,10 @@
       white-space: nowrap;
     }
 
+    .budget-waterfall-note { margin: 4px 0 10px; font-size: 13px; opacity: 0.75; }
+    .budget-waterfall-negative td { color: #dc2626; font-weight: 600; }
+    .budget-waterfall-highlight td { font-weight: 700; }
+    .budget-waterfall-muted { opacity: 0.6; font-size: 12px; }
     .budget-empty {
       padding: 26px;
       border: 1px dashed #d9d2c8;
@@ -7458,6 +7462,15 @@
       if (summary) {
         if (Number.isFinite(totalSpentFromTotalCell)) summary.totalSpentFromTotalCell = totalSpentFromTotalCell;
         if (Number.isFinite(remainingFromTotalCell)) summary.remainingFromTotalCell = remainingFromTotalCell;
+        summary.contractMonthRows = summary.monthRows;
+        summary.residualAtJune = readTotal(/^RESIDUAL AT/i);
+        summary.extensionJul = readTotal(/^JULY 2026 - EXTENSION$/i);
+        summary.extensionAug = readTotal(/^AUG 2026 - EXTENSION$/i);
+        summary.extensionSept = readTotal(/^SEPT 2026 - EXTENSION$/i);
+        summary.julFee = readTotal(/^JUL26 FEE$/i);
+        summary.augFee = readTotal(/^AUG26 FEE$/i);
+        summary.septFee = readTotal(/^SEPT26 FEE$/i);
+        summary.newQuarterBudget = readTotal(/^MEDIA BUDGET/i);
       }
       const parsedSheets = workbook.SheetNames
         .filter((sheetName) => !/^TOT(AL)?$/i.test(sheetName))
@@ -7544,6 +7557,70 @@
           <div class="budget-pie" style="background:conic-gradient(${segments.join(",")})"></div>
           <div class="budget-legend">${legendItems}</div>
         </div>
+      `;
+    }
+
+    function budgetWaterfallMarkup(summary) {
+      const contractMonths = summary?.contractMonthRows || [];
+      if (!contractMonths.length && !Number.isFinite(summary?.residualAtJune)) return "";
+      let balance = 90000;
+      const contractRowsHtml = contractMonths.map((month) => {
+        balance -= (month.total || 0);
+        return `
+          <tr>
+            <td>${escapeHtml(month.month)}</td>
+            <td>${escapeHtml(budgetCurrency(month.total || 0))}</td>
+            <td class="budget-waterfall-muted">€5.000 (fatturata a parte)</td>
+            <td>${escapeHtml(budgetCurrency(balance))}</td>
+          </tr>
+        `;
+      }).join("");
+      const extensionSteps = [
+        { label: "Luglio 2026", spend: summary?.extensionJul, fee: summary?.julFee },
+        { label: "Agosto 2026", spend: summary?.extensionAug, fee: summary?.augFee },
+        { label: "Settembre 2026", spend: summary?.extensionSept, fee: summary?.septFee }
+      ];
+      let extBalance = Number.isFinite(summary?.residualAtJune) ? summary.residualAtJune : balance;
+      const extensionRowsHtml = extensionSteps.map((step) => {
+        const spend = step.spend || 0;
+        const fee = step.fee || 0;
+        extBalance -= spend + fee;
+        const rowClass = extBalance < 0 ? "budget-waterfall-negative" : "";
+        return `
+          <tr class="${rowClass}">
+            <td>${escapeHtml(step.label)}</td>
+            <td>${escapeHtml(budgetCurrency(spend))}</td>
+            <td>${escapeHtml(budgetCurrency(fee))}</td>
+            <td>${escapeHtml(budgetCurrency(extBalance))}</td>
+          </tr>
+        `;
+      }).join("");
+      const newBudgetHtml = Number.isFinite(summary?.newQuarterBudget) ? `
+        <tr class="budget-waterfall-highlight">
+          <td>+ Nuovo plafond ott-dic (3 x €4.470)</td>
+          <td>-</td>
+          <td>-</td>
+          <td>${escapeHtml(budgetCurrency(extBalance + summary.newQuarterBudget))}</td>
+        </tr>
+      ` : "";
+      return `
+        <section class="budget-panel budget-waterfall">
+          <h3>Come sono andati i soldi, mese per mese</h3>
+          <p class="budget-waterfall-note">Budget spese 1 lug 2025 - 30 giu 2026: €90.000 (fee di gestione €5.000/mese fatturata a parte, non scalata da qui).</p>
+          <div class="budget-table-wrap">
+            <table class="budget-month-matrix">
+              <thead><tr><th>Mese</th><th>Spesa</th><th>Fee</th><th>Residuo</th></tr></thead>
+              <tbody>${contractRowsHtml}</tbody>
+            </table>
+          </div>
+          <p class="budget-waterfall-note">Dal 1 luglio 2026 (proroga): la fee viene scalata dallo stesso residuo insieme alle spese.</p>
+          <div class="budget-table-wrap">
+            <table class="budget-month-matrix">
+              <thead><tr><th>Mese</th><th>Spesa</th><th>Fee</th><th>Residuo</th></tr></thead>
+              <tbody>${extensionRowsHtml}${newBudgetHtml}</tbody>
+            </table>
+          </div>
+        </section>
       `;
     }
 
@@ -7683,6 +7760,7 @@
           <div class="budget-kpi"><span>Total spent</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
           <div class="budget-kpi"><span>Remaining</span><strong>${escapeHtml(budgetCurrency(remaining))}</strong></div>
         </section>
+        ${budgetWaterfallMarkup(summary)}
         <section class="budget-filters">
           ${budgetSelectMarkup("budgetMonthFilter", "Month", months, monthFilter, "All months")}
           ${budgetSelectMarkup("budgetCategoryFilter", "Category", categories, categoryFilter, "All categories")}
