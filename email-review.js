@@ -20,21 +20,21 @@ function installSurface() {
   button.className = "toolbar-btn email-review-button";
   button.id = "emailReviewButton";
   button.type = "button";
-  button.innerHTML = `Task da approvare <span class="email-review-count" id="emailReviewCount" hidden>0</span>`;
+  button.innerHTML = `Tasks to approve <span class="email-review-count" id="emailReviewCount" hidden>0</span>`;
   historyButton.before(button);
 
   const modal = document.createElement("div");
   modal.className = "email-review-modal";
   modal.id = "emailReviewModal";
-  modal.setAttribute("aria-label", "Task da approvare");
+  modal.setAttribute("aria-label", "Tasks to approve");
   modal.innerHTML = `
     <section class="email-review-dialog" role="dialog" aria-modal="true" aria-labelledby="emailReviewTitle">
       <header class="email-review-head">
         <div>
-          <h2 id="emailReviewTitle">Task da approvare</h2>
-          <p>Apri solo la proposta che vuoi controllare, poi approvala oppure ignorala.</p>
+          <h2 id="emailReviewTitle">Tasks to approve</h2>
+          <p>Open the proposal you want to check, then approve or dismiss it.</p>
         </div>
-        <button type="button" data-email-close aria-label="Chiudi">Chiudi</button>
+        <button type="button" data-email-close aria-label="Close">Close</button>
       </header>
       <div class="email-review-list" id="emailReviewList"></div>
     </section>`;
@@ -61,16 +61,16 @@ function expandedCard(review) {
       <p class="email-review-source">${escapeHtml(review.excerpt || "")}</p>
       <div class="email-review-fields">
         <label class="email-review-wide">Task<input data-field="name" value="${escapeHtml(task.name || "")}"></label>
-        <label>Progetto<select data-field="projectId">${options(cachedChoices.projects, task.projectId || "", "Da assegnare")}</select></label>
-        <label>Stato<select data-field="status">${options(cachedChoices.statuses, task.status || "", "Da assegnare")}</select></label>
-        <label>Responsabili<input data-field="members" value="${escapeHtml((task.members || []).join(", "))}" placeholder="Nomi separati da virgola"></label>
-        <label>Inizio<input data-field="start" type="date" value="${escapeHtml(dateValue(task.start))}"></label>
-        <label>Fine<input data-field="end" type="date" value="${escapeHtml(dateValue(task.end))}"></label>
-        <label class="email-review-wide">Note<textarea data-field="info">${escapeHtml(task.info || "")}</textarea></label>
+        <label>Project<select data-field="projectId">${options(cachedChoices.projects, task.projectId || "", "Unassigned")}</select></label>
+        <label>Status<select data-field="status">${options(cachedChoices.statuses, task.status || "", "Unassigned")}</select></label>
+        <label>Who<input data-field="members" value="${escapeHtml((task.members || []).join(", "))}" placeholder="Names, separated by commas"></label>
+        <label>Start<input data-field="start" type="date" value="${escapeHtml(dateValue(task.start))}"></label>
+        <label>End<input data-field="end" type="date" value="${escapeHtml(dateValue(task.end))}"></label>
+        <label class="email-review-wide">Notes<textarea data-field="info">${escapeHtml(task.info || "")}</textarea></label>
       </div>
       <div class="email-review-actions">
-        <button class="approve" type="button" data-email-action="approve">Approva e aggiungi</button>
-        ${review.emailUrl ? `<a href="${escapeHtml(review.emailUrl)}" target="_blank" rel="noopener">Apri email</a>` : ""}
+        <button class="approve" type="button" data-email-action="approve">Approve and add</button>
+        ${review.emailUrl ? `<a href="${escapeHtml(review.emailUrl)}" target="_blank" rel="noopener">Open email</a>` : ""}
       </div>
     </div>`;
 }
@@ -82,7 +82,7 @@ function render() {
   badge.textContent = String(reviews.length);
   badge.hidden = reviews.length === 0;
   if (!reviews.length) {
-    list.innerHTML = `<div class="email-review-empty"><strong>Nessuna proposta in attesa.</strong><br>Il controllo automatico viene eseguito ogni ora.</div>`;
+    list.innerHTML = `<div class="email-review-empty"><strong>No proposals waiting.</strong><br>Emails are checked automatically every hour.</div>`;
     return;
   }
   list.innerHTML = reviews.map((review) => {
@@ -94,17 +94,17 @@ function render() {
         <div class="email-review-summary">
           <div class="email-review-summary-copy">
             <div class="email-review-meta">
-              <span class="email-review-status">Da approvare</span>
+              <span class="email-review-status">To approve</span>
               <span>${escapeHtml(review.sender || review.senderEmail)}</span>
               <span>${escapeHtml(received)}</span>
-              <span class="email-review-confidence">${Math.round(Number(task.confidence || 0) * 100)}% affidabilità</span>
+              <span class="email-review-confidence">${Math.round(Number(task.confidence || 0) * 100)}% confidence</span>
             </div>
-            <h3>${escapeHtml(task.name || review.subject || "Email senza oggetto")}</h3>
-            <p>${escapeHtml(review.subject || "Email senza oggetto")}</p>
+            <h3>${escapeHtml(task.name || review.subject || "Email without subject")}</h3>
+            <p>${escapeHtml(review.subject || "Email without subject")}</p>
           </div>
           <div class="email-review-quick-actions">
-            <button type="button" data-email-action="toggle" aria-expanded="${expanded}">${expanded ? "Chiudi" : "Apri"}</button>
-            <button type="button" data-email-action="reject">Ignora</button>
+            <button type="button" data-email-action="toggle" aria-expanded="${expanded}">${expanded ? "Close" : "Apri"}</button>
+            <button type="button" data-email-action="reject">Dismiss</button>
           </div>
         </div>
         ${expanded ? expandedCard(review) : ""}
@@ -132,13 +132,13 @@ async function sendAction(action, reviewId, task) {
     body: JSON.stringify({ action, reviewId, task })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Operazione non riuscita");
+  if (!response.ok) throw new Error(payload.error || "Something went wrong");
 }
 
 async function refreshReviews() {
   const response = await fetch(reviewApiUrl, { cache: "no-store" });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "Coda non disponibile");
+  if (!response.ok) throw new Error(payload.error || "Queue unavailable");
   reviews = (payload.reviews || []).sort((a, b) => String(b.receivedAt || "").localeCompare(String(a.receivedAt || "")));
   cachedChoices = payload.choices || cachedChoices;
   if (expandedReviewId && !reviews.some((item) => item.id === expandedReviewId)) expandedReviewId = "";
@@ -159,13 +159,13 @@ async function handleAction(event) {
   }
   const task = action === "approve" ? valuesFromCard(card) : undefined;
   if (action === "approve") {
-    if (!task.name) return alert("Inserisci un titolo per la task");
-    if (!task.projectId) return alert("Assegna un progetto prima di aggiungere la task");
-    if (!task.start) return alert("Assegna una data prima di aggiungere la task");
+    if (!task.name) return alert("Give the task a title");
+    if (!task.projectId) return alert("Pick a project before adding the task");
+    if (!task.start) return alert("Pick a date before adding the task");
   }
   const originalText = button.textContent;
   button.disabled = true;
-  button.textContent = action === "reject" ? "Rimuovo…" : "Aggiungo…";
+  button.textContent = action === "reject" ? "Removing…" : "Adding…";
   card.classList.add("busy");
   try {
     await sendAction(action, review.id, task);
@@ -173,7 +173,7 @@ async function handleAction(event) {
     if (expandedReviewId === review.id) expandedReviewId = "";
     render();
   } catch (error) {
-    alert(error?.message || "Operazione non riuscita");
+    alert(error?.message || "Something went wrong");
     button.disabled = false;
     button.textContent = originalText;
     card.classList.remove("busy");

@@ -3,10 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17120f">
   <title>O'Tacos Workflow</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
   <link rel="shortcut icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='white'/%3E%3Ccircle cx='28' cy='34' r='18' fill='none' stroke='%23ff5a14' stroke-width='12'/%3E%3Cellipse cx='47' cy='17' rx='7' ry='11' fill='%23ff5a14' transform='rotate(-18 47 17)'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="./otacos-favicon.png?v=7">
+  <link rel="preload" href="./fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="./fonts/switzer-500.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="./email-review.css?v=3">
   <style>
     :root {
@@ -17,9 +20,9 @@
       --text: #18130f;
       --muted: #746c63;
       --chip: #f1ede6;
-      --blue: #ff5a14;
-      --orange: #ff5a14;
-      --orange-dark: #d83f00;
+      --blue: #ff7200;
+      --orange: #ff7200;
+      --orange-dark: #e05f00;
       --orange-soft: #fff0e7;
       --ink: #171411;
       --shadow: 0 1px 2px rgba(24, 19, 15, .06), 0 10px 28px rgba(24, 19, 15, .07);
@@ -27,7 +30,7 @@
       --sidebar: 180px;
       --timeline-head: 72px;
       --ped-hour: 180px;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: var(--sans);
     }
 
     * { box-sizing: border-box; }
@@ -99,7 +102,7 @@
     .login-title {
       margin: 0;
       color: var(--ink);
-      font-size: 34px;
+      font-size: 30px;
       font-weight: 900;
       letter-spacing: .08em;
     }
@@ -108,14 +111,14 @@
       height: 44px;
       min-width: 148px;
       border: 0;
-      border-radius: 10px;
-      background: #ff4f0a;
+      border-radius: var(--r-md);
+      background: #ff7200;
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 900;
       letter-spacing: .08em;
       cursor: pointer;
-      box-shadow: 0 14px 34px rgba(255, 79, 10, .24);
+      box-shadow: none;
     }
 
     .login-field {
@@ -127,10 +130,10 @@
     .login-field input {
       height: 42px;
       border: 1px solid #ded7cd;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       padding: 0 12px;
       font: inherit;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
     }
 
@@ -150,8 +153,7 @@
       padding: 10px 16px;
       background: rgba(255, 253, 249, .96);
       border-bottom: 1px solid var(--line);
-      box-shadow: 0 1px 0 rgba(255, 90, 20, .08), 0 8px 24px rgba(24, 19, 15, .05);
-      backdrop-filter: blur(10px);
+      box-shadow: none;
       z-index: 5;
     }
 
@@ -166,16 +168,16 @@
     .brand-mark {
       width: 28px;
       height: 28px;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       display: grid;
       place-items: center;
       color: #fff;
       background: var(--orange);
-      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .12), 0 8px 16px rgba(255, 90, 20, .18);
+      box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .12), 0 8px 16px rgba(255, 114, 0, .18);
     }
 
     .brand-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 900;
       letter-spacing: 0;
     }
@@ -183,7 +185,7 @@
     .month-chip {
       height: 24px;
       padding: 4px 12px;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: var(--ink);
       color: #fff;
       font-size: 12px;
@@ -200,7 +202,7 @@
       align-items: center;
       gap: 4px;
       padding: 4px;
-      border-radius: 9px;
+      border-radius: var(--r-sm);
       background: var(--chip);
     }
 
@@ -208,7 +210,7 @@
       width: 26px;
       height: 26px;
       border: 0;
-      border-radius: 7px;
+      border-radius: var(--r-sm);
       display: grid;
       place-items: center;
       color: #665d55;
@@ -235,9 +237,9 @@
     .today-btn {
       height: 34px;
       border: 1px solid #ffd6c2;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       padding: 0 14px;
-      color: #ad4e00;
+      color: #a84b00;
       background: var(--orange-soft);
       font-size: 13px;
       font-weight: 700;
@@ -247,7 +249,7 @@
     .toolbar-btn {
       height: 34px;
       border: 0;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       padding: 0 12px;
       color: #6b2506;
       background: var(--orange-soft);
@@ -255,7 +257,7 @@
       font-weight: 900;
       cursor: pointer;
       white-space: nowrap;
-      box-shadow: 0 1px 0 rgba(255, 255, 255, .9);
+      box-shadow: none;
     }
 
     .toolbar-btn:hover {
@@ -267,7 +269,7 @@
     .toolbar-btn.overdue-btn {
       color: #7a2500;
       background: #fff1e8;
-      border: 1px solid rgba(255, 90, 20, .28);
+      border: 1px solid rgba(255, 114, 0, .28);
       font-weight: 1000;
       min-width: 104px;
     }
@@ -275,7 +277,7 @@
     .toolbar-btn.overdue-btn.has-overdue {
       color: #fff;
       background: var(--orange);
-      box-shadow: 0 8px 18px rgba(255, 90, 20, .2);
+      box-shadow: none;
     }
 
     .member-select {
@@ -283,7 +285,7 @@
       width: 156px;
       padding: 0 10px;
       border: 1px solid #d9d2c8;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       color: #4e453d;
       background: #fffaf4;
       font-size: 13px;
@@ -431,9 +433,9 @@
       width: var(--day);
       z-index: 2;
       pointer-events: none;
-      background: rgba(255, 90, 20, .2);
-      border-left: 2px solid rgba(255, 90, 20, .78);
-      border-right: 2px solid rgba(255, 90, 20, .78);
+      background: rgba(255, 114, 0, .2);
+      border-left: 2px solid rgba(255, 114, 0, .78);
+      border-right: 2px solid rgba(255, 114, 0, .78);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .42);
     }
 
@@ -445,7 +447,7 @@
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #fffaf4;
-      box-shadow: 0 10px 18px rgba(24, 19, 15, .05);
+      box-shadow: none;
       transform: translateZ(0);
       will-change: auto;
     }
@@ -471,7 +473,7 @@
       font-size: 12px;
       font-weight: 800;
       letter-spacing: .13em;
-      box-shadow: 12px 0 18px rgba(255, 250, 244, .92);
+      box-shadow: none;
     }
 
     .days {
@@ -514,14 +516,14 @@
     }
 
     .day.today {
-      background: rgba(255, 90, 20, .22);
-      color: #9a3412;
+      background: rgba(255, 114, 0, .22);
+      color: #8a3c00;
       box-shadow: inset 0 -3px 0 var(--orange);
     }
 
     .day.today .day-weekday,
     .day.today .day-number {
-      color: #9a3412;
+      color: #8a3c00;
     }
 
     .weekends {
@@ -572,7 +574,7 @@
       right: 0;
       height: 1px;
       background: rgba(64, 56, 50, .18);
-      box-shadow: 0 1px 0 rgba(255, 255, 255, .72);
+      box-shadow: none;
     }
 
     .project-divider.is-strong {
@@ -586,13 +588,13 @@
       display: flex;
       align-items: center;
       padding: 0 8px;
-      border-radius: 6px;
+      border-radius: var(--r-sm);
       border: 2px solid currentColor;
       color: var(--ink);
       background: #fff;
       font-size: 11px;
       font-weight: 800;
-      box-shadow: 0 4px 12px rgba(24, 19, 15, .08);
+      box-shadow: none;
       white-space: nowrap;
       overflow: hidden;
       gap: 7px;
@@ -610,7 +612,7 @@
 
     .bar:hover {
       background: #fffaf4;
-      box-shadow: 0 8px 20px rgba(24, 19, 15, .13);
+      box-shadow: none;
     }
 
     .bar.is-done::after {
@@ -642,7 +644,7 @@
 
     .bar.is-pressing,
     .ped-post.is-pressing {
-      outline: 2px solid rgba(255, 90, 20, .28);
+      outline: 2px solid rgba(255, 114, 0, .28);
       outline-offset: 3px;
       transform: translateY(-1px);
     }
@@ -651,7 +653,7 @@
     .ped-post.is-dragging {
       opacity: .72;
       cursor: grabbing;
-      box-shadow: 0 20px 36px rgba(255, 90, 20, .24);
+      box-shadow: var(--shadow-pop);
       z-index: 90;
     }
 
@@ -680,9 +682,9 @@
       height: 18px;
       padding: 0 6px;
       border-radius: 999px;
-      color: #4b5563;
+      color: #605852;
       background: #f3f4f6;
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1);
+      box-shadow: inset 0 0 0 1px rgba(23, 18, 15, .1);
       font-size: 10px;
       font-weight: 900;
       line-height: 1;
@@ -702,7 +704,7 @@
       border-radius: 999px;
       color: #fff;
       background: var(--orange);
-      box-shadow: 0 6px 14px rgba(255, 90, 20, .28), inset 0 0 0 1px rgba(255,255,255,.28);
+      box-shadow: 0 6px 14px rgba(255, 114, 0, .28), inset 0 0 0 1px rgba(255,255,255,.28);
     }
 
     .bar-unassigned svg {
@@ -715,7 +717,7 @@
       height: 10px;
       border-radius: 3px;
       display: inline-block;
-      background: #d7dde5;
+      background: #ddd3c3;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
     }
 
@@ -784,7 +786,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       transform: translateX(-50%);
-      box-shadow: 0 4px 10px rgba(24, 19, 15, .2);
+      box-shadow: none;
     }
 
     .gantt-mock-phone {
@@ -793,9 +795,9 @@
       height: 68px;
       margin: 0 auto;
       border: 2px solid #151515;
-      border-radius: 12px;
+      border-radius: var(--r-md);
       background: #111;
-      box-shadow: 0 7px 16px rgba(24, 19, 15, .18);
+      box-shadow: none;
       overflow: hidden;
     }
 
@@ -827,7 +829,7 @@
 
     .gantt-mock-phone.is-story .gantt-mock-content {
       inset: 0;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #242424;
     }
 
@@ -943,7 +945,7 @@
       border: 1px solid #e8e1d8;
       border-radius: 3px;
       background: #fff;
-      box-shadow: 0 6px 12px rgba(24, 19, 15, .14);
+      box-shadow: none;
     }
 
     .gantt-mock-slide:nth-child(1) { left: 0; z-index: 3; }
@@ -1010,9 +1012,9 @@
       min-width: 164px;
       padding: 6px;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #fffdf9;
-      box-shadow: 0 14px 42px rgba(24, 19, 15, .18);
+      box-shadow: var(--shadow-pop);
       z-index: 30;
     }
 
@@ -1035,7 +1037,7 @@
       gap: 8px;
       min-height: 30px;
       border: 0;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       padding: 0 9px;
       color: #2f2822;
       background: transparent;
@@ -1057,14 +1059,14 @@
       height: 26px;
       display: grid;
       place-items: center;
-      border: 1px solid #cfd8e3;
+      border: 1px solid #d8cdbb;
       border-radius: 999px;
       background: #fff;
-      color: #0f172a;
-      font-size: 16px;
+      color: #17120f;
+      font-size: 15px;
       font-weight: 900;
       line-height: 1;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, .12);
+      box-shadow: none;
       pointer-events: none;
       z-index: 26;
     }
@@ -1084,13 +1086,13 @@
       margin: 0 auto;
       padding: 10px 14px;
       border: 1px solid #fecaca;
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #fff1f2;
       color: #991b1b;
       font-size: 12px;
       font-weight: 800;
       text-align: center;
-      box-shadow: 0 12px 32px rgba(153, 27, 27, .14);
+      box-shadow: var(--shadow-pop);
     }
 
     .ped-fab {
@@ -1106,7 +1108,7 @@
       background: var(--ink);
       font-size: 13px;
       font-weight: 900;
-      box-shadow: 0 10px 26px rgba(24, 19, 15, .24);
+      box-shadow: var(--shadow-pop);
       cursor: pointer;
     }
 
@@ -1134,7 +1136,7 @@
       height: var(--timeline-head);
       border-bottom: 1px solid var(--line);
       background: #fffaf4;
-      box-shadow: 0 10px 18px rgba(24, 19, 15, .05);
+      box-shadow: none;
       transform: translateZ(0);
       will-change: auto;
     }
@@ -1186,7 +1188,7 @@
       font-size: 12px;
       font-weight: 900;
       text-align: center;
-      box-shadow: 0 6px 14px rgba(24, 19, 15, .12);
+      box-shadow: none;
     }
 
     .ped-weekends {
@@ -1202,12 +1204,12 @@
       min-height: 92px;
       padding: 9px 118px 9px 9px;
       border: 2px solid var(--ink);
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fff;
       color: var(--ink);
       font-size: 12px;
       font-weight: 800;
-      box-shadow: 0 4px 12px rgba(24, 19, 15, .08);
+      box-shadow: none;
       cursor: grab;
       touch-action: none;
       user-select: none;
@@ -1237,7 +1239,7 @@
       justify-content: flex-end;
       gap: 6px;
       max-width: 104px;
-      color: #344054;
+      color: #403833;
       font-size: 10px;
       font-weight: 900;
       line-height: 1.1;
@@ -1250,15 +1252,15 @@
       width: 20px;
       height: 20px;
       flex: 0 0 auto;
-      border-radius: 5px;
+      border-radius: var(--r-sm);
       display: inline-block;
-      background: #d7dde5;
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12);
+      background: #ddd3c3;
+      box-shadow: inset 0 0 0 1px rgba(23, 18, 15, .12);
     }
 
     .ped-subtask-preview {
       margin-top: 4px;
-      color: #475569;
+      color: #605852;
       font-size: 10px;
       font-weight: 800;
       line-height: 1.25;
@@ -1271,7 +1273,7 @@
       min-height: 20px;
       margin: 2px 0 3px;
       padding: 2px 7px;
-      border: 1px solid #e2e8f0;
+      border: 1px solid #e9e1d3;
       border-radius: 999px;
       background: #fffdf9;
       color: #18130f;
@@ -1294,10 +1296,10 @@
       height: auto;
       max-height: none;
       margin-top: 5px;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
+      border: 1px solid #e9e1d3;
+      border-radius: var(--r-sm);
       object-fit: initial;
-      background: #f8fafc;
+      background: #faf7f0;
     }
 
     .asset-frame {
@@ -1305,8 +1307,8 @@
       width: 100%;
       height: 120px;
       margin-top: 5px;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
+      border: 1px solid #e9e1d3;
+      border-radius: var(--r-sm);
       background: #fff;
     }
 
@@ -1315,22 +1317,22 @@
       aspect-ratio: 4 / 5;
       min-height: 0;
       margin-top: 5px;
-      border: 1px solid rgba(255, 90, 20, .2);
-      border-radius: 18px;
+      border: 1px solid rgba(255, 114, 0, .2);
+      border-radius: var(--r-md);
       display: flex;
       align-items: flex-end;
       gap: 10px;
       padding: 12px;
       box-sizing: border-box;
       background:
-        linear-gradient(145deg, rgba(255, 90, 20, .9), rgba(255, 184, 77, .82)),
+        linear-gradient(145deg, rgba(255, 114, 0, .9), rgba(255, 184, 77, .82)),
         radial-gradient(circle at 20% 18%, rgba(255,255,255,.5), transparent 28%);
       color: #18130f;
       font-size: 12px;
       font-weight: 950;
       overflow: hidden;
       position: relative;
-      box-shadow: 0 16px 34px rgba(24, 19, 15, .16);
+      box-shadow: none;
     }
 
     .asset-video-play {
@@ -1342,7 +1344,7 @@
       flex: 0 0 auto;
       background: rgba(255,255,255,.92);
       color: var(--orange);
-      box-shadow: 0 8px 20px rgba(24, 19, 15, .18);
+      box-shadow: none;
     }
 
     .asset-video-preview span:last-child {
@@ -1361,10 +1363,10 @@
       width: 156px;
       aspect-ratio: 4 / 5;
       margin: 7px 0 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 90, 20, .16);
+      border-radius: var(--r-md);
+      border: 1px solid rgba(255, 114, 0, .16);
       background: #fff;
-      box-shadow: 0 16px 34px rgba(24, 19, 15, .16);
+      box-shadow: none;
       overflow: visible;
       position: relative;
     }
@@ -1374,13 +1376,13 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      border-radius: 18px;
+      border-radius: var(--r-md);
     }
 
     .asset-folder-cover-frame {
       width: 100%;
       height: 100%;
-      border-radius: 18px;
+      border-radius: var(--r-md);
       overflow: hidden;
       background: #fff;
       position: relative;
@@ -1414,7 +1416,7 @@
       inset: 9px -9px auto auto;
       width: 82%;
       height: 82%;
-      border-radius: 18px;
+      border-radius: var(--r-md);
       border: 1px solid rgba(24, 19, 15, .12);
       background: rgba(255,255,255,.82);
       transform: translate(12px, 10px);
@@ -1439,7 +1441,7 @@
       border-radius: 999px;
       color: #18130f;
       background: rgba(255,255,255,.92);
-      box-shadow: 0 8px 22px rgba(24, 19, 15, .16);
+      box-shadow: none;
       font-size: 10px;
       font-weight: 950;
     }
@@ -1447,7 +1449,7 @@
     .asset-folder-thumb {
       width: 100%;
       height: 100%;
-      border-radius: 18px;
+      border-radius: var(--r-md);
       display: grid;
       align-content: end;
       gap: 10px;
@@ -1455,7 +1457,7 @@
       box-sizing: border-box;
       background:
         radial-gradient(circle at 22% 18%, rgba(255,255,255,.62), transparent 27%),
-        linear-gradient(145deg, #ff5a14, #ffb14a);
+        linear-gradient(145deg, #ff7200, #ffb14a);
       color: #18130f;
       overflow: hidden;
       position: relative;
@@ -1467,12 +1469,12 @@
       position: absolute;
       width: 72px;
       height: 96px;
-      border-radius: 14px;
+      border-radius: var(--r-md);
       background: rgba(255,255,255,.58);
       right: -18px;
       top: 22px;
       transform: rotate(-8deg);
-      box-shadow: 0 12px 26px rgba(24, 19, 15, .12);
+      box-shadow: none;
     }
 
     .asset-folder-thumb::after {
@@ -1485,12 +1487,12 @@
     .asset-folder-symbol {
       width: 38px;
       height: 38px;
-      border-radius: 12px;
+      border-radius: var(--r-md);
       display: grid;
       place-items: center;
       background: rgba(255,255,255,.92);
       color: var(--orange);
-      box-shadow: 0 8px 18px rgba(24, 19, 15, .18);
+      box-shadow: none;
       z-index: 1;
     }
 
@@ -1524,14 +1526,14 @@
     .asset-open:hover .asset-preview,
     .asset-open:hover .asset-video-preview,
     .asset-open:hover .asset-carousel-preview {
-      box-shadow: 0 0 0 3px rgba(255, 90, 20, .14);
+      box-shadow: none;
     }
 
     .asset-viewer-modal {
       width: min(1120px, calc(100vw - 32px)) !important;
       max-width: min(1120px, calc(100vw - 32px)) !important;
       max-height: calc(100vh - 56px) !important;
-      border-radius: 24px !important;
+      border-radius: var(--r-md) !important;
       padding: 18px !important;
       overflow: hidden !important;
     }
@@ -1555,9 +1557,9 @@
       justify-content: center;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,.08);
-      border-radius: 22px;
+      border-radius: var(--r-md);
       background:
-        radial-gradient(circle at 50% 18%, rgba(255, 90, 20, .22), transparent 34%),
+        radial-gradient(circle at 50% 18%, rgba(255, 114, 0, .22), transparent 34%),
         linear-gradient(145deg, #201b17, #0f1115);
       position: relative;
       padding: 38px 72px;
@@ -1614,10 +1616,10 @@
 
     .asset-slide-card {
       aspect-ratio: 4 / 5;
-      border-radius: 24px;
+      border-radius: var(--r-md);
       overflow: hidden;
       background: #fff;
-      box-shadow: 0 18px 46px rgba(0,0,0,.34);
+      box-shadow: none;
       opacity: .58;
       transform: scale(.86);
       transition: transform .24s var(--ease-out), opacity .24s var(--ease-out);
@@ -1666,7 +1668,7 @@
 
     .asset-slide-card.is-active {
       opacity: 1;
-      box-shadow: 0 28px 68px rgba(0,0,0,.46), 0 0 0 4px rgba(255, 90, 20, .22);
+      box-shadow: none;
     }
 
     .asset-slide-card img,
@@ -1690,7 +1692,7 @@
       border-radius: 999px;
       background: rgba(255,255,255,.92);
       color: #18130f;
-      box-shadow: 0 12px 30px rgba(0,0,0,.28);
+      box-shadow: var(--shadow-pop);
       cursor: pointer;
       font-size: 22px;
       font-weight: 950;
@@ -1724,7 +1726,7 @@
 
     .asset-viewer-empty strong {
       margin-bottom: 8px;
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 950;
     }
 
@@ -1746,7 +1748,7 @@
       text-decoration: none;
       font-size: 12px;
       font-weight: 950;
-      box-shadow: 0 16px 34px rgba(0,0,0,.24);
+      box-shadow: none;
     }
 
     .asset-viewer-controls {
@@ -1772,7 +1774,7 @@
     .asset-folder-viewer {
       width: min(520px, 100%);
       aspect-ratio: 4 / 5;
-      border-radius: 28px;
+      border-radius: var(--r-md);
       padding: 22px;
       box-sizing: border-box;
       display: grid;
@@ -1781,8 +1783,8 @@
       color: #18130f;
       background:
         radial-gradient(circle at 22% 18%, rgba(255,255,255,.62), transparent 26%),
-        linear-gradient(145deg, #ff5a14, #ffb14a);
-      box-shadow: 0 34px 84px rgba(0,0,0,.38);
+        linear-gradient(145deg, #ff7200, #ffb14a);
+      box-shadow: none;
       position: relative;
       overflow: hidden;
     }
@@ -1793,12 +1795,12 @@
       position: absolute;
       width: 42%;
       aspect-ratio: 4 / 5;
-      border-radius: 24px;
+      border-radius: var(--r-md);
       background: rgba(255,255,255,.62);
       right: -6%;
       top: 14%;
       transform: rotate(-8deg);
-      box-shadow: 0 22px 54px rgba(24, 19, 15, .18);
+      box-shadow: none;
     }
 
     .asset-folder-viewer::after {
@@ -1817,7 +1819,7 @@
 
     .asset-folder-viewer h3 {
       margin: 0;
-      font-size: 28px;
+      font-size: 30px;
       line-height: 1;
     }
 
@@ -1838,7 +1840,7 @@
       text-decoration: none;
       font-size: 12px;
       font-weight: 950;
-      box-shadow: 0 12px 28px rgba(24, 19, 15, .18);
+      box-shadow: none;
     }
 
     .asset-folder-browser {
@@ -1853,9 +1855,9 @@
       width: 100%;
       height: 100%;
       border: 0;
-      border-radius: 18px;
+      border-radius: var(--r-md);
       background: #fff;
-      box-shadow: 0 22px 60px rgba(0,0,0,.28);
+      box-shadow: none;
     }
 
     .asset-folder-browser a {
@@ -1867,7 +1869,7 @@
       text-decoration: none;
       font-size: 12px;
       font-weight: 950;
-      box-shadow: 0 12px 28px rgba(0,0,0,.2);
+      box-shadow: none;
     }
 
     .ped-post small {
@@ -1916,9 +1918,9 @@
       min-height: 86px;
       padding: 9px 118px 9px 10px;
       border: 2px solid var(--ink);
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fff;
-      box-shadow: 0 8px 18px rgba(24, 19, 15, .08);
+      box-shadow: none;
       color: var(--ink);
       font-size: 11px;
       font-weight: 900;
@@ -1948,8 +1950,8 @@
       width: 20px;
       height: 20px;
       flex: 0 0 auto;
-      border-radius: 5px;
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .12);
+      border-radius: var(--r-sm);
+      box-shadow: inset 0 0 0 1px rgba(23, 18, 15, .12);
     }
 
     .creator-card-title {
@@ -1974,7 +1976,7 @@
       padding: 0 8px;
       border-radius: 999px;
       background: var(--ink);
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1);
+      box-shadow: inset 0 0 0 1px rgba(23, 18, 15, .1);
       font-size: 9px;
       font-weight: 900;
       line-height: 1;
@@ -2020,7 +2022,7 @@
       background: var(--orange);
       font-size: 12px;
       font-weight: 900;
-      box-shadow: 0 10px 22px rgba(255, 90, 20, .24);
+      box-shadow: var(--shadow-pop);
       cursor: pointer;
     }
 
@@ -2028,17 +2030,17 @@
       position: relative;
       z-index: 2;
       min-width: 82px;
-      box-shadow: 0 12px 28px rgba(255, 90, 20, .28), inset 0 -2px 0 rgba(24, 19, 15, .12);
-      transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), background .18s var(--ease-out);
+      box-shadow: 0 12px 28px rgba(255, 114, 0, .28), inset 0 -2px 0 rgba(24, 19, 15, .12);
+      transition: transform .18s var(--ease-out), background .18s var(--ease-out);
     }
 
     .view-switch-current:hover {
       transform: translateY(-1px);
-      box-shadow: 0 16px 34px rgba(255, 90, 20, .34), inset 0 -2px 0 rgba(24, 19, 15, .12);
+      box-shadow: 0 16px 34px rgba(255, 114, 0, .34), inset 0 -2px 0 rgba(24, 19, 15, .12);
     }
 
     .view-switch.is-open .view-switch-current {
-      background: #ff6a22;
+      background: #ff8a24;
       transform: translateY(-1px) scale(1.01);
     }
 
@@ -2056,16 +2058,11 @@
       min-width: 82px;
       color: #4b4038;
       background: rgba(255, 253, 249, .98);
-      box-shadow: 0 12px 28px rgba(24, 19, 15, .14);
+      box-shadow: var(--shadow-pop);
       border: 1px solid rgba(222, 215, 205, .92);
       opacity: 0;
       transform: translateY(12px) scale(.96);
-      transition:
-        opacity .2s var(--ease-out),
-        transform .24s var(--ease-spring),
-        background .16s var(--ease-out),
-        color .16s var(--ease-out),
-        box-shadow .16s var(--ease-out);
+      transition: opacity .2s var(--ease-out), transform .24s var(--ease-out), background .16s var(--ease-out), color .16s var(--ease-out);
     }
 
     .view-switch.is-open .view-switch-menu {
@@ -2086,7 +2083,7 @@
     .view-switch-menu button:hover {
       color: var(--ink);
       background: #fff7ef;
-      box-shadow: 0 16px 34px rgba(24, 19, 15, .18);
+      box-shadow: var(--shadow-pop);
       transform: translateY(-1px) scale(1.015);
     }
 
@@ -2109,7 +2106,7 @@
       border: 1px solid #ded7cd;
       border-radius: 999px;
       background: rgba(255, 253, 249, .97);
-      box-shadow: 0 10px 26px rgba(24, 19, 15, .13);
+      box-shadow: none;
     }
 
     body.ped-mode .horizontal-scrollbar,
@@ -2153,9 +2150,9 @@
       gap: 8px;
       padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fffdf9;
-      box-shadow: 0 8px 22px rgba(24, 19, 15, .06);
+      box-shadow: none;
     }
 
     .influencer-controls input,
@@ -2163,7 +2160,7 @@
       min-width: 0;
       height: 34px;
       border: 1px solid #d9d2c8;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       padding: 0 10px;
       font-size: 12px;
       font-weight: 800;
@@ -2185,7 +2182,7 @@
       gap: 9px;
       padding: 13px;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #fffdf9;
     }
 
@@ -2198,10 +2195,10 @@
     }
 
     .influencer-progress-title { font-size: 12px; font-weight: 900; }
-    .influencer-progress-ratio { color: var(--orange-dark); font-size: 16px; font-weight: 950; }
+    .influencer-progress-ratio { color: var(--orange-dark); font-size: 15px; font-weight: 950; }
     .influencer-progress-counts { color: #746c63; font-size: 11px; font-weight: 800; }
-    .influencer-progress-track { display: flex; height: 8px; overflow: hidden; border-radius: 99px; background: #eee8df; }
-    .influencer-progress-bar { height: 100%; transition: width .2s ease; }
+    .influencer-progress-track { display: flex; height: 8px; overflow: hidden; border-radius: 999px; background: #eee8df; }
+    .influencer-progress-bar { height: 100%; transition: none; }
     .influencer-progress-bar.is-booked { background: #22c55e; }
     .influencer-progress-bar.is-contacted { background: #facc15; }
 
@@ -2210,7 +2207,7 @@
       gap: 10px;
       padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #fffdf9;
     }
 
@@ -2226,21 +2223,21 @@
     .influencer-type-config .mini-field { display: grid; gap: 4px; color: #746c63; font-size: 10px; font-weight: 900; text-transform: uppercase; }
     .influencer-type-config-fields .mini-field:last-child { grid-column: 1 / -1; }
     .influencer-type-config input:not([type="color"]),
-    .influencer-type-config select { width: 100%; min-width: 0; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; padding: 0 8px; font-weight: 800; }
+    .influencer-type-config select { width: 100%; min-width: 0; height: 34px; border: 1px solid #d9d2c8; border-radius: var(--r-sm); padding: 0 8px; font-weight: 800; }
     .influencer-type-config input[type="color"] { width: 28px; min-width: 28px; height: 28px; padding: 2px; }
     .influencer-type-config-head > button:last-child { width: 28px; height: 28px; }
-    .influencer-visibility-toggle { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px solid #d9d2c8; border-radius: 8px; background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 17px; }
-    .influencer-visibility-toggle.is-active { border-color: var(--orange); background: #fff1e8; color: var(--orange-dark); box-shadow: 0 0 0 2px rgba(255, 90, 20, .12); }
+    .influencer-visibility-toggle { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px solid #d9d2c8; border-radius: var(--r-sm); background: #f1ede6; color: #8b8178; cursor: pointer; font-size: 18px; }
+    .influencer-visibility-toggle.is-active { border-color: var(--orange); background: #fff1e8; color: var(--orange-dark); box-shadow: none; }
     .influencer-deadline-control { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 5px; }
     .influencer-deadline-control input { cursor: pointer; }
-    .influencer-calendar-button { width: 34px; height: 34px; border: 1px solid #d9d2c8; border-radius: 7px; background: #fff; cursor: pointer; font-size: 15px; }
+    .influencer-calendar-button { width: 34px; height: 34px; border: 1px solid #d9d2c8; border-radius: var(--r-sm); background: #fff; cursor: pointer; font-size: 15px; }
     #influencerSettingsPanel { width: min(420px, calc(100vw - 32px)); }
     #influencerTypeList { max-height: none; overflow: visible; padding-right: 0; }
 
     .influencer-table-wrap {
       margin-top: 12px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       overflow: visible;
       background: #fffdf9;
     }
@@ -2334,7 +2331,7 @@
 
     .influencer-chip:hover {
       filter: brightness(.96);
-      box-shadow: 0 0 0 2px rgba(255, 90, 20, .14);
+      box-shadow: none;
     }
 
     .profile-link {
@@ -2373,9 +2370,9 @@
     .budget-hero,
     .budget-panel {
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-md);
       background: #fffdf9;
-      box-shadow: 0 12px 34px rgba(24, 19, 15, .07);
+      box-shadow: var(--shadow-pop);
     }
 
     .budget-hero {
@@ -2411,7 +2408,7 @@
       gap: 6px;
       padding: 14px;
       border: 1px solid var(--line-soft);
-      border-radius: 10px;
+      border-radius: var(--r-md);
       background: #fff8f1;
     }
 
@@ -2478,9 +2475,9 @@
       align-items: end;
       padding: 14px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-md);
       background: #fffdf9;
-      box-shadow: 0 8px 24px rgba(24, 19, 15, .05);
+      box-shadow: none;
     }
 
     .budget-filters label {
@@ -2496,7 +2493,7 @@
     .budget-filters select {
       height: 36px;
       border: 1px solid #d9d2c8;
-      border-radius: 9px;
+      border-radius: var(--r-sm);
       padding: 0 10px;
       color: var(--ink);
       background: #fffaf4;
@@ -2565,7 +2562,7 @@
       border-radius: 999px;
       background: var(--orange);
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 950;
     }
 
@@ -2649,7 +2646,7 @@
       overflow: auto;
       max-height: 420px;
       border: 1px solid var(--line-soft);
-      border-radius: 10px;
+      border-radius: var(--r-md);
     }
 
     .budget-table {
@@ -2720,12 +2717,12 @@
     .budget-waterfall-muted { opacity: 0.6; font-size: 12px; }
 .budget-kpi-primary {
       background: #fff1e8;
-      border-color: #ff8a4c;
+      border-color: #ff9a3c;
     }
 
     .budget-kpi-primary strong {
-      font-size: 28px;
-      color: #c2410c;
+      font-size: 30px;
+      color: #c65400;
     }
 
     .budget-kpi-negative {
@@ -2747,7 +2744,7 @@
         .budget-empty {
       padding: 26px;
       border: 1px dashed #d9d2c8;
-      border-radius: 12px;
+      border-radius: var(--r-md);
       color: var(--muted);
       background: #fffdf9;
       font-size: 13px;
@@ -2764,11 +2761,11 @@
       gap: 8px;
       height: 42px;
       padding: 0 14px;
-      border-radius: 18px;
+      border-radius: var(--r-md);
       background: #222;
       color: #fff;
       font-size: 12px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.22);
+      box-shadow: none;
     }
 
     .settings-panel {
@@ -2780,15 +2777,15 @@
       box-sizing: border-box;
       padding: 16px 16px 22px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-md);
       background: #fffdf9;
-      box-shadow: 0 18px 60px rgba(24, 19, 15, .18);
+      box-shadow: var(--shadow-pop);
       transform: translateY(-8px);
       opacity: 0;
       pointer-events: none;
       overflow: auto;
       overscroll-behavior: contain;
-      transition: opacity .16s ease, transform .16s ease;
+      transition: opacity .16s var(--ease-out), transform .16s var(--ease-out);
       z-index: 80;
       max-height: calc(100dvh - 182px);
       overflow: auto;
@@ -2821,9 +2818,9 @@
       scroll-padding-bottom: 96px;
       padding: 16px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--r-md);
       background: #fffdf9;
-      box-shadow: 0 24px 80px rgba(24, 19, 15, .24);
+      box-shadow: var(--shadow-pop);
     }
 
     .modal h2 {
@@ -2854,7 +2851,7 @@
       align-items: center;
       padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fffaf4;
     }
 
@@ -2883,7 +2880,7 @@
 
     .overdue-actions button {
       height: 30px;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       padding: 0 10px;
       font-size: 11px;
       font-weight: 900;
@@ -2993,7 +2990,7 @@
     .danger-btn {
       height: 34px;
       border: 0;
-      border-radius: 9px;
+      border-radius: var(--r-sm);
       padding: 0 12px;
       background: #ffe8eb;
       color: #9f1d2d;
@@ -3011,7 +3008,7 @@
 
     .settings-panel h2 {
       margin: 0 0 12px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 900;
     }
 
@@ -3037,7 +3034,7 @@
     .field textarea {
       height: 34px;
       border: 1px solid #d9d2c8;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       padding: 0 10px;
       color: var(--text);
       background: #fffaf4;
@@ -3053,7 +3050,7 @@
     .influencer-controls input:focus,
     .influencer-controls select:focus {
       border-color: var(--orange);
-      box-shadow: 0 0 0 3px rgba(255, 90, 20, .12);
+      box-shadow: none;
       outline: none;
     }
 
@@ -3062,7 +3059,7 @@
       padding: 9px 10px;
       resize: vertical;
       line-height: 1.4;
-      font-family: Inter, "Segoe UI", "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
+      font-family: var(--sans);
     }
 
     .inline-check {
@@ -3088,7 +3085,7 @@
       margin: 4px 0 12px;
       padding: 10px;
       border: 1px solid #ded7cd;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fff8f1;
     }
 
@@ -3120,7 +3117,7 @@
       overflow: auto;
       padding: 8px;
       border: 1px solid #ded7cd;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fffaf4;
     }
 
@@ -3130,7 +3127,7 @@
       gap: 8px;
       min-height: 24px;
       padding: 3px 4px;
-      border-radius: 6px;
+      border-radius: var(--r-sm);
       color: #403832;
       font-size: 13px;
       font-weight: 700;
@@ -3170,7 +3167,7 @@
     .secondary-btn {
       height: 34px;
       border: 0;
-      border-radius: 9px;
+      border-radius: var(--r-sm);
       padding: 0 12px;
       font-size: 13px;
       font-weight: 900;
@@ -3180,7 +3177,7 @@
     .primary-btn {
       background: var(--orange);
       color: #fff;
-      box-shadow: 0 8px 18px rgba(255, 90, 20, .18);
+      box-shadow: none;
     }
 
     .secondary-btn {
@@ -3217,16 +3214,16 @@
       align-items: center;
       justify-content: space-between;
       min-height: 30px;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       padding: 0 8px;
-      background: #f5f7f9;
-      color: #48535e;
+      background: #faf7f0;
+      color: #4d443d;
       font-size: 12px;
       font-weight: 700;
     }
 
     .project-pill em {
-      color: #7b8793;
+      color: #8a7f74;
       font-style: normal;
       font-weight: 600;
     }
@@ -3236,10 +3233,10 @@
       flex: 1;
       height: 24px;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: var(--r-sm);
       padding: 0 6px;
       background: transparent;
-      color: #48535e;
+      color: #4d443d;
       font: inherit;
       font-size: 12px;
     }
@@ -3250,7 +3247,7 @@
       height: 24px;
       flex: 0 0 auto;
       padding: 2px;
-      border-color: #d3dae2;
+      border-color: #ddd3c3;
       background: #fff;
       cursor: pointer;
     }
@@ -3271,14 +3268,14 @@
       width: 42px;
       min-width: 42px;
       height: 26px;
-      border: 1px solid #cfd7df;
-      border-radius: 8px;
+      border: 1px solid #d8cdbb;
+      border-radius: var(--r-sm);
       padding: 2px;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.7);
     }
 
     .project-pill input:focus {
-      border-color: #c7d2df;
+      border-color: #d8cdbb;
       background: #fff;
       outline: none;
     }
@@ -3287,7 +3284,7 @@
       width: 22px;
       height: 22px;
       border: 0;
-      border-radius: 6px;
+      border-radius: var(--r-sm);
       color: #8a3540;
       background: transparent;
       cursor: pointer;
@@ -3297,8 +3294,8 @@
       width: auto;
       min-width: 38px;
       padding: 0 6px;
-      color: #56616d;
-      background: #eef2f5;
+      color: #605852;
+      background: #f1ebdf;
       font-size: 11px;
       font-weight: 800;
     }
@@ -3313,7 +3310,7 @@
     }
 
     .project-pill .move-btn:hover {
-      background: #dfe6ee;
+      background: #e9e1d3;
     }
 
     .subtasks {
@@ -3321,13 +3318,13 @@
       gap: 8px;
       margin: 12px 0 16px;
       padding: 10px;
-      border: 2px solid #cbd5e1;
-      border-radius: 8px;
-      background: #f4f7fb;
+      border: 2px solid #d8cdbb;
+      border-radius: var(--r-sm);
+      background: #faf7f0;
     }
 
     .subtasks-title {
-      color: #56616d;
+      color: #605852;
       font-size: 12px;
       font-weight: 900;
       text-transform: uppercase;
@@ -3341,9 +3338,9 @@
       align-items: center;
       min-height: 30px;
       padding: 6px;
-      border-radius: 7px;
+      border-radius: var(--r-sm);
       background: #fff;
-      color: #3f4a55;
+      color: #403833;
       font-size: 12px;
       font-weight: 700;
     }
@@ -3354,7 +3351,7 @@
     }
 
     .subtask-members {
-      color: #7b8793;
+      color: #8a7f74;
       font-size: 11px;
       font-weight: 700;
     }
@@ -3363,7 +3360,7 @@
       width: 24px;
       height: 24px;
       border: 0;
-      border-radius: 6px;
+      border-radius: var(--r-sm);
       color: #8a3540;
       background: transparent;
       cursor: pointer;
@@ -3379,7 +3376,7 @@
       margin: 12px 0 16px;
       padding: 10px;
       border: 2px solid #fde0cf;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fff7ef;
     }
 
@@ -3403,7 +3400,7 @@
       display: grid;
       gap: 4px;
       padding: 8px;
-      border-radius: 8px;
+      border-radius: var(--r-sm);
       background: #fff;
       box-shadow: 0 1px 0 rgba(255,255,255,.85) inset, 0 6px 16px rgba(24, 19, 15, .06);
     }
@@ -3474,18 +3471,18 @@
       display: grid;
       gap: 6px;
       padding: 10px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      background: #f8fafc;
+      border: 1px solid #e9e1d3;
+      border-radius: var(--r-sm);
+      background: #faf7f0;
     }
 
     .history-row strong {
-      color: #111827;
+      color: #17120f;
       font-size: 12px;
     }
 
     .history-row small {
-      color: #64748b;
+      color: #8a7f74;
       font-size: 11px;
       font-weight: 800;
       line-height: 1.35;
@@ -3495,9 +3492,9 @@
       justify-self: start;
       height: 28px;
       border: 0;
-      border-radius: 7px;
+      border-radius: var(--r-sm);
       padding: 0 10px;
-      background: #147bd1;
+      background: #ff7200;
       color: #fff;
       font-size: 12px;
       font-weight: 900;
@@ -3511,15 +3508,15 @@
     }
 
     .history-actions .secondary-history-btn {
-      background: #e8eef6;
-      color: #22405a;
+      background: #f1ebdf;
+      color: #322a25;
     }
 
     .history-preview {
       display: grid;
       gap: 8px;
       padding-top: 6px;
-      border-top: 1px solid #e2e8f0;
+      border-top: 1px solid #e9e1d3;
     }
 
     .history-preview[hidden] {
@@ -3528,7 +3525,7 @@
 
     .history-preview h3 {
       margin: 0;
-      color: #303943;
+      color: #322a25;
       font-size: 11px;
       letter-spacing: .08em;
       text-transform: uppercase;
@@ -3537,7 +3534,7 @@
     .history-preview ul {
       margin: 0;
       padding-left: 16px;
-      color: #475569;
+      color: #605852;
       font-size: 11px;
       font-weight: 800;
       line-height: 1.45;
@@ -3551,7 +3548,7 @@
       --hairline: rgba(24, 19, 15, .08);
       --shadow-soft: 0 8px 24px rgba(24, 19, 15, .08);
       --shadow-float: 0 18px 52px rgba(24, 19, 15, .16);
-      --orange-ring: 0 0 0 4px rgba(255, 90, 20, .14);
+      --orange-ring: 0 0 0 4px rgba(255, 114, 0, .14);
     }
 
     body {
@@ -3573,8 +3570,6 @@
     .horizontal-scrollbar,
     .settings-panel,
     .modal {
-      backdrop-filter: blur(18px) saturate(1.08);
-      -webkit-backdrop-filter: blur(18px) saturate(1.08);
     }
 
     .toolbar {
@@ -3595,13 +3590,7 @@
     .influencer-chip,
     .project-pill button,
     .subtask-delete {
-      transition:
-        transform .18s var(--ease-out),
-        box-shadow .18s var(--ease-out),
-        background-color .18s var(--ease-out),
-        color .18s var(--ease-out),
-        border-color .18s var(--ease-out),
-        filter .18s var(--ease-out);
+      transition: transform .18s var(--ease-out), background-color .18s var(--ease-out), color .18s var(--ease-out), border-color .18s var(--ease-out);
     }
 
     .icon-btn:hover,
@@ -3632,7 +3621,7 @@
     }
 
     .toolbar-btn:hover {
-      box-shadow: 0 8px 18px rgba(255, 90, 20, .2);
+      box-shadow: none;
     }
 
     .horizontal-scrollbar {
@@ -3652,12 +3641,12 @@
     }
 
     .view-switch button:not(.is-active):hover {
-      background: rgba(255, 90, 20, .08);
+      background: rgba(255, 114, 0, .08);
       color: #2f2822;
     }
 
     .view-switch button.is-active {
-      box-shadow: 0 8px 18px rgba(24, 19, 15, .22), inset 0 -2px 0 rgba(255, 90, 20, .48);
+      box-shadow: 0 8px 18px rgba(24, 19, 15, .22), inset 0 -2px 0 rgba(255, 114, 0, .48);
       animation: activeTabPop .24s var(--ease-spring);
     }
 
@@ -3674,12 +3663,7 @@
     .bar,
     .ped-post,
     .creator-card {
-      transition:
-        transform .18s var(--ease-out),
-        box-shadow .18s var(--ease-out),
-        background-color .18s var(--ease-out),
-        border-color .18s var(--ease-out),
-        opacity .18s var(--ease-out);
+      transition: transform .18s var(--ease-out), background-color .18s var(--ease-out), border-color .18s var(--ease-out), opacity .18s var(--ease-out);
       box-shadow: 0 1px 0 rgba(255,255,255,.82) inset, var(--shadow-soft);
     }
 
@@ -3694,14 +3678,14 @@
     .ped-post.is-pressing {
       transform: translateY(-2px) scale(1.006);
       outline: 0;
-      box-shadow: var(--orange-ring), 0 14px 34px rgba(24, 19, 15, .16);
+      box-shadow: none;
     }
 
     .bar.is-dragging,
     .ped-post.is-dragging {
       transform-origin: center;
       filter: saturate(1.06);
-      box-shadow: 0 24px 52px rgba(255, 90, 20, .24), 0 10px 24px rgba(24, 19, 15, .18);
+      box-shadow: var(--shadow-pop);
     }
 
     .bar-status-dot,
@@ -3709,12 +3693,12 @@
     .creator-status-swatch,
     .status-swatch,
     .project-dot {
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .1), 0 1px 2px rgba(24, 19, 15, .12);
+      box-shadow: inset 0 0 0 1px rgba(23, 18, 15, .1), 0 1px 2px rgba(24, 19, 15, .12);
     }
 
     .hidden-task-indicator,
     .ped-hidden-indicator {
-      transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out);
+      transition: transform .18s var(--ease-out);
       animation: indicatorPulse 1.8s ease-in-out infinite;
     }
 
@@ -3730,7 +3714,7 @@
     .status-menu button:hover,
     .context-menu button:hover {
       transform: translateX(2px);
-      background: rgba(255, 90, 20, .1);
+      background: rgba(255, 114, 0, .1);
     }
 
     .modal-backdrop.open {
@@ -3760,10 +3744,7 @@
     .influencer-controls input,
     .influencer-controls select,
     .check-list {
-      transition:
-        border-color .18s var(--ease-out),
-        box-shadow .18s var(--ease-out),
-        background-color .18s var(--ease-out);
+      transition: border-color .18s var(--ease-out), background-color .18s var(--ease-out);
       box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
     }
 
@@ -3787,7 +3768,7 @@
     }
 
     .primary-btn {
-      box-shadow: 0 10px 20px rgba(255, 90, 20, .22), 0 1px 0 rgba(255,255,255,.24) inset;
+      box-shadow: 0 10px 20px rgba(255, 114, 0, .22), 0 1px 0 rgba(255,255,255,.24) inset;
     }
 
     .primary-btn:hover {
@@ -3829,7 +3810,7 @@
     .subtask-row,
     .history-row {
       box-shadow: 0 1px 0 rgba(255,255,255,.85) inset;
-      transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), background-color .18s var(--ease-out);
+      transition: transform .18s var(--ease-out), background-color .18s var(--ease-out);
     }
 
     .project-pill:hover,
@@ -3845,12 +3826,12 @@
 
     .login-button,
     .login-logo {
-      transition: transform .2s var(--ease-out), box-shadow .2s var(--ease-out), filter .2s var(--ease-out);
+      transition: transform .2s var(--ease-out);
     }
 
     .login-button:hover {
       transform: translateY(-1px);
-      box-shadow: 0 18px 38px rgba(255, 79, 10, .28);
+      box-shadow: none;
     }
 
     @keyframes menuIn {
@@ -3957,7 +3938,7 @@
       .brand-mark {
         width: 30px;
         height: 30px;
-        border-radius: 9px;
+        border-radius: var(--r-sm);
       }
       .brand-title {
         display: inline;
@@ -4144,7 +4125,7 @@
         grid-template-columns: minmax(150px, 1fr) minmax(116px, 132px);
         overflow-x: auto;
         padding-bottom: 4px;
-        background: #f6f8fb;
+        background: #faf7f0;
       }
       .context-menu,
       .status-menu {
@@ -4153,17 +4134,18 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="./theme-otacos.css?v=1">
 </head>
 <body>
   <section class="login-page" aria-label="Accesso">
     <div class="login-box">
-      <img class="login-logo" src="otacos-logo.jpg" alt="O'Tacos">
+      <img class="login-logo" src="./otacos-logo.svg" alt="O'Tacos" width="410" height="70">
       <h1 class="login-title">WORKFLOW</h1>
       <label class="login-field">
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
         <span class="login-error" id="loginError"></span>
       </label>
-      <button class="login-button" id="loginButton" type="button">ACCEDI</button>
+      <button class="login-button" id="loginButton" type="button">Log in</button>
     </div>
   </section>
 
@@ -4173,12 +4155,8 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 1 1 0 12h-2"/></svg>
       </button>
       <div class="brand" aria-label="Workflow">
-        <div class="brand-mark" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1" y="3" width="12" height="2" rx="1" fill="currentColor"/>
-            <rect x="1" y="6.5" width="8" height="2" rx="1" fill="currentColor"/>
-            <rect x="1" y="10" width="10" height="2" rx="1" fill="currentColor"/>
-          </svg>
+        <div class="brand-mark ot-wordmark" aria-hidden="true">
+          <svg viewBox="0 0 205 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M30.3484 5.14802C28.7293 3.65343 26.8195 2.49098 24.6607 1.66065C22.5018 0.830324 20.2184 0.415161 17.852 0.415161C15.4441 0.415161 13.1607 0.830324 11.0018 1.66065C8.84297 2.49098 6.97474 3.65343 5.31409 5.14802C3.69495 6.64261 2.40795 8.42781 1.41155 10.5451C0.498196 12.621 0 14.9459 0 17.4368C0 19.9278 0.498196 22.2527 1.45307 24.3286C2.40795 26.4044 3.69495 28.2311 5.3556 29.7257C6.97474 31.2203 8.88449 32.4242 11.0433 33.2546C13.2022 34.0849 15.4856 34.5 17.8935 34.5C20.26 34.5 22.5434 34.0849 24.7022 33.2546C26.8611 32.4242 28.7708 31.2618 30.3899 29.7257C32.0091 28.2311 33.3376 26.4044 34.2925 24.3286C35.2473 22.2527 35.7455 19.9278 35.7455 17.4368C35.7455 14.9459 35.2473 12.621 34.2925 10.5451C33.2961 8.46932 31.9676 6.68412 30.3484 5.14802ZM25.9892 21.0903C25.6156 22.2527 25.0343 23.2076 24.287 24.0379C23.5397 24.8683 22.6264 25.5325 21.547 26.0307C20.4675 26.5289 19.2221 26.778 17.8105 26.778C16.3989 26.778 15.1535 26.5289 14.1155 26.0307C13.0776 25.5325 12.1228 24.8683 11.3755 24.0379C10.6282 23.2076 10.0469 22.2112 9.6733 21.0903C9.29965 19.9693 9.09207 18.7239 9.09207 17.4368C9.09207 16.1498 9.29965 14.9044 9.6733 13.7834C10.0469 12.621 10.6282 11.6661 11.3755 10.8358C12.1228 10.0054 13.0361 9.34117 14.1155 8.88449C15.195 8.42781 16.4405 8.17871 17.8105 8.17871C19.2221 8.17871 20.4675 8.42781 21.547 8.88449C22.6264 9.34117 23.5397 10.0054 24.287 10.8358C25.0343 11.6661 25.6156 12.6625 25.9892 13.7834C26.3629 14.9044 26.5704 16.1498 26.5704 17.4368C26.5704 18.7239 26.4044 19.9693 25.9892 21.0903Z" fill="#FF7200"/><path d="M75.0206 0.830322H48.5332V8.30326H57.3347V34.0434H66.2191V8.30326H75.0206V0.830322Z" fill="#FF7200"/><path d="M89.3843 0C89.2598 0 89.1352 0.0830326 89.0937 0.249098L72.9023 34.0849H81.6208L82.8663 31.2618H95.3627L96.6497 34.0849H105.825L89.6749 0.249098C89.6334 0.0830326 89.5089 0 89.3843 0ZM85.6894 24.5777L89.0107 16.8556L92.415 24.5777H85.6894Z" fill="#FF7200"/><path d="M127.829 25.491C126.666 26.3629 125.006 26.778 122.847 26.778C121.56 26.778 120.439 26.5289 119.443 26.0307C118.446 25.5325 117.574 24.8683 116.869 24.0379C116.163 23.2076 115.623 22.2112 115.249 21.0903C114.876 19.9693 114.668 18.7239 114.668 17.4368C114.668 16.1498 114.834 14.9044 115.208 13.7834C115.582 12.621 116.08 11.6661 116.786 10.8358C117.45 10.0054 118.28 9.34117 119.235 8.88449C120.19 8.42781 121.311 8.17871 122.515 8.17871C123.553 8.17871 124.466 8.30326 125.255 8.51084C126.044 8.71842 126.749 9.05055 127.372 9.4242C127.953 9.79785 128.493 10.213 128.908 10.7112C129.323 11.1679 129.697 11.6661 130.029 12.1643L136.713 7.639C136.049 6.64261 135.219 5.68773 134.305 4.81589C133.392 3.94405 132.354 3.19675 131.192 2.53249C130.029 1.90975 128.701 1.41155 127.248 1.03791C125.795 0.622743 124.175 0.415161 122.39 0.415161C120.19 0.415161 118.031 0.830324 115.997 1.66065C113.962 2.49098 112.177 3.65343 110.641 5.14802C109.105 6.64261 107.86 8.42781 106.946 10.5451C106.033 12.621 105.576 14.9459 105.576 17.4368C105.576 19.9278 106.033 22.2527 106.988 24.3286C107.901 26.4044 109.188 28.2311 110.766 29.7257C112.343 31.2203 114.17 32.4242 116.246 33.2546C118.322 34.0849 120.564 34.5 122.888 34.5C126.293 34.5 129.157 33.8773 131.482 32.6318C133.849 31.3863 135.842 29.352 137.502 26.5704L130.652 22.1697C129.946 23.4982 128.991 24.6192 127.829 25.491Z" fill="#FF7200"/><path d="M170.383 5.14802C168.764 3.65343 166.854 2.49098 164.695 1.66065C162.537 0.830324 160.253 0.415161 157.887 0.415161C155.479 0.415161 153.195 0.830324 151.036 1.66065C148.878 2.49098 147.009 3.65343 145.349 5.14802C143.73 6.64261 142.443 8.42781 141.446 10.5451C140.491 12.621 139.993 14.9459 139.993 17.4368C139.993 19.9278 140.45 22.2527 141.446 24.3286C142.401 26.4044 143.688 28.2311 145.349 29.7257C146.968 31.2203 148.878 32.4242 151.036 33.2546C153.195 34.0849 155.479 34.5 157.887 34.5C160.253 34.5 162.537 34.0849 164.695 33.2546C166.854 32.4242 168.764 31.2618 170.383 29.7257C172.002 28.2311 173.289 26.4044 174.286 24.3286C175.24 22.2527 175.739 19.9278 175.739 17.4368C175.739 14.9459 175.24 12.621 174.286 10.5451C173.289 8.46932 172.002 6.68412 170.383 5.14802ZM166.024 21.0903C165.65 22.2527 165.069 23.2076 164.322 24.0379C163.574 24.8683 162.661 25.5325 161.582 26.0307C160.502 26.5289 159.257 26.778 157.887 26.778C156.475 26.778 155.23 26.5289 154.192 26.0307C153.112 25.5325 152.199 24.8683 151.452 24.0379C150.704 23.2076 150.123 22.2112 149.749 21.0903C149.376 19.9693 149.168 18.7239 149.168 17.4368C149.168 16.1498 149.376 14.9044 149.749 13.7834C150.165 12.621 150.704 11.6661 151.452 10.8358C152.199 10.0054 153.112 9.34117 154.192 8.88449C155.271 8.42781 156.517 8.17871 157.887 8.17871C159.298 8.17871 160.544 8.42781 161.582 8.88449C162.661 9.34117 163.574 10.0054 164.322 10.8358C165.069 11.6661 165.65 12.6625 166.024 13.7834C166.398 14.9044 166.605 16.1498 166.605 17.4368C166.605 18.7239 166.398 19.9693 166.024 21.0903Z" fill="#FF7200"/><path d="M199.528 15.8177C198.407 15.1534 196.995 14.5307 195.335 13.991L190.934 12.5379C190.104 12.2888 189.523 11.9567 189.149 11.6246C188.775 11.2509 188.568 10.7527 188.568 10.13C188.568 9.46572 188.817 8.926 189.356 8.46932C189.896 8.01265 190.685 7.80506 191.764 7.80506C193.093 7.80506 194.172 8.01265 195.003 8.46932C195.833 8.926 196.58 9.50723 197.245 10.213L202.31 4.89892C201.811 4.31769 201.23 3.77798 200.566 3.23827C199.902 2.74007 199.113 2.24188 198.241 1.82672C197.369 1.41155 196.331 1.07942 195.169 0.830324C194.006 0.581226 192.761 0.415161 191.308 0.415161C189.855 0.415161 188.443 0.622743 187.073 1.03791C185.703 1.45307 184.499 2.07581 183.42 2.90614C182.34 3.73647 181.51 4.77437 180.887 6.01986C180.264 7.26535 179.974 8.67691 179.974 10.3376C179.974 11.7076 180.181 12.9116 180.597 13.991C181.012 15.0289 181.593 15.9838 182.299 16.8141C183.046 17.6444 183.918 18.3502 184.914 18.9314C185.911 19.5127 187.032 20.0109 188.236 20.3845L192.138 21.713C193.259 22.0867 194.089 22.4603 194.629 22.8755C195.169 23.2906 195.418 23.8304 195.418 24.5777C195.418 25.5325 195.044 26.1968 194.338 26.612C193.591 27.0271 192.553 27.2347 191.225 27.2347C189.564 27.2347 188.194 26.9026 187.115 26.1968C186.035 25.491 185.08 24.6607 184.291 23.6228L177.856 28.4802C178.396 29.1444 179.019 29.8917 179.849 30.5975C180.638 31.3448 181.593 32.0091 182.755 32.5903C183.876 33.1715 185.163 33.6697 186.658 34.0434C188.152 34.417 189.813 34.6246 191.681 34.6246C193.882 34.6246 195.75 34.3755 197.369 33.8358C198.947 33.2961 200.275 32.5903 201.313 31.6769C202.351 30.7636 203.098 29.6426 203.597 28.3556C204.095 27.0686 204.344 25.6571 204.344 24.121C204.344 22.9585 204.178 21.8791 203.887 20.8827C203.597 19.8863 203.098 18.973 202.393 18.1426C201.562 17.2293 200.649 16.482 199.528 15.8177Z" fill="#FF7200"/><path d="M39.6062 8.88449C40.395 8.34477 40.8932 7.639 40.9762 7.34838C40.0629 7.26535 38.6928 6.76715 38.0701 6.14441C37.4889 5.52167 37.1982 4.77437 37.1982 3.94405C37.1982 3.0722 37.4889 2.32491 38.0701 1.70216C38.6513 1.12094 39.3986 0.830322 40.2704 0.830322C41.2253 0.830322 42.0557 1.20397 42.7614 1.99278C43.4672 2.78159 43.8409 3.73646 43.8409 4.8574C43.7993 7.18232 42.9275 8.51084 40.5195 10.2545C40.312 10.4206 40.0214 10.3376 39.8968 10.13L39.4816 9.50723C39.3571 9.29965 39.3986 9.00903 39.6062 8.88449Z" fill="#FF7200"/></svg>
         </div>
         <span class="brand-title">Workflow</span>
       </div>
@@ -4193,7 +4171,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
         </button>
       </div>
-      <button class="today-btn" id="jumpTodayButton" type="button">Today</button>
+      <div class="ot-nav" role="group" aria-label="Move in time"><button class="ot-nav-btn" id="otPrevButton" type="button" title="Earlier (←)" aria-label="Earlier"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><button class="today-btn" id="jumpTodayButton" type="button" title="Today (T)">Today</button><button class="ot-nav-btn" id="otNextButton" type="button" title="Later (→)" aria-label="Later"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button></div>
       <button class="toolbar-btn" id="openTaskPanel" type="button">Task</button>
       <button class="toolbar-btn" id="openProjectPanel" type="button">Project</button>
       <button class="toolbar-btn overdue-btn" id="openOverdueModal" type="button">Backlog 0</button>
@@ -4272,12 +4250,12 @@
   <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
     <input id="horizontalScrollRange" type="range" min="0" max="0" value="0" aria-label="Horizontal scroll">
   </div>
-  <div class="sync">Sincronizzazione...</div>
+  <div class="sync">Syncing...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="Project">
     <h2>Project</h2>
     <form id="projectForm">
       <label class="field">Name<input id="projectName" value="New project" required></label>
-      <label class="field">Project color<input id="projectColor" type="color" value="#147bd1" required></label>
+      <label class="field">Project color<input id="projectColor" type="color" value="#ff7200" required></label>
       <div class="panel-actions">
         <button class="primary-btn" type="submit">Add project</button>
         <button class="secondary-btn" type="button" id="resetBoard">Reset</button>
@@ -4304,19 +4282,19 @@
       <label class="field">Label<select id="taskLabel"></select></label>
       <div class="creator-block" id="creatorOptions" hidden>
         <div class="creator-block-title">Creator duplicates</div>
-        <label class="inline-check"><input id="creatorContact" type="checkbox"> Contattare</label>
-        <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Ok Alice</label>
-        <label class="inline-check"><input id="creatorContract" type="checkbox"> Mandare contratto</label>
+        <label class="inline-check"><input id="creatorContact" type="checkbox"> Contact creator</label>
+        <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Alice for OK</label>
+        <label class="inline-check"><input id="creatorContract" type="checkbox"> Send contract</label>
         <label class="inline-check"><input id="creatorBrief" type="checkbox"> Brief</label>
-        <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+        <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Notify Giorgia</label>
         <label class="inline-check"><input id="creatorVideo" type="checkbox"> Video in store</label>
         <label class="field">Video in store date<input id="creatorVideoDate" type="date" value="2026-06-16"></label>
-        <label class="inline-check"><input id="creatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
-        <label class="field">Mandare video ad Alice date<input id="creatorSendVideoAliceDate" type="date" value="2026-06-16"></label>
-        <label class="inline-check"><input id="creatorPublish" type="checkbox"> Pubblicazione</label>
-        <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorSendVideoAlice" type="checkbox"> Send video to Alice</label>
+        <label class="field">Send video to Alice — date<input id="creatorSendVideoAliceDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorPublish" type="checkbox"> Publication</label>
+        <label class="field">Publication date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
       </div>
-      <label class="field">Link<textarea id="taskInfo" placeholder="Link o note"></textarea></label>
+      <label class="field">Link<textarea id="taskInfo" placeholder="Link or notes"></textarea></label>
       <label class="inline-check"><input id="taskPedEnabled" type="checkbox"> Add to PED</label>
       <div class="ped-fields" id="taskPedFields" hidden>
         <label class="field">PED date<input id="taskPedDate" type="date" value="2026-06-16"></label>
@@ -4515,19 +4493,19 @@
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <div class="creator-block" id="editCreatorOptions" hidden>
           <div class="creator-block-title">Creator duplicates</div>
-          <label class="inline-check"><input id="editCreatorContact" type="checkbox"> Contattare</label>
-          <label class="inline-check"><input id="editCreatorAskOk" type="checkbox"> Ask Ok Alice</label>
-          <label class="inline-check"><input id="editCreatorContract" type="checkbox"> Mandare contratto</label>
+          <label class="inline-check"><input id="editCreatorContact" type="checkbox"> Contact creator</label>
+          <label class="inline-check"><input id="editCreatorAskOk" type="checkbox"> Ask Alice for OK</label>
+          <label class="inline-check"><input id="editCreatorContract" type="checkbox"> Send contract</label>
           <label class="inline-check"><input id="editCreatorBrief" type="checkbox"> Brief</label>
-          <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+          <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Notify Giorgia</label>
           <label class="inline-check"><input id="editCreatorVideo" type="checkbox"> Video in store</label>
           <label class="field">Video in store date<input id="editCreatorVideoDate" type="date"></label>
-          <label class="inline-check"><input id="editCreatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
-          <label class="field">Mandare video ad Alice date<input id="editCreatorSendVideoAliceDate" type="date"></label>
-          <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Pubblicazione</label>
-          <label class="field">Pubblicazione date<input id="editCreatorPublishDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorSendVideoAlice" type="checkbox"> Send video to Alice</label>
+          <label class="field">Send video to Alice — date<input id="editCreatorSendVideoAliceDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Publication</label>
+          <label class="field">Publication date<input id="editCreatorPublishDate" type="date"></label>
         </div>
-        <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
+        <label class="field">Link<textarea id="editTaskInfo" placeholder="Link or notes"></textarea></label>
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
         <div class="ped-fields" id="editTaskPedFields" hidden>
           <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
@@ -4740,8 +4718,107 @@
       measurementId: "G-22GLYLHKKD"
     };
 
-    const monthNames = ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"];
-    const weekdayNames = ["DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"];
+    /* ===== v2 perf helpers ===== */
+    const otReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const otCssVarCache = new Map();
+    function otCssNumber(name) {
+      if (otCssVarCache.has(name)) return otCssVarCache.get(name);
+      const value = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+      otCssVarCache.set(name, value);
+      return value;
+    }
+    function otInvalidateCssVars() { otCssVarCache.clear(); }
+    let otScrollbarRaf = 0;
+    function otScrollbarFrame() {
+      if (otScrollbarRaf) return;
+      otScrollbarRaf = requestAnimationFrame(() => { otScrollbarRaf = 0; syncHorizontalScrollbarNow(); });
+    }
+    window.addEventListener("resize", otInvalidateCssVars);
+    function otRafThrottle(fn) {
+      let frame = 0;
+      return function throttled() {
+        if (frame) return;
+        frame = requestAnimationFrame(() => { frame = 0; fn(); });
+      };
+    }
+    function otIdle(fn, wait = 140) {
+      let timer = 0;
+      return function idle() {
+        clearTimeout(timer);
+        timer = setTimeout(() => requestAnimationFrame(fn), wait);
+      };
+    }
+    /* smooth (lerp) scrolling for the views where the wheel is translated by code */
+    const otSmoothScrollers = new WeakMap();
+    function otSmoothScrollBy(el, axis, delta) {
+      let st = otSmoothScrollers.get(el);
+      if (!st) { st = { x: null, y: null, raf: 0 }; otSmoothScrollers.set(el, st); }
+      const prop = axis === "x" ? "scrollLeft" : "scrollTop";
+      const max = axis === "x" ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight;
+      const base = st[axis] ?? el[prop];
+      const target = Math.max(0, Math.min(max, base + delta));
+      if (Math.abs(target - el[prop]) < 0.5 && st[axis] === null) return false;
+      if (otReduceMotion) { el[prop] = target; return true; }
+      st[axis] = target;
+      const step = () => {
+        st.raf = 0;
+        let moving = false;
+        ["x", "y"].forEach((ax) => {
+          if (st[ax] === null) return;
+          const p = ax === "x" ? "scrollLeft" : "scrollTop";
+          const current = el[p];
+          if (!el.clientWidth) { st[ax] = null; return; }
+          const next = current + (st[ax] - current) * 0.2;
+          if (Math.abs(st[ax] - next) < 0.6) { el[p] = st[ax]; st[ax] = null; return; }
+          el[p] = next;
+          if (Math.abs(el[p] - current) < 0.1) { st[ax] = null; return; }
+          moving = true;
+        });
+        if (moving) st.raf = requestAnimationFrame(step);
+      };
+      if (!st.raf) st.raf = requestAnimationFrame(step);
+      return true;
+    }
+    function otCancelSmoothScroll(el) {
+      const st = otSmoothScrollers.get(el);
+      if (!st) return;
+      st.x = null; st.y = null;
+      if (st.raf) cancelAnimationFrame(st.raf);
+      st.raf = 0;
+    }
+    /* FLIP: cards glide to their new place instead of jumping after a re-render */
+    let otFlipOverride = null;
+    function otFlipKey(el) { return el.dataset.taskId || el.dataset.pedPostId || ""; }
+    function otFlipCapture(container, selector) {
+      if (otReduceMotion || !container || !container.isConnected) return null;
+      const map = new Map();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      container.querySelectorAll(selector).forEach((el) => {
+        const key = otFlipKey(el);
+        if (!key) return;
+        const r = el.getBoundingClientRect();
+        if (!r.width || r.right < -200 || r.left > vw + 200 || r.bottom < -200 || r.top > vh + 200) return;
+        map.set(key, r);
+      });
+      if (otFlipOverride) { map.set(otFlipOverride.key, otFlipOverride.rect); otFlipOverride = null; }
+      return map;
+    }
+    function otFlipPlay(container, selector, before) {
+      if (!before || !before.size) return;
+      container.querySelectorAll(selector).forEach((el) => {
+        const old = before.get(otFlipKey(el));
+        if (!old) return;
+        const r = el.getBoundingClientRect();
+        const dx = old.left - r.left, dy = old.top - r.top;
+        if ((Math.abs(dx) < 1 && Math.abs(dy) < 1) || Math.abs(dx) > 1600 || Math.abs(dy) > 900) return;
+        el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "translate(0, 0)" }],
+          { duration: 280, easing: "cubic-bezier(.16, 1, .3, 1)" });
+      });
+    }
+    /* ===== end v2 perf helpers ===== */
+
+    const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+    const weekdayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     const monthsEl = document.getElementById("months");
     const weekendsEl = document.getElementById("weekends");
     const boardEl = document.querySelector(".board");
@@ -5037,7 +5114,7 @@
       { label: "XS", width: 90 },
       { label: "S", width: 150 },
       { label: "M", width: 230 },
-      { label: "Compatta", width: 320 },
+      { label: "Compact", width: 320 },
       { label: "Max", width: 380 },
       { label: "420", width: 420 },
       { label: "460", width: 460 }
@@ -5086,7 +5163,7 @@
               pendingSaveCommittedAt = 0;
               hasUnsyncedChanges = false;
               updateUndoButton();
-              setSyncMessage("Sincronizzato live");
+              setSyncMessage("Synced");
               return;
             }
             if (pendingLocalData && pendingLocalRevision && remoteRevision <= pendingLocalRevision) return;
@@ -5107,12 +5184,12 @@
             committedData = structuredClone(data);
             saveLocalSnapshot(data, historyEntries, dataVersion);
             scheduleSyncedRender();
-            setSyncMessage("Sincronizzato live");
+            setSyncMessage("Synced");
             if (shouldRepairRemote && !pendingLocalData) saveData(true);
           }, () => {
-            setSyncMessage("Errore sincronizzazione Firestore: dati condivisi non aggiornati", true);
+            setSyncMessage("Sync error: shared data is not up to date", true);
           });
-          setSyncMessage("Connesso a Firestore");
+          setSyncMessage("Connected");
           if (snapshot.exists()) {
             const snapshotData = snapshot.data();
             const remoteRevision = Number(snapshotData.revision || 0);
@@ -5125,7 +5202,7 @@
               pendingLocalRevision = dataVersion;
               suppressRemoteUntil = Date.now() + 30000;
               saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
-              setSyncMessage(`Recupero dati dalla copia di sicurezza: ${safest.source}`);
+              setSyncMessage(`Restoring data from safety copy: ${safest.source}`);
               setTimeout(retryPendingLocalSave, 250);
               return normalizeData(safest.data);
             }
@@ -5138,7 +5215,7 @@
           historyEntries = [];
           return normalizeData(starterData);
         }
-        setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
+        setSyncMessage("Offline: saving on this device only", true);
         const localSnapshot = readLocalSnapshot();
         const localSafety = await readLatestLocalSafetyBackup();
         const bestLocal = [localSnapshot, localSafety]
@@ -5149,7 +5226,7 @@
         return bestLocal?.data || normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
-        setSyncMessage(`Non riesco a leggere i dati condivisi: ${error?.code || error?.message || "errore Firebase"}`, true);
+        setSyncMessage(`Cannot read shared data: ${error?.code || error?.message || "Firebase error"}`, true);
         const localSnapshot = readLocalSnapshot();
         const localSafety = await readLatestLocalSafetyBackup();
         const bestLocal = [localSnapshot, localSafety]
@@ -6188,7 +6265,7 @@
         pendingLocalData = null;
         pendingLocalRevision = 0;
         console.error("Restore failed", error);
-        setSyncMessage(`Restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
+        setSyncMessage(`Restore failed: ${error?.code || error?.message || "unknown error"}`, true);
       }
     }
 
@@ -6238,7 +6315,7 @@
         pendingLocalRevision = 0;
         pendingSaveCommittedAt = 0;
         console.error("Safety restore failed", error);
-        setSyncMessage(`Safety restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
+        setSyncMessage(`Safety restore failed: ${error?.code || error?.message || "unknown error"}`, true);
       }
     }
 
@@ -6264,7 +6341,7 @@
         // Whatever went wrong (bad data, storage error, etc.), never let it
         // vanish as a silent, unhandled failure - always tell the user.
         console.error("saveData failed before queueing", error);
-        setSyncMessage(`Salvataggio non riuscito: ${error?.message || "errore sconosciuto"}. Ricarica la pagina e riprova.`, true);
+        setSyncMessage(`Save failed: ${error?.message || "unknown error"}. Reload the page and try again.`, true);
         throw error;
       }
     }
@@ -6361,7 +6438,7 @@
             hasUnsyncedChanges = false;
           }
           updateUndoButton();
-          setSyncMessage("Sincronizzato live");
+          setSyncMessage("Synced");
           return;
         }
         saveLocalSnapshot(snapshotData, historyEntries, dataVersion);
@@ -6369,7 +6446,7 @@
         committedData = structuredClone(snapshotData);
         hasUnsyncedChanges = false;
         updateUndoButton();
-        setSyncMessage("Firebase non configurato: salvato solo locale", true);
+        setSyncMessage("Offline: saved on this device only", true);
       } catch (error) {
         applyingRemoteUpdate = false;
         hasUnsyncedChanges = true;
@@ -6383,7 +6460,7 @@
         committedData = structuredClone(normalizeData(pendingLocalData));
         updateUndoButton();
         console.error("Firestore save failed", error);
-        setSyncMessage(`Salvataggio non sincronizzato, riprovo automaticamente: ${error?.code || error?.message || "errore Firestore"}`, true);
+        setSyncMessage(`Not synced yet, retrying automatically: ${error?.code || error?.message || "Firestore error"}`, true);
       }
     }
 
@@ -6404,7 +6481,7 @@
         pendingSaveCommittedAt = Date.now();
         hasUnsyncedChanges = false;
         saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
-        setSyncMessage("Sincronizzato live");
+        setSyncMessage("Synced");
       } catch (error) {
         console.error("Firestore retry failed", error);
         const retryError = String(error?.code || error?.message || "");
@@ -6427,7 +6504,7 @@
           setSyncMessage("Dati locali vecchi scartati: sincronizzato con Firebase", true);
           return;
         }
-        setSyncMessage(`Riprovo salvataggio: ${error?.code || error?.message || "errore Firestore"}`, true);
+        setSyncMessage(`Retrying save: ${error?.code || error?.message || "Firestore error"}`, true);
       } finally {
         setTimeout(() => {
           applyingRemoteUpdate = false;
@@ -6490,6 +6567,7 @@
     function updateZoom() {
       const current = zooms[zoomIndex];
       root.style.setProperty("--day", `${current.width}px`);
+      otInvalidateCssVars();
       document.getElementById("zoomLabel").textContent = current.label;
       document.getElementById("zoomOut").disabled = zoomIndex === 0;
       document.getElementById("zoomIn").disabled = zoomIndex === zooms.length - 1;
@@ -6505,13 +6583,19 @@
       return scroller;
     }
 
-    function syncHorizontalScrollbar() {
+    function syncHorizontalScrollbar() { otScrollbarFrame(); }
+    function syncHorizontalScrollbarNow() {
       const scrollEl = activeHorizontalScrollElement();
       if (!scrollEl || !horizontalScrollbar || !horizontalScrollRange) return;
       const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
-      horizontalScrollRange.max = String(Math.round(maxScroll));
-      horizontalScrollRange.value = String(Math.round(Math.min(scrollEl.scrollLeft, maxScroll)));
-      horizontalScrollbar.hidden = maxScroll <= 4;
+      const nextMax = String(Math.round(maxScroll));
+      const nextValue = String(Math.round(Math.min(scrollEl.scrollLeft, maxScroll)));
+      if (horizontalScrollRange.max !== nextMax) horizontalScrollRange.max = nextMax;
+      if (horizontalScrollRange.value !== nextValue) horizontalScrollRange.value = nextValue;
+      const trackW = horizontalScrollRange.clientWidth || 1;
+      horizontalScrollRange.style.setProperty("--thumb-w", `${Math.round(Math.max(36, Math.min(trackW * .6, trackW * scrollEl.clientWidth / Math.max(1, scrollEl.scrollWidth))))}px`);
+      const hide = maxScroll <= 4;
+      if (horizontalScrollbar.hidden !== hide) horizontalScrollbar.hidden = hide;
     }
 
     function wheelPixelDelta(event) {
@@ -6545,16 +6629,8 @@
       const verticalBlocked = y > 0 ? !canScrollDown : y < 0 ? !canScrollUp : true;
       const horizontalIntent = Math.abs(x) > 0 || event.shiftKey || verticalBlocked;
       if (!horizontalIntent) return;
-      const before = pedView.scrollLeft;
       const delta = Math.abs(x) > 0 ? x : y;
-      pedView.scrollLeft = Math.max(0, Math.min(maxLeft, before + delta));
-      if (pedView.scrollLeft !== before) {
-        event.preventDefault();
-        updatePedHiddenIndicators();
-        syncPedHeaderPosition();
-        updatePedHourLabels();
-        syncHorizontalScrollbar();
-      }
+      if (otSmoothScrollBy(pedView, "x", delta)) event.preventDefault();
     }
 
     function initials(rawValue) {
@@ -6770,7 +6846,7 @@
       if (!value) return "-";
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return value;
-      return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+      return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
     function option(value, label = value) {
@@ -7627,18 +7703,21 @@
     }
 
     const BUDGET_CATEGORY_COLORS = {
-      Influencer: "#ff4b14",
-      Media: "#111827",
-      Events: "#0ea5e9",
-      Fee: "#22c55e",
-      General: "#f59e0b",
-      Forecast: "#a855f7"
+      Influencer: "#ff7200",
+      Media: "#17120f",
+      Events: "#ffc233",
+      Fee: "#b1a596",
+      General: "#c65400",
+      Forecast: "#605852"
     };
-    const BUDGET_FALLBACK_COLORS = ["#f59e0b", "#a855f7", "#ec4899", "#64748b"];
+    const BUDGET_FALLBACK_COLORS = ["#ff7200", "#17120f", "#ffc233", "#c65400", "#b1a596", "#605852"];
 
     function budgetCategoryColor(name, fallbackIndex) {
       if (BUDGET_CATEGORY_COLORS[name]) return BUDGET_CATEGORY_COLORS[name];
-      return BUDGET_FALLBACK_COLORS[fallbackIndex % BUDGET_FALLBACK_COLORS.length];
+      if (!budgetCategoryColor.assigned) budgetCategoryColor.assigned = new Map();
+      const assigned = budgetCategoryColor.assigned;
+      if (!assigned.has(name)) assigned.set(name, BUDGET_FALLBACK_COLORS[assigned.size % BUDGET_FALLBACK_COLORS.length]);
+      return assigned.get(name);
     }
 
     function budgetBarsMarkup(items, total) {
@@ -8086,6 +8165,17 @@
       return `logo-gantt-translation:${text.trim().toLowerCase()}`;
     }
 
+    function otTranslateLater(task) {
+      const source = task.name;
+      translateToEnglish(source).then((translated) => {
+        if (!translated || task.name !== source || task.nameEn === translated) return;
+        task.nameEn = translated;
+        touchItem(task);
+        saveData(true);
+        renderBoard();
+      }).catch(() => {});
+    }
+
     async function translateToEnglish(text) {
       const source = text.trim();
       if (!source) return "";
@@ -8095,7 +8185,7 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 2500);
       try {
-        setSyncMessage("Traduzione...");
+        setSyncMessage("Translating...");
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=it|en`;
         const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error("Translation failed");
@@ -8105,7 +8195,7 @@
         localStorage.setItem(cacheKey, result);
         return result;
       } catch {
-        setSyncMessage("Traduzione non disponibile", true);
+        setSyncMessage("Translation unavailable", true);
         return source;
       } finally {
         clearTimeout(timeout);
@@ -9829,6 +9919,12 @@
 
     function renderPed() {
       if (appStarted && !isViewActive("ped")) return;
+      const flip = appStarted ? otFlipCapture(pedCalendar, ".ped-post") : null;
+      renderPedImpl();
+      otFlipPlay(pedCalendar, ".ped-post", flip);
+    }
+
+    function renderPedImpl() {
       pedCalendar.innerHTML = "";
       applyTodayColumn(pedCalendar);
       const items = pedItems();
@@ -9940,7 +10036,7 @@
               nextTop += post.scrollHeight + 10;
             });
         });
-        const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + pedTotalHourHeight() + 80;
+        const height = otCssNumber("--timeline-head") + pedTotalHourHeight() + 80;
         pedCalendar.style.height = `${height}px`;
         updatePedHourLabels();
         updatePedHiddenIndicators();
@@ -9958,17 +10054,13 @@
       requestAnimationFrame(syncHorizontalScrollbar);
     }
 
-    function syncPedHeaderPosition() {
-      const months = pedCalendar.querySelector(".ped-months");
-      if (!months) return;
-      months.style.transform = "translateZ(0)";
-    }
+    function syncPedHeaderPosition() {}
 
+    let otPedHourLabelsEl = null;
     function updatePedHourLabels() {
-      const pedView = document.getElementById("pedView");
-      const labels = pedCalendar.querySelector(".ped-hour-labels");
-      if (!labels) return;
-      labels.style.transform = `translateX(${pedView.scrollLeft + 8}px)`;
+      if (!otPedHourLabelsEl || !otPedHourLabelsEl.isConnected) otPedHourLabelsEl = pedCalendar.querySelector(".ped-hour-labels");
+      if (!otPedHourLabelsEl) return;
+      otPedHourLabelsEl.style.transform = `translate3d(${pedView.scrollLeft + 8}px, 0, 0)`;
     }
 
     function updatePedHiddenIndicators() {
@@ -9977,8 +10069,8 @@
       updatePedHourLabels();
       pedCalendar.querySelectorAll(".ped-hidden-indicator").forEach((indicator) => indicator.remove());
       const pedView = document.getElementById("pedView");
-      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
-      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const timelineHead = otCssNumber("--timeline-head");
+      const dayWidth = otCssNumber("--day");
       const bottomControlsSpace = 116;
       const visibleBottom = pedView.scrollTop + pedView.clientHeight - timelineHead - bottomControlsSpace;
       const datesWithHidden = new Map();
@@ -10036,6 +10128,12 @@
 
     function renderCreatorCalendar() {
       if (appStarted && !isViewActive("creator-calendar")) return;
+      const flip = appStarted ? otFlipCapture(creatorCalendar, ".creator-card") : null;
+      renderCreatorCalendarImpl();
+      otFlipPlay(creatorCalendar, ".creator-card", flip);
+    }
+
+    function renderCreatorCalendarImpl() {
       creatorCalendar.innerHTML = "";
       applyTodayColumn(creatorCalendar);
       const items = creatorCalendarItems();
@@ -10120,7 +10218,7 @@
         });
         maxColumnHeight = Math.max(maxColumnHeight, nextTop + 16);
       });
-      const height = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + maxColumnHeight;
+      const height = otCssNumber("--timeline-head") + maxColumnHeight;
       creatorCalendar.style.height = `${height}px`;
       requestAnimationFrame(syncHorizontalScrollbar);
     }
@@ -10806,6 +10904,14 @@
 
     function renderBoard(viewportOnly = false) {
       if (appStarted && !isViewActive("gantt")) return;
+      const flip = appStarted ? otFlipCapture(bars, ".bar[data-task-id]") : null;
+      renderBoardImpl(viewportOnly);
+      otAddResizeHandles();
+      if (window.otQuickGhostEl) bars.appendChild(window.otQuickGhostEl);
+      otFlipPlay(bars, ".bar[data-task-id]", flip);
+    }
+
+    function renderBoardImpl(viewportOnly = false) {
       const previousTaskProject = taskProject.value;
       const previousEditTaskProject = editTaskProject.value;
       sidebar.querySelectorAll(".row-label").forEach((el) => el.remove());
@@ -10819,7 +10925,7 @@
         renderPedProjectOptions();
       }
       const selectedMember = memberFilter.value;
-      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const dayWidth = otCssNumber("--day");
       const visibleDayWindow = ganttVisibleDayWindow(dayWidth);
       lastGanttLayoutWindowKey = visibleDayWindow.key;
       if (!viewportOnly) {
@@ -10861,18 +10967,7 @@
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
         return matchingTaskProjectIds.has(project.id) || matchingPedProjectIds.has(project.id);
-      }).sort((left, right) => {
-        const leftPublicationsToday = publicationsTodayByProject.get(left.id) || 0;
-        const rightPublicationsToday = publicationsTodayByProject.get(right.id) || 0;
-        if (Boolean(leftPublicationsToday) !== Boolean(rightPublicationsToday)) {
-          return leftPublicationsToday ? -1 : 1;
-        }
-        if (leftPublicationsToday !== rightPublicationsToday) return rightPublicationsToday - leftPublicationsToday;
-        const leftTasksToday = tasksTodayByProject.get(left.id) || 0;
-        const rightTasksToday = tasksTodayByProject.get(right.id) || 0;
-        if (leftTasksToday !== rightTasksToday) return rightTasksToday - leftTasksToday;
-        return (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0);
-      });
+      }).sort((left, right) => (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0));
 
       let projectTop = 0;
       visibleProjects.forEach((project) => {
@@ -10899,11 +10994,12 @@
           const dayIndex = dateDiffDays(timelineStart, layout.start);
           return dayIndex >= visibleDayWindow.start && dayIndex <= visibleDayWindow.end;
         });
-        const taskBottom = Math.max(0, ...visibleTaskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
-        const pedBottom = Math.max(0, ...visiblePedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
+        const taskBottom = Math.max(0, ...taskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
+        const pedBottom = Math.max(0, ...pedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
         const rowHeight = Math.max(28, taskBottom, pedBottom) + rowBottomPadding;
         const row = document.createElement("div");
         row.className = "row-label";
+        row.dataset.projectId = project.id;
         row.style.height = `${rowHeight}px`;
         row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
         sidebar.appendChild(row);
@@ -10968,7 +11064,7 @@
       }
 
       const bottomScrollBuffer = 128;
-      const boardContentHeight = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head")) + projectTop + bottomScrollBuffer;
+      const boardContentHeight = otCssNumber("--timeline-head") + projectTop + bottomScrollBuffer;
       sidebar.style.minHeight = `${boardContentHeight}px`;
       timelineEl.style.minHeight = `${boardContentHeight}px`;
       bars.style.height = `${projectTop + bottomScrollBuffer}px`;
@@ -10983,30 +11079,31 @@
     }
 
     function syncGanttHeaderPosition() {
-      monthsEl.style.transform = `translateY(${boardEl.scrollTop}px) translateZ(0)`;
+      monthsEl.style.transform = `translate3d(0, ${boardEl.scrollTop}px, 0)`;
     }
 
     function scheduleGanttViewportRender() {
+      return;
       if (document.body.classList.contains("ped-mode")
         || document.body.classList.contains("influencer-mode")
         || document.body.classList.contains("creator-calendar-mode")
         || document.body.classList.contains("budget-mode")) return;
-      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const dayWidth = otCssNumber("--day");
       const windowKey = ganttVisibleDayWindow(dayWidth).key;
       if (windowKey === lastGanttLayoutWindowKey) return;
       window.clearTimeout(ganttViewportRenderTimer);
-      ganttViewportRenderTimer = window.setTimeout(() => {
-        const currentDayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      ganttViewportRenderTimer = window.setTimeout(() => requestAnimationFrame(() => {
+        const currentDayWidth = otCssNumber("--day");
         const nextKey = ganttVisibleDayWindow(currentDayWidth).key;
         if (nextKey !== lastGanttLayoutWindowKey) renderBoard(true);
-      }, 220);
+      }), 160);
     }
 
     function updateHiddenTaskIndicators() {
       bars.querySelectorAll(".hidden-task-indicator").forEach((indicator) => indicator.remove());
       if (document.body.classList.contains("ped-mode")) return;
-      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
-      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const timelineHead = otCssNumber("--timeline-head");
+      const dayWidth = otCssNumber("--day");
       const bottomControlsSpace = 116;
       const visibleBottomInBars = boardEl.scrollTop + boardEl.clientHeight - timelineHead - bottomControlsSpace;
       const indicatorTop = Math.max(6, Math.min(parseFloat(bars.style.height || "0") - 24, visibleBottomInBars - 28));
@@ -11034,7 +11131,7 @@
     function scrollToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
-      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const offset = dayIndex * otCssNumber("--day");
       scroller.scrollTo({ left: Math.max(0, offset - 300), behavior });
       requestAnimationFrame(syncHorizontalScrollbar);
     }
@@ -11042,7 +11139,7 @@
     function scrollPedToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
-      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const offset = dayIndex * otCssNumber("--day");
       pedView.scrollTo({ left: Math.max(0, offset - 300), behavior });
       requestAnimationFrame(syncHorizontalScrollbar);
     }
@@ -11050,7 +11147,7 @@
     function scrollCreatorCalendarToToday(behavior = "smooth") {
       const todayDate = new Date(`${currentDateKey()}T00:00:00`);
       const dayIndex = Math.max(0, dateDiffDays(timelineStart, todayDate));
-      const offset = dayIndex * parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const offset = dayIndex * otCssNumber("--day");
       creatorCalendarView.scrollTo({ left: Math.max(0, offset - 300), behavior });
       requestAnimationFrame(syncHorizontalScrollbar);
     }
@@ -11145,7 +11242,7 @@
     window.addEventListener("unhandledrejection", (event) => {
       console.error("Unhandled error", event.reason);
       hasUnsyncedChanges = true;
-      setSyncMessage("Si è verificato un errore imprevisto: alcune modifiche potrebbero non essere salvate. Ricarica la pagina.", true);
+      setSyncMessage("Something went wrong: some changes may not be saved. Please reload the page.", true);
     });
 
     const OT_TEAM_EMAIL = "team@otacos-workflow.app";
@@ -11158,17 +11255,17 @@
       const password = document.getElementById("loginPassword").value;
       const error = document.getElementById("loginError");
       const button = document.getElementById("loginButton");
-      if (!password) { error.textContent = "Inserisci la password"; return; }
+      if (!password) { error.textContent = "Enter the password"; return; }
       const label = button.textContent;
       button.disabled = true;
-      button.textContent = "Accesso...";
+      button.textContent = "Logging in...";
       error.textContent = "";
       try {
         await signInWithEmailAndPassword(getAuth(otFirebaseApp()), OT_TEAM_EMAIL, password);
         startApp();
       } catch (authError) {
         console.warn("Login failed", authError?.code);
-        error.textContent = "Password non corretta";
+        error.textContent = "Wrong password";
       } finally {
         button.disabled = false;
         button.textContent = label;
@@ -11399,6 +11496,11 @@
       if (!influencerMode && !budgetMode) {
         zoomIndex = zooms.length - 1;
         updateZoom();
+      }
+      const otEntering = { gantt: boardEl, ped: pedView, influencer: influencerView, "creator-calendar": creatorCalendarView, budget: budgetView }[view];
+      if (otEntering && !otReduceMotion && options.persist !== false && otEntering.animate) {
+        otEntering.animate([{ opacity: 0, transform: "translate3d(0, 10px, 0)" }, { opacity: 1, transform: "none" }],
+          { duration: 340, easing: "cubic-bezier(.16, 1, .3, 1)" });
       }
       if (view === "gantt") renderBoard();
       if (pedMode) renderPed();
@@ -11889,12 +11991,13 @@
       const creatorControls = creatorControlsSnapshot("");
       if (!projectId || !name || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
-      const nameEn = await translateToEnglish(name);
+      const nameEn = localStorage.getItem(translationCacheKey(name)) || "";
       const createdAt = Date.now();
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate, createdAt, updatedAt: createdAt };
       if (creatorControls.giorgia.checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasksFromControls(baseTask, createdAt, creatorControls);
       data.tasks.push(baseTask);
+      if (!nameEn) otTranslateLater(baseTask);
       upsertCreatorGeneratedTasks(generatedTasks);
       if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
       syncAutomaticPedPostsForTasks([baseTask, ...generatedTasks]);
@@ -11984,7 +12087,7 @@
 
     function dateFromTimelineClientX(clientX, scrollEl) {
       const rect = scrollEl.getBoundingClientRect();
-      const dayWidth = parseFloat(getComputedStyle(root).getPropertyValue("--day"));
+      const dayWidth = otCssNumber("--day");
       const x = Math.max(0, clientX - rect.left + scrollEl.scrollLeft);
       const dayIndex = Math.max(0, Math.floor(x / dayWidth));
       const date = new Date(timelineStart);
@@ -11995,7 +12098,7 @@
     function pedTimeFromClientY(clientY) {
       const pedView = document.getElementById("pedView");
       const rect = pedView.getBoundingClientRect();
-      const timelineHead = parseFloat(getComputedStyle(root).getPropertyValue("--timeline-head"));
+      const timelineHead = otCssNumber("--timeline-head");
       const y = Math.max(0, clientY - rect.top + pedView.scrollTop - timelineHead - 10);
       const hour = pedHourFromY(y);
       return `${String(hour).padStart(2, "0")}:00`;
@@ -12012,8 +12115,8 @@
       const scrollEl = dragScrollElement(state);
       if (!scrollEl) return;
       const rect = scrollEl.getBoundingClientRect();
-      const edge = 56;
-      const maxStep = 34;
+      const edge = 72;
+      const maxStep = 22;
       if (event.clientX > rect.right - edge) {
         const strength = Math.min(1, (event.clientX - (rect.right - edge)) / edge);
         scrollEl.scrollLeft += Math.max(8, Math.round(maxStep * strength));
@@ -12031,6 +12134,18 @@
         }
       }
       syncHorizontalScrollbar();
+    }
+
+    let otDragAutoFrame = 0;
+    function otEnsureDragAutoScroll() {
+      if (otDragAutoFrame) return;
+      const tick = () => {
+        otDragAutoFrame = 0;
+        if (!dragState || !dragState.dragged) return;
+        autoScrollWhileDragging({ clientX: dragState.lastX, clientY: dragState.lastY }, dragState);
+        otDragAutoFrame = requestAnimationFrame(tick);
+      };
+      otDragAutoFrame = requestAnimationFrame(tick);
     }
 
     function startDragState(details) {
@@ -12094,8 +12209,8 @@
       dragState.dragged = true;
       dragState.element.classList.remove("is-pressing");
       dragState.element.classList.add("is-dragging");
-      autoScrollWhileDragging({ clientX, clientY }, dragState);
       moveFixedDragVisual(dragState, clientX, clientY);
+      otEnsureDragAutoScroll();
       sourceEvent?.preventDefault?.();
     }
 
@@ -12132,8 +12247,12 @@
       if (event?.pointerId !== undefined && dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
       const state = dragState;
       dragState = null;
+      if (state.dragged && state.element && !otReduceMotion) {
+        const key = otFlipKey(state.element);
+        if (key) otFlipOverride = { key, rect: state.element.getBoundingClientRect() };
+      }
       resetDragVisualState(state);
-      if (!state.dragged) return;
+      if (!state.dragged) { otFlipOverride = null; return; }
       suppressNextClick = true;
       setTimeout(() => { suppressNextClick = false; }, 250);
       const dropX = Number.isFinite(state.lastX) ? state.lastX : event.clientX;
@@ -12192,10 +12311,18 @@
       }
     }
 
+    let otDragFrame = 0;
+    let otDragPoint = null;
     document.addEventListener("pointermove", (event) => {
       if (!dragState) return;
       if (event.pointerId !== undefined && dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId) return;
-      updateDragPosition(event.clientX, event.clientY, event);
+      if (dragState.dragged) event.preventDefault();
+      otDragPoint = { x: event.clientX, y: event.clientY };
+      if (otDragFrame) return;
+      otDragFrame = requestAnimationFrame(() => {
+        otDragFrame = 0;
+        if (dragState && otDragPoint) updateDragPosition(otDragPoint.x, otDragPoint.y, null);
+      });
     });
 
     document.addEventListener("pointerup", finishDrag);
@@ -13099,11 +13226,12 @@
       const pedDate = document.getElementById("editTaskPedDate").value || start;
       const creatorControls = creatorControlsSnapshot("edit");
       if (!projectId || !name || !status || !start || !end) return;
-      const nameEn = originalTask.name === name && originalTask.nameEn ? originalTask.nameEn : await translateToEnglish(name);
+      const nameEn = originalTask.name === name && originalTask.nameEn ? originalTask.nameEn : (localStorage.getItem(translationCacheKey(name)) || "");
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
       task.name = name;
       task.nameEn = nameEn;
+      if (!nameEn) otTranslateLater(task);
       task.projectId = projectId;
       task.status = status;
       task.members = members;
@@ -13709,21 +13837,32 @@
     });
 
     memberFilter.addEventListener("change", () => renderBoard());
+    const otGanttIndicatorsWhenIdle = otIdle(updateHiddenTaskIndicators);
     boardEl.addEventListener("scroll", () => {
       syncGanttHeaderPosition();
-      updateHiddenTaskIndicators();
       syncHorizontalScrollbar();
-    });
+      otGanttIndicatorsWhenIdle();
+    }, { passive: true });
     scroller.addEventListener("scroll", () => {
       syncHorizontalScrollbar();
       scheduleGanttViewportRender();
     }, { passive: true });
+    const otPedIndicatorsWhenIdle = otIdle(updatePedHiddenIndicators);
     pedView.addEventListener("scroll", () => {
-      updatePedHiddenIndicators();
-      syncPedHeaderPosition();
       updatePedHourLabels();
       syncHorizontalScrollbar();
+      otPedIndicatorsWhenIdle();
     }, { passive: true });
+    pedView.addEventListener("pointerdown", () => otCancelSmoothScroll(pedView), { passive: true });
+    [boardEl, scroller, pedView, influencerView, creatorCalendarView, budgetView].forEach((el) => {
+      if (!el) return;
+      let timer = 0;
+      el.addEventListener("scroll", () => {
+        if (!el.classList.contains("ot-scrolling")) el.classList.add("ot-scrolling");
+        clearTimeout(timer);
+        timer = setTimeout(() => el.classList.remove("ot-scrolling"), 220);
+      }, { passive: true });
+    });
     pedView.addEventListener("wheel", handlePedWheel, { passive: false });
     creatorCalendarView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
     influencerView.addEventListener("scroll", syncHorizontalScrollbar, { passive: true });
@@ -13744,13 +13883,14 @@
     horizontalScrollRange.addEventListener("input", () => {
       const scrollEl = activeHorizontalScrollElement();
       if (!scrollEl) return;
+      otCancelSmoothScroll(scrollEl);
       scrollEl.scrollLeft = Number(horizontalScrollRange.value || 0);
     });
     window.addEventListener("resize", syncHorizontalScrollbar);
     setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
-      if (!confirmDelete("Sei sicuro? Questo cancella TUTTI i dati (task, PED, influencer) e non si può annullare. Continuare?")) return;
+      if (!confirmDelete("Are you sure? This deletes ALL data (tasks, PED, influencers) and cannot be undone. Continue?")) return;
       data = structuredClone(starterData);
       saveData();
       renderBoard();
@@ -13759,6 +13899,491 @@
       renderCreatorCalendar();
       scrollToToday();
     });
+
+    /* =====================================================================
+       v2 round 2 — navigation, quick create, resize, task sheet
+       ===================================================================== */
+
+    /* ---------- horizontal navigation: arrows, keyboard, drag-to-pan ---------- */
+    function otTimelineScroller() {
+      if (document.body.classList.contains("ped-mode")) return pedView;
+      if (document.body.classList.contains("creator-calendar-mode")) return creatorCalendarView;
+      if (document.body.classList.contains("influencer-mode") || document.body.classList.contains("budget-mode")) return null;
+      return scroller;
+    }
+    function otPage(direction) {
+      const el = otTimelineScroller();
+      if (!el) return;
+      const dayW = otCssNumber("--day") || 1;
+      const visibleDays = Math.max(1, Math.floor(el.clientWidth / dayW));
+      const days = visibleDays >= 7 ? 7 : Math.max(1, visibleDays - 1 || 1);
+      const st = otSmoothScrollers.get(el);
+      const from = st?.x ?? el.scrollLeft;
+      const target = Math.round((from + direction * days * dayW) / dayW) * dayW;
+      otSmoothScrollBy(el, "x", target - from);
+    }
+    document.getElementById("otPrevButton")?.addEventListener("click", () => otPage(-1));
+    document.getElementById("otNextButton")?.addEventListener("click", () => otPage(1));
+    document.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const tag = (event.target?.tagName || "").toLowerCase();
+      if (["input", "textarea", "select"].includes(tag) || event.target?.isContentEditable) return;
+      if (document.querySelector(".settings-panel.open, .modal-backdrop.open")) return;
+      if (event.key === "ArrowLeft") { event.preventDefault(); otPage(-1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); otPage(1); }
+      if (event.key === "t" || event.key === "T") jumpActiveViewToToday();
+    });
+
+    const otPanBlockers = ".bar, .ped-post, .creator-card, .gantt-ped-thumb, button, a, input, select, textarea, label, .hidden-task-indicator, .ped-hidden-indicator";
+    function otEnablePan(el, verticalEl) {
+      if (!el) return;
+      el.classList.add("ot-pannable");
+      let pan = null;
+      el.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || event.pointerType !== "mouse" || dragState) return;
+        if (event.target.closest(otPanBlockers)) return;
+        otCancelSmoothScroll(el);
+        pan = { x: event.clientX, y: event.clientY, left: el.scrollLeft, top: verticalEl.scrollTop, moved: false, id: event.pointerId,
+          samples: [{ x: event.clientX, t: performance.now() }] };
+      });
+      window.addEventListener("pointermove", (event) => {
+        if (!pan || event.pointerId !== pan.id) return;
+        const dx = event.clientX - pan.x;
+        const dy = event.clientY - pan.y;
+        if (!pan.moved && Math.hypot(dx, dy) < 5) return;
+        if (!pan.moved) {
+          pan.moved = true;
+          el.classList.add("ot-panning");
+          try { el.setPointerCapture(event.pointerId); } catch (error) {}
+        }
+        el.scrollLeft = pan.left - dx;
+        verticalEl.scrollTop = pan.top - dy;
+        pan.samples.push({ x: event.clientX, t: performance.now() });
+        if (pan.samples.length > 5) pan.samples.shift();
+      });
+      const end = (event) => {
+        if (!pan || (event.pointerId !== undefined && event.pointerId !== pan.id)) return;
+        const finished = pan;
+        pan = null;
+        el.classList.remove("ot-panning");
+        if (!finished.moved) return;
+        const first = finished.samples[0];
+        const last = finished.samples[finished.samples.length - 1];
+        const dt = Math.max(1, last.t - first.t);
+        const velocity = (last.x - first.x) / dt;
+        if (Math.abs(velocity) > 0.25 && performance.now() - last.t < 80) otSmoothScrollBy(el, "x", -velocity * 260);
+        const swallow = (clickEvent) => { clickEvent.stopPropagation(); clickEvent.preventDefault(); };
+        window.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 60);
+      };
+      window.addEventListener("pointerup", end);
+      window.addEventListener("pointercancel", end);
+    }
+    otEnablePan(scroller, boardEl);
+    otEnablePan(pedView, pedView);
+    otEnablePan(creatorCalendarView, creatorCalendarView);
+
+    /* ---------- quick create: double click on an empty day in a project row ---------- */
+    function otProjectAtClientY(clientY) {
+      const row = [...sidebar.querySelectorAll(".row-label[data-project-id]")].find((label) => {
+        const r = label.getBoundingClientRect();
+        return clientY >= r.top && clientY < r.bottom;
+      });
+      return row?.dataset.projectId || "";
+    }
+    const otQuickGhost = document.createElement("div");
+    otQuickGhost.className = "ot-quick-ghost";
+    otQuickGhost.innerHTML = '<span>+</span> Double-click to add';
+    otQuickGhost.hidden = true;
+    bars.appendChild(otQuickGhost);
+    window.otQuickGhostEl = otQuickGhost;
+    let otGhostFrame = 0;
+    bars.addEventListener("pointermove", (event) => {
+      if (dragState || event.pointerType !== "mouse") return;
+      const overItem = event.target.closest(".bar, .gantt-ped-thumb, .ot-quick-ghost");
+      const point = { x: event.clientX, y: event.clientY, overItem };
+      if (otGhostFrame) cancelAnimationFrame(otGhostFrame);
+      otGhostFrame = requestAnimationFrame(() => {
+        otGhostFrame = 0;
+        if (point.overItem && !point.overItem.classList.contains("ot-quick-ghost")) { otQuickGhost.hidden = true; return; }
+        if (point.overItem) return;
+        const projectId = otProjectAtClientY(point.y);
+        if (!projectId) { otQuickGhost.hidden = true; return; }
+        const dayW = otCssNumber("--day");
+        const rect = scroller.getBoundingClientRect();
+        const dayIndex = Math.floor((point.x - rect.left + scroller.scrollLeft) / dayW);
+        const barsRect = bars.getBoundingClientRect();
+        const row = sidebar.querySelector(`.row-label[data-project-id="${CSS.escape(projectId)}"]`);
+        const rowRect = row.getBoundingClientRect();
+        otQuickGhost.style.transform = `translate3d(${dayIndex * dayW + 6}px, ${point.y - barsRect.top - 12}px, 0)`;
+        otQuickGhost.style.width = `${Math.max(60, dayW - 12)}px`;
+        otQuickGhost.dataset.projectId = projectId;
+        otQuickGhost.dataset.dayIndex = String(dayIndex);
+        otQuickGhost.hidden = point.y < rowRect.top || point.y > rowRect.bottom;
+      });
+    });
+    bars.addEventListener("pointerleave", () => { otQuickGhost.hidden = true; });
+    function otQuickCreate(clientX, clientY) {
+      const projectId = otProjectAtClientY(clientY);
+      if (!projectId) return;
+      const date = dateFromTimelineClientX(clientX, scroller);
+      otOpenNewTaskSheet({ projectId, date });
+    }
+    bars.addEventListener("dblclick", (event) => {
+      if (event.target.closest(".bar, .gantt-ped-thumb")) return;
+      event.preventDefault();
+      window.getSelection?.().removeAllRanges();
+      otQuickCreate(event.clientX, event.clientY);
+    });
+
+    /* ---------- resize a task by dragging its left / right edge ---------- */
+    function otAddResizeHandles() {
+      bars.querySelectorAll(".bar[data-task-id]").forEach((bar) => {
+        if (bar.querySelector(".ot-resize")) return;
+        bar.insertAdjacentHTML("beforeend", '<span class="ot-resize ot-resize-start" data-resize="start"></span><span class="ot-resize ot-resize-end" data-resize="end"></span>');
+      });
+    }
+    bars.addEventListener("pointerdown", (event) => {
+      const handle = event.target.closest(".ot-resize");
+      if (!handle || event.button !== 0) return;
+      const bar = handle.closest(".bar[data-task-id]");
+      const task = data.tasks.find((item) => item.id === bar?.dataset.taskId);
+      if (!task) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const dayW = otCssNumber("--day");
+      const state = {
+        side: handle.dataset.resize, startX: event.clientX, bar, task,
+        origStart: task.start, origEnd: task.end || task.start,
+        left: parseFloat(bar.style.left) || 0, width: parseFloat(bar.style.width) || dayW,
+        start: task.start, end: task.end || task.start
+      };
+      bar.classList.add("is-resizing");
+      document.body.classList.add("ot-resizing");
+      try { bar.setPointerCapture(event.pointerId); } catch (error) {}
+      let frame = 0;
+      let lastX = event.clientX;
+      const move = (moveEvent) => {
+        lastX = moveEvent.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          const days = Math.round((lastX - state.startX) / dayW);
+          const lengthDays = dateDiffDays(new Date(`${state.origStart}T00:00:00`), new Date(`${state.origEnd}T00:00:00`));
+          if (state.side === "end") {
+            const d = Math.max(-lengthDays, days);
+            state.start = state.origStart;
+            state.end = shiftDateString(state.origEnd, d);
+            bar.style.width = `${state.width + d * dayW}px`;
+          } else {
+            const d = Math.min(lengthDays, days);
+            state.start = shiftDateString(state.origStart, d);
+            state.end = state.origEnd;
+            bar.style.left = `${state.left + d * dayW}px`;
+            bar.style.width = `${state.width - d * dayW}px`;
+          }
+        });
+      };
+      const up = async () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+        if (frame) cancelAnimationFrame(frame);
+        bar.classList.remove("is-resizing");
+        document.body.classList.remove("ot-resizing");
+        suppressNextClick = true;
+        setTimeout(() => { suppressNextClick = false; }, 250);
+        if (state.start === state.origStart && state.end === state.origEnd) return;
+        task.start = state.start;
+        task.end = state.end;
+        if (state.start !== state.origStart && shouldAutoCreatePedPost(task)) {
+          task.pedEnabled = true;
+          task.pedDate = state.start;
+          task.pedTime = task.pedTime || "12:00";
+          syncAutomaticPedPostsForTasks([task]);
+        }
+        touchItem(task);
+        const savePromise = saveData();
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        await savePromise;
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    }, true);
+
+    /* ---------- task sheet (new + edit): Apple-like controls over the same form fields ---------- */
+    function otPillsFor(select, kind) {
+      const wrap = document.createElement("div");
+      wrap.className = `ot-pills ot-pills-${kind}`;
+      wrap.setAttribute("role", "radiogroup");
+      const draw = () => {
+        const html = [...select.options].map((opt) => {
+          let dot = "";
+          if (kind === "project") {
+            const project = data.projects.find((item) => item.id === opt.value);
+            if (project) dot = `<i style="background:${escapeHtml(project.color)}"></i>`;
+          } else if (kind === "status" && opt.value) {
+            dot = `<i style="background:${escapeHtml(statusColor(opt.value))}"></i>`;
+          }
+          const active = opt.value === select.value;
+          return `<button type="button" class="ot-pill${active ? " is-active" : ""}" role="radio" aria-checked="${active}" data-value="${escapeHtml(opt.value)}">${dot}${escapeHtml(opt.textContent || "None")}</button>`;
+        }).join("");
+        if (wrap.innerHTML !== html) wrap.innerHTML = html;
+      };
+      const syncActive = () => wrap.querySelectorAll(".ot-pill").forEach((pill) => {
+        const active = pill.dataset.value === select.value;
+        pill.classList.toggle("is-active", active);
+        pill.setAttribute("aria-checked", String(active));
+      });
+      wrap.addEventListener("click", (event) => {
+        const pill = event.target.closest(".ot-pill");
+        if (!pill) return;
+        select.value = pill.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncActive();
+      });
+      select.addEventListener("change", syncActive);
+      new MutationObserver(draw).observe(select, { childList: true, subtree: true });
+      draw();
+      wrap.otRefresh = () => { draw(); syncActive(); };
+      return wrap;
+    }
+
+    function otGroup(label, ...children) {
+      const section = document.createElement("section");
+      section.className = "ot-group";
+      if (label) {
+        const title = document.createElement("div");
+        title.className = "ot-group-label";
+        title.textContent = label;
+        section.appendChild(title);
+      }
+      children.filter(Boolean).forEach((child) => section.appendChild(child));
+      return section;
+    }
+
+    const otDateFormat = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    function otFriendlyDate(input, chip) {
+      let text = chip.querySelector(".ot-date-text");
+      if (!text) {
+        text = document.createElement("b");
+        text.className = "ot-date-text";
+        chip.appendChild(text);
+        input.addEventListener("input", () => otFriendlyDate(input, chip));
+        input.addEventListener("change", () => otFriendlyDate(input, chip));
+        chip.addEventListener("click", (event) => {
+          if (event.target === input && typeof input.showPicker === "function") {
+            try { input.showPicker(); } catch (error) {}
+          }
+        });
+        /* programmatic value changes (open, quick create, edit) */
+        const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+        Object.defineProperty(input, "value", {
+          get() { return desc.get.call(this); },
+          set(v) { desc.set.call(this, v); otFriendlyDate(input, chip); }
+        });
+      }
+      const v = input.value;
+      const d = v ? new Date(`${v}T00:00:00`) : null;
+      const sameYear = d && d.getFullYear() === new Date().getFullYear();
+      text.textContent = d && !Number.isNaN(d.getTime())
+        ? otDateFormat.format(d).replace(sameYear ? ` ${d.getFullYear()}` : "", "")
+        : "Pick a date";
+    }
+    function otDateChip(input, label) {
+      const chip = document.createElement("label");
+      chip.className = "ot-date-chip";
+      chip.innerHTML = `<span>${label}</span>`;
+      chip.appendChild(input);
+      otFriendlyDate(input, chip);
+      return chip;
+    }
+
+    const otSheets = [];
+    function otEnhanceTaskForm(form, p, creatorId, title) {
+      if (!form || form.dataset.otEnhanced) return;
+      form.dataset.otEnhanced = "1";
+      form.noValidate = true;
+      const $ = (suffix) => document.getElementById(p + suffix);
+      const fieldOf = (el) => el?.closest("label.field");
+      const nameInput = $("Name");
+      const projectSel = $("Project");
+      const statusSel = $("Status");
+      const labelSel = $("Label");
+      const members = $("Members");
+      const start = $("Start");
+      const endToggle = $("AddEndDate");
+      const endWrap = $("EndWrap");
+      const end = $("End");
+      const info = $("Info");
+      const pedToggle = $("PedEnabled");
+      const pedFields = $("PedFields");
+      const creator = document.getElementById(creatorId);
+
+      const head = document.createElement("div");
+      head.className = "ot-sheet-head";
+      const kicker = document.createElement("div");
+      kicker.className = "ot-sheet-kicker";
+      kicker.textContent = title;
+      head.appendChild(kicker);
+      nameInput.classList.add("ot-title-input");
+      nameInput.placeholder = "What needs to be done?";
+      nameInput.autocomplete = "off";
+      const oldNameField = fieldOf(nameInput);
+      head.appendChild(nameInput);
+
+      const projectPills = otPillsFor(projectSel, "project");
+      const statusPills = otPillsFor(statusSel, "status");
+      const labelPills = otPillsFor(labelSel, "label");
+      const pills = [projectPills, statusPills, labelPills];
+
+      const endToggleLabel = endToggle.closest("label");
+      endToggleLabel.classList.add("ot-chip-toggle");
+      endToggleLabel.lastChild.textContent = " End date";
+      const dateRow = document.createElement("div");
+      dateRow.className = "ot-date-row";
+      const startField = fieldOf(start);
+      dateRow.appendChild(otDateChip(start, "Start"));
+      const endField = endWrap;
+      endWrap.classList.add("ot-date-chip");
+      endWrap.firstChild.textContent = "";
+      endWrap.insertAdjacentHTML("afterbegin", "<span>End</span>");
+      otFriendlyDate(end, endWrap);
+      dateRow.appendChild(endWrap);
+      dateRow.appendChild(endToggleLabel);
+
+      const membersField = fieldOf(members);
+      members.classList.add("ot-people");
+
+      const more = document.createElement("details");
+      more.className = "ot-more";
+      more.innerHTML = "<summary>More options</summary>";
+      const moreBody = document.createElement("div");
+      moreBody.className = "ot-more-body";
+      more.appendChild(moreBody);
+      const infoField = fieldOf(info);
+      info.placeholder = "Link or notes";
+      infoField.firstChild.textContent = "Link or notes";
+      moreBody.appendChild(infoField);
+      const pedToggleLabel = pedToggle.closest("label");
+      pedToggleLabel.classList.add("ot-switch-row");
+      moreBody.appendChild(pedToggleLabel);
+      moreBody.appendChild(pedFields);
+
+      const insertionPoint = fieldOf(projectSel);
+      const frag = document.createDocumentFragment();
+      frag.appendChild(head);
+      frag.appendChild(otGroup("Project", projectPills));
+      frag.appendChild(otGroup("When", dateRow));
+      frag.appendChild(otGroup("Status", statusPills));
+      frag.appendChild(otGroup("Who", members));
+      frag.appendChild(otGroup("Label", labelPills));
+      if (creator) frag.appendChild(creator);
+      frag.appendChild(more);
+      form.insertBefore(frag, insertionPoint);
+      [insertionPoint, oldNameField, fieldOf(statusSel), membersField, startField, fieldOf(labelSel)].forEach((field) => {
+        if (!field) return;
+        const sel = field.querySelector("select");
+        if (sel) { sel.hidden = true; form.appendChild(sel); }
+        field.remove();
+      });
+      creator?.querySelectorAll("label.inline-check").forEach((row) => row.classList.add("ot-switch-row"));
+
+      const actions = form.querySelector(".modal-actions") || form.querySelector(":scope > button[type='submit']");
+      if (actions && actions.tagName === "BUTTON") {
+        const bar = document.createElement("div");
+        bar.className = "ot-sheet-actions";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "secondary-btn";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", () => closePanels());
+        actions.textContent = "Add task";
+        actions.title = "Add task (Enter)";
+        bar.append(cancel, actions);
+        form.appendChild(bar);
+      } else if (actions) {
+        actions.classList.add("ot-sheet-actions");
+        form.appendChild(actions);
+      }
+
+      form.addEventListener("submit", (event) => {
+        if (nameInput.value.trim()) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        nameInput.focus();
+        nameInput.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-3px)" }, { transform: "translateX(0)" }], { duration: 320, easing: "ease-out" });
+      }, true);
+
+      if (p === "task") {
+        let countBefore = 0;
+        form.addEventListener("submit", () => { countBefore = data.tasks.length; }, true);
+        form.addEventListener("submit", () => {
+          setTimeout(() => {
+            if (data.tasks.length <= countBefore) return;
+            const newest = data.tasks[data.tasks.length - 1];
+            closePanels();
+            requestAnimationFrame(() => {
+              const bar = bars.querySelector(`.bar[data-task-id="${CSS.escape(newest.id)}"]`);
+              if (!bar) return;
+              bar.animate([{ boxShadow: "0 0 0 0 rgba(255,114,0,.0)", transform: "scale(.96)" }, { boxShadow: "0 0 0 6px rgba(255,114,0,.35)", transform: "scale(1)" }, { boxShadow: "0 0 0 0 rgba(255,114,0,0)", transform: "scale(1)" }],
+                { duration: 700, easing: "cubic-bezier(.16, 1, .3, 1)" });
+            });
+          }, 0);
+        });
+      }
+
+      const sheet = { form, nameInput, pills, more, refresh: () => pills.forEach((group) => group.otRefresh()) };
+      otSheets.push(sheet);
+      return sheet;
+    }
+
+    const otNewSheet = otEnhanceTaskForm(document.getElementById("taskForm"), "task", "creatorOptions", "New task");
+    const otEditSheet = otEnhanceTaskForm(document.getElementById("editTaskForm"), "editTask", "editCreatorOptions", "Edit task");
+    document.getElementById("taskPanel")?.classList.add("ot-sheet");
+    document.querySelector("#taskModal .modal")?.classList.add("ot-sheet");
+    document.querySelector("#taskPanel .panel-footer")?.remove();
+
+    const otSheetBackdrop = document.createElement("div");
+    otSheetBackdrop.className = "ot-sheet-backdrop";
+    document.body.appendChild(otSheetBackdrop);
+    otSheetBackdrop.addEventListener("click", () => closePanels());
+
+    function otOpenNewTaskSheet(preset = {}) {
+      if (!document.getElementById("taskPanel").classList.contains("open")) document.getElementById("openTaskPanel").click();
+      const nameInput = otNewSheet.nameInput;
+      if (preset.projectId) {
+        taskProject.value = preset.projectId;
+        taskProject.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (preset.date) {
+        document.getElementById("taskStart").value = preset.date;
+        document.getElementById("taskEnd").value = preset.date;
+        document.getElementById("taskPedDate").value = preset.date;
+      }
+      otNewSheet.refresh();
+    }
+    document.getElementById("openTaskPanel").addEventListener("click", () => {
+      otNewSheet.nameInput.value = "";
+      otNewSheet.more.open = false;
+      requestAnimationFrame(() => {
+        otNewSheet.refresh();
+        otNewSheet.nameInput.focus({ preventScroll: true });
+      });
+    });
+    new MutationObserver(() => {
+      if (!taskModal.classList.contains("open")) return;
+      otEditSheet.refresh();
+    }).observe(taskModal, { attributes: true, attributeFilter: ["class"] });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (document.getElementById("taskPanel").classList.contains("open")) closePanels();
+      if (taskModal.classList.contains("open")) closeTaskEditor();
+    });
+    /* ===== end round 2 ===== */
   </script>
   <script type="module" src="./email-review.js?v=3"></script>
 </body>
