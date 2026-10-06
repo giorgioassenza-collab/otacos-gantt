@@ -4727,7 +4727,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     window.FIREBASE_CONFIG = {
@@ -4931,7 +4931,6 @@
     const driveFolderPromises = new Map();
     const driveFolderStorageKey = "otacosWorkflowDriveFolderSlides";
     let xlsxLoadPromise = null;
-    const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
 
     function setSyncMessage(message, isError = false) {
@@ -5053,9 +5052,9 @@
       try {
         const config = window.FIREBASE_CONFIG;
         if (config && config.apiKey && config.projectId) {
-          const app = initializeApp(config);
+          const app = otFirebaseApp();
           const auth = getAuth(app);
-          await signInAnonymously(auth);
+          if (!auth.currentUser) throw new Error("Not logged in");
           const db = getFirestore(app);
           boardDb = db;
           boardRef = doc(db, "boards", "default");
@@ -11149,16 +11148,31 @@
       setSyncMessage("Si è verificato un errore imprevisto: alcune modifiche potrebbero non essere salvate. Ricarica la pagina.", true);
     });
 
-    function handleLogin() {
+    const OT_TEAM_EMAIL = "team@otacos-workflow.app";
+    let otFirebaseAppInstance = null;
+    function otFirebaseApp() {
+      if (!otFirebaseAppInstance) otFirebaseAppInstance = initializeApp(window.FIREBASE_CONFIG);
+      return otFirebaseAppInstance;
+    }
+    async function handleLogin() {
       const password = document.getElementById("loginPassword").value;
       const error = document.getElementById("loginError");
-      if (password !== accessPassword) {
-        error.textContent = "Password non corretta";
-        return;
-      }
+      const button = document.getElementById("loginButton");
+      if (!password) { error.textContent = "Inserisci la password"; return; }
+      const label = button.textContent;
+      button.disabled = true;
+      button.textContent = "Accesso...";
       error.textContent = "";
-      sessionStorage.setItem("logo-gantt-authenticated", "true");
-      startApp();
+      try {
+        await signInWithEmailAndPassword(getAuth(otFirebaseApp()), OT_TEAM_EMAIL, password);
+        startApp();
+      } catch (authError) {
+        console.warn("Login failed", authError?.code);
+        error.textContent = "Password non corretta";
+      } finally {
+        button.disabled = false;
+        button.textContent = label;
+      }
     }
 
     document.getElementById("loginButton").addEventListener("click", handleLogin);
@@ -11166,8 +11180,11 @@
       if (event.key === "Enter") handleLogin();
     });
 
-    if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
-      startApp();
+    sessionStorage.removeItem("logo-gantt-authenticated");
+    if (window.FIREBASE_CONFIG?.apiKey) {
+      onAuthStateChanged(getAuth(otFirebaseApp()), (user) => {
+        if (user && !user.isAnonymous) startApp();
+      });
     }
 
     undoButton.addEventListener("click", async () => {

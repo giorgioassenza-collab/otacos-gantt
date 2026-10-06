@@ -4705,7 +4705,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     window.FIREBASE_CONFIG = {
@@ -5131,7 +5131,7 @@
         if (config && config.apiKey && config.projectId) {
           const app = otFirebaseApp();
           const auth = getAuth(app);
-          if (!auth.currentUser) await signInAnonymously(auth);
+          if (!auth.currentUser) throw new Error("Not logged in");
           const db = getFirestore(app);
           boardDb = db;
           boardRef = doc(db, "boards", "default");
@@ -11246,42 +11246,29 @@
     });
 
     const OT_TEAM_EMAIL = "team@otacos-workflow.app";
-    /* TEMPORARY: hash of the old shared password, only used until the Firebase account exists. Remove at go-live. */
-    const OT_LEGACY_HASH = "6d3ed3222cd70945eac4a95e9723d0c39529606d499be1c49df35a616ba14cbb";
     let otFirebaseAppInstance = null;
     function otFirebaseApp() {
       if (!otFirebaseAppInstance) otFirebaseAppInstance = initializeApp(window.FIREBASE_CONFIG);
       return otFirebaseAppInstance;
-    }
-    async function otSha256(text) {
-      const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-      return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     }
     async function handleLogin() {
       const password = document.getElementById("loginPassword").value;
       const error = document.getElementById("loginError");
       const button = document.getElementById("loginButton");
       if (!password) { error.textContent = "Enter the password"; return; }
+      const label = button.textContent;
       button.disabled = true;
+      button.textContent = "Logging in...";
       error.textContent = "";
       try {
-        if (window.FIREBASE_CONFIG?.apiKey) {
-          try {
-            await signInWithEmailAndPassword(getAuth(otFirebaseApp()), OT_TEAM_EMAIL, password);
-            startApp();
-            return;
-          } catch (authError) {
-            console.info("Team account sign-in not available, using temporary check", authError?.code);
-          }
-        }
-        if (await otSha256(password) !== OT_LEGACY_HASH) {
-          error.textContent = "Wrong password";
-          return;
-        }
-        sessionStorage.setItem("logo-gantt-authenticated", "true");
+        await signInWithEmailAndPassword(getAuth(otFirebaseApp()), OT_TEAM_EMAIL, password);
         startApp();
+      } catch (authError) {
+        console.warn("Login failed", authError?.code);
+        error.textContent = "Wrong password";
       } finally {
         button.disabled = false;
+        button.textContent = label;
       }
     }
 
@@ -11290,9 +11277,8 @@
       if (event.key === "Enter") handleLogin();
     });
 
-    if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
-      startApp();
-    } else if (window.FIREBASE_CONFIG?.apiKey) {
+    sessionStorage.removeItem("logo-gantt-authenticated");
+    if (window.FIREBASE_CONFIG?.apiKey) {
       onAuthStateChanged(getAuth(otFirebaseApp()), (user) => {
         if (user && !user.isAnonymous) startApp();
       });
