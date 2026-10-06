@@ -8023,12 +8023,10 @@
           <div class="budget-title">
             <h2>Budget</h2>
             <p>${escapeHtml(budgetState.title || "Live Google Sheet")}</p>
-            <p>Totals include the extension fees recorded in the source sheet.</p>
           </div>
           <div class="budget-kpi budget-kpi-primary ${todayBalance < 0 ? "budget-kpi-negative" : ""}"><span>Remaining budget</span><strong>${escapeHtml(budgetCurrency(todayBalance))}</strong></div>
           <div class="budget-kpi"><span>Total spent (expenses + fee, since Jul 2025)</span><strong>${escapeHtml(budgetCurrency(totalSpent))}</strong></div>
         </section>
-        <p class="budget-hero-note">This is today's real position. The upcoming October-December allowance (not yet arrived) is shown separately in the month-by-month breakdown below.</p>
         <section class="budget-panel">
           <h3>${escapeHtml(pieTitle)}</h3>
           ${budgetPieMarkup(pieItems, pieTotal)}
