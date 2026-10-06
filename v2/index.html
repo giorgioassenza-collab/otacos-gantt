@@ -4145,7 +4145,7 @@
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password">
         <span class="login-error" id="loginError"></span>
       </label>
-      <button class="login-button" id="loginButton" type="button">Entra</button>
+      <button class="login-button" id="loginButton" type="button">Log in</button>
     </div>
   </section>
 
@@ -4171,7 +4171,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
         </button>
       </div>
-      <button class="today-btn" id="jumpTodayButton" type="button">Today</button>
+      <div class="ot-nav" role="group" aria-label="Move in time"><button class="ot-nav-btn" id="otPrevButton" type="button" title="Earlier (←)" aria-label="Earlier"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button><button class="today-btn" id="jumpTodayButton" type="button" title="Today (T)">Today</button><button class="ot-nav-btn" id="otNextButton" type="button" title="Later (→)" aria-label="Later"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button></div>
       <button class="toolbar-btn" id="openTaskPanel" type="button">Task</button>
       <button class="toolbar-btn" id="openProjectPanel" type="button">Project</button>
       <button class="toolbar-btn overdue-btn" id="openOverdueModal" type="button">Backlog 0</button>
@@ -4250,7 +4250,7 @@
   <div class="horizontal-scrollbar" id="horizontalScrollbar" aria-label="Horizontal scroll">
     <input id="horizontalScrollRange" type="range" min="0" max="0" value="0" aria-label="Horizontal scroll">
   </div>
-  <div class="sync">Sincronizzazione...</div>
+  <div class="sync">Syncing...</div>
   <aside class="settings-panel" id="projectPanel" aria-label="Project">
     <h2>Project</h2>
     <form id="projectForm">
@@ -4282,19 +4282,19 @@
       <label class="field">Label<select id="taskLabel"></select></label>
       <div class="creator-block" id="creatorOptions" hidden>
         <div class="creator-block-title">Creator duplicates</div>
-        <label class="inline-check"><input id="creatorContact" type="checkbox"> Contattare</label>
-        <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Ok Alice</label>
-        <label class="inline-check"><input id="creatorContract" type="checkbox"> Mandare contratto</label>
+        <label class="inline-check"><input id="creatorContact" type="checkbox"> Contact creator</label>
+        <label class="inline-check"><input id="creatorAskOk" type="checkbox"> Ask Alice for OK</label>
+        <label class="inline-check"><input id="creatorContract" type="checkbox"> Send contract</label>
         <label class="inline-check"><input id="creatorBrief" type="checkbox"> Brief</label>
-        <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+        <label class="inline-check"><input id="creatorGiorgia" type="checkbox"> Notify Giorgia</label>
         <label class="inline-check"><input id="creatorVideo" type="checkbox"> Video in store</label>
         <label class="field">Video in store date<input id="creatorVideoDate" type="date" value="2026-06-16"></label>
-        <label class="inline-check"><input id="creatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
-        <label class="field">Mandare video ad Alice date<input id="creatorSendVideoAliceDate" type="date" value="2026-06-16"></label>
-        <label class="inline-check"><input id="creatorPublish" type="checkbox"> Pubblicazione</label>
-        <label class="field">Pubblicazione date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorSendVideoAlice" type="checkbox"> Send video to Alice</label>
+        <label class="field">Send video to Alice — date<input id="creatorSendVideoAliceDate" type="date" value="2026-06-16"></label>
+        <label class="inline-check"><input id="creatorPublish" type="checkbox"> Publication</label>
+        <label class="field">Publication date<input id="creatorPublishDate" type="date" value="2026-06-16"></label>
       </div>
-      <label class="field">Link<textarea id="taskInfo" placeholder="Link o note"></textarea></label>
+      <label class="field">Link<textarea id="taskInfo" placeholder="Link or notes"></textarea></label>
       <label class="inline-check"><input id="taskPedEnabled" type="checkbox"> Add to PED</label>
       <div class="ped-fields" id="taskPedFields" hidden>
         <label class="field">PED date<input id="taskPedDate" type="date" value="2026-06-16"></label>
@@ -4493,19 +4493,19 @@
         <label class="field">Label<select id="editTaskLabel"></select></label>
         <div class="creator-block" id="editCreatorOptions" hidden>
           <div class="creator-block-title">Creator duplicates</div>
-          <label class="inline-check"><input id="editCreatorContact" type="checkbox"> Contattare</label>
-          <label class="inline-check"><input id="editCreatorAskOk" type="checkbox"> Ask Ok Alice</label>
-          <label class="inline-check"><input id="editCreatorContract" type="checkbox"> Mandare contratto</label>
+          <label class="inline-check"><input id="editCreatorContact" type="checkbox"> Contact creator</label>
+          <label class="inline-check"><input id="editCreatorAskOk" type="checkbox"> Ask Alice for OK</label>
+          <label class="inline-check"><input id="editCreatorContract" type="checkbox"> Send contract</label>
           <label class="inline-check"><input id="editCreatorBrief" type="checkbox"> Brief</label>
-          <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Avvisare Giorgia</label>
+          <label class="inline-check"><input id="editCreatorGiorgia" type="checkbox"> Notify Giorgia</label>
           <label class="inline-check"><input id="editCreatorVideo" type="checkbox"> Video in store</label>
           <label class="field">Video in store date<input id="editCreatorVideoDate" type="date"></label>
-          <label class="inline-check"><input id="editCreatorSendVideoAlice" type="checkbox"> Mandare video ad Alice</label>
-          <label class="field">Mandare video ad Alice date<input id="editCreatorSendVideoAliceDate" type="date"></label>
-          <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Pubblicazione</label>
-          <label class="field">Pubblicazione date<input id="editCreatorPublishDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorSendVideoAlice" type="checkbox"> Send video to Alice</label>
+          <label class="field">Send video to Alice — date<input id="editCreatorSendVideoAliceDate" type="date"></label>
+          <label class="inline-check"><input id="editCreatorPublish" type="checkbox"> Publication</label>
+          <label class="field">Publication date<input id="editCreatorPublishDate" type="date"></label>
         </div>
-        <label class="field">Link<textarea id="editTaskInfo" placeholder="Link o note"></textarea></label>
+        <label class="field">Link<textarea id="editTaskInfo" placeholder="Link or notes"></textarea></label>
         <label class="inline-check"><input id="editTaskPedEnabled" type="checkbox"> Add to PED</label>
         <div class="ped-fields" id="editTaskPedFields" hidden>
           <label class="field">PED date<input id="editTaskPedDate" type="date"></label>
@@ -4705,7 +4705,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
     import { doc, getDoc, getFirestore, onSnapshot, runTransaction, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
     window.FIREBASE_CONFIG = {
@@ -4817,8 +4817,8 @@
     }
     /* ===== end v2 perf helpers ===== */
 
-    const monthNames = ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"];
-    const weekdayNames = ["DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"];
+    const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+    const weekdayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     const monthsEl = document.getElementById("months");
     const weekendsEl = document.getElementById("weekends");
     const boardEl = document.querySelector(".board");
@@ -5008,7 +5008,6 @@
     const driveFolderPromises = new Map();
     const driveFolderStorageKey = "otacosWorkflowDriveFolderSlides";
     let xlsxLoadPromise = null;
-    const accessPassword = "otacos2026";
     const clientNames = ["Giorgia", "Alice"];
 
     function setSyncMessage(message, isError = false) {
@@ -5115,7 +5114,7 @@
       { label: "XS", width: 90 },
       { label: "S", width: 150 },
       { label: "M", width: 230 },
-      { label: "Compatta", width: 320 },
+      { label: "Compact", width: 320 },
       { label: "Max", width: 380 },
       { label: "420", width: 420 },
       { label: "460", width: 460 }
@@ -5130,9 +5129,9 @@
       try {
         const config = window.FIREBASE_CONFIG;
         if (config && config.apiKey && config.projectId) {
-          const app = initializeApp(config);
+          const app = otFirebaseApp();
           const auth = getAuth(app);
-          await signInAnonymously(auth);
+          if (!auth.currentUser) await signInAnonymously(auth);
           const db = getFirestore(app);
           boardDb = db;
           boardRef = doc(db, "boards", "default");
@@ -5164,7 +5163,7 @@
               pendingSaveCommittedAt = 0;
               hasUnsyncedChanges = false;
               updateUndoButton();
-              setSyncMessage("Sincronizzato live");
+              setSyncMessage("Synced");
               return;
             }
             if (pendingLocalData && pendingLocalRevision && remoteRevision <= pendingLocalRevision) return;
@@ -5185,12 +5184,12 @@
             committedData = structuredClone(data);
             saveLocalSnapshot(data, historyEntries, dataVersion);
             scheduleSyncedRender();
-            setSyncMessage("Sincronizzato live");
+            setSyncMessage("Synced");
             if (shouldRepairRemote && !pendingLocalData) saveData(true);
           }, () => {
-            setSyncMessage("Errore sincronizzazione Firestore: dati condivisi non aggiornati", true);
+            setSyncMessage("Sync error: shared data is not up to date", true);
           });
-          setSyncMessage("Connesso a Firestore");
+          setSyncMessage("Connected");
           if (snapshot.exists()) {
             const snapshotData = snapshot.data();
             const remoteRevision = Number(snapshotData.revision || 0);
@@ -5203,7 +5202,7 @@
               pendingLocalRevision = dataVersion;
               suppressRemoteUntil = Date.now() + 30000;
               saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
-              setSyncMessage(`Recupero dati dalla copia di sicurezza: ${safest.source}`);
+              setSyncMessage(`Restoring data from safety copy: ${safest.source}`);
               setTimeout(retryPendingLocalSave, 250);
               return normalizeData(safest.data);
             }
@@ -5216,7 +5215,7 @@
           historyEntries = [];
           return normalizeData(starterData);
         }
-        setSyncMessage("Firebase non configurato: salvataggio solo locale", true);
+        setSyncMessage("Offline: saving on this device only", true);
         const localSnapshot = readLocalSnapshot();
         const localSafety = await readLatestLocalSafetyBackup();
         const bestLocal = [localSnapshot, localSafety]
@@ -5227,7 +5226,7 @@
         return bestLocal?.data || normalizeData(starterData);
       } catch (error) {
         console.error("Firebase load failed", error);
-        setSyncMessage(`Non riesco a leggere i dati condivisi: ${error?.code || error?.message || "errore Firebase"}`, true);
+        setSyncMessage(`Cannot read shared data: ${error?.code || error?.message || "Firebase error"}`, true);
         const localSnapshot = readLocalSnapshot();
         const localSafety = await readLatestLocalSafetyBackup();
         const bestLocal = [localSnapshot, localSafety]
@@ -6266,7 +6265,7 @@
         pendingLocalData = null;
         pendingLocalRevision = 0;
         console.error("Restore failed", error);
-        setSyncMessage(`Restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
+        setSyncMessage(`Restore failed: ${error?.code || error?.message || "unknown error"}`, true);
       }
     }
 
@@ -6316,7 +6315,7 @@
         pendingLocalRevision = 0;
         pendingSaveCommittedAt = 0;
         console.error("Safety restore failed", error);
-        setSyncMessage(`Safety restore failed: ${error?.code || error?.message || "errore sconosciuto"}`, true);
+        setSyncMessage(`Safety restore failed: ${error?.code || error?.message || "unknown error"}`, true);
       }
     }
 
@@ -6342,7 +6341,7 @@
         // Whatever went wrong (bad data, storage error, etc.), never let it
         // vanish as a silent, unhandled failure - always tell the user.
         console.error("saveData failed before queueing", error);
-        setSyncMessage(`Salvataggio non riuscito: ${error?.message || "errore sconosciuto"}. Ricarica la pagina e riprova.`, true);
+        setSyncMessage(`Save failed: ${error?.message || "unknown error"}. Reload the page and try again.`, true);
         throw error;
       }
     }
@@ -6439,7 +6438,7 @@
             hasUnsyncedChanges = false;
           }
           updateUndoButton();
-          setSyncMessage("Sincronizzato live");
+          setSyncMessage("Synced");
           return;
         }
         saveLocalSnapshot(snapshotData, historyEntries, dataVersion);
@@ -6447,7 +6446,7 @@
         committedData = structuredClone(snapshotData);
         hasUnsyncedChanges = false;
         updateUndoButton();
-        setSyncMessage("Firebase non configurato: salvato solo locale", true);
+        setSyncMessage("Offline: saved on this device only", true);
       } catch (error) {
         applyingRemoteUpdate = false;
         hasUnsyncedChanges = true;
@@ -6461,7 +6460,7 @@
         committedData = structuredClone(normalizeData(pendingLocalData));
         updateUndoButton();
         console.error("Firestore save failed", error);
-        setSyncMessage(`Salvataggio non sincronizzato, riprovo automaticamente: ${error?.code || error?.message || "errore Firestore"}`, true);
+        setSyncMessage(`Not synced yet, retrying automatically: ${error?.code || error?.message || "Firestore error"}`, true);
       }
     }
 
@@ -6482,7 +6481,7 @@
         pendingSaveCommittedAt = Date.now();
         hasUnsyncedChanges = false;
         saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
-        setSyncMessage("Sincronizzato live");
+        setSyncMessage("Synced");
       } catch (error) {
         console.error("Firestore retry failed", error);
         const retryError = String(error?.code || error?.message || "");
@@ -6505,7 +6504,7 @@
           setSyncMessage("Dati locali vecchi scartati: sincronizzato con Firebase", true);
           return;
         }
-        setSyncMessage(`Riprovo salvataggio: ${error?.code || error?.message || "errore Firestore"}`, true);
+        setSyncMessage(`Retrying save: ${error?.code || error?.message || "Firestore error"}`, true);
       } finally {
         setTimeout(() => {
           applyingRemoteUpdate = false;
@@ -6593,7 +6592,8 @@
       const nextValue = String(Math.round(Math.min(scrollEl.scrollLeft, maxScroll)));
       if (horizontalScrollRange.max !== nextMax) horizontalScrollRange.max = nextMax;
       if (horizontalScrollRange.value !== nextValue) horizontalScrollRange.value = nextValue;
-      horizontalScrollRange.style.setProperty("--fill", maxScroll ? `${(Number(nextValue) / maxScroll) * 100}%` : "0%");
+      const trackW = horizontalScrollRange.clientWidth || 1;
+      horizontalScrollRange.style.setProperty("--thumb-w", `${Math.round(Math.max(36, Math.min(trackW * .6, trackW * scrollEl.clientWidth / Math.max(1, scrollEl.scrollWidth))))}px`);
       const hide = maxScroll <= 4;
       if (horizontalScrollbar.hidden !== hide) horizontalScrollbar.hidden = hide;
     }
@@ -6846,7 +6846,7 @@
       if (!value) return "-";
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return value;
-      return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
+      return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
     }
 
     function option(value, label = value) {
@@ -8165,6 +8165,17 @@
       return `logo-gantt-translation:${text.trim().toLowerCase()}`;
     }
 
+    function otTranslateLater(task) {
+      const source = task.name;
+      translateToEnglish(source).then((translated) => {
+        if (!translated || task.name !== source || task.nameEn === translated) return;
+        task.nameEn = translated;
+        touchItem(task);
+        saveData(true);
+        renderBoard();
+      }).catch(() => {});
+    }
+
     async function translateToEnglish(text) {
       const source = text.trim();
       if (!source) return "";
@@ -8174,7 +8185,7 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 2500);
       try {
-        setSyncMessage("Traduzione...");
+        setSyncMessage("Translating...");
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=it|en`;
         const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) throw new Error("Translation failed");
@@ -8184,7 +8195,7 @@
         localStorage.setItem(cacheKey, result);
         return result;
       } catch {
-        setSyncMessage("Traduzione non disponibile", true);
+        setSyncMessage("Translation unavailable", true);
         return source;
       } finally {
         clearTimeout(timeout);
@@ -10895,6 +10906,8 @@
       if (appStarted && !isViewActive("gantt")) return;
       const flip = appStarted ? otFlipCapture(bars, ".bar[data-task-id]") : null;
       renderBoardImpl(viewportOnly);
+      otAddResizeHandles();
+      if (window.otQuickGhostEl) bars.appendChild(window.otQuickGhostEl);
       otFlipPlay(bars, ".bar[data-task-id]", flip);
     }
 
@@ -10954,18 +10967,7 @@
       const visibleProjects = data.projects.filter((project) => {
         if (selectedMember === "all") return true;
         return matchingTaskProjectIds.has(project.id) || matchingPedProjectIds.has(project.id);
-      }).sort((left, right) => {
-        const leftPublicationsToday = publicationsTodayByProject.get(left.id) || 0;
-        const rightPublicationsToday = publicationsTodayByProject.get(right.id) || 0;
-        if (Boolean(leftPublicationsToday) !== Boolean(rightPublicationsToday)) {
-          return leftPublicationsToday ? -1 : 1;
-        }
-        if (leftPublicationsToday !== rightPublicationsToday) return rightPublicationsToday - leftPublicationsToday;
-        const leftTasksToday = tasksTodayByProject.get(left.id) || 0;
-        const rightTasksToday = tasksTodayByProject.get(right.id) || 0;
-        if (leftTasksToday !== rightTasksToday) return rightTasksToday - leftTasksToday;
-        return (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0);
-      });
+      }).sort((left, right) => (projectOrder.get(left.id) || 0) - (projectOrder.get(right.id) || 0));
 
       let projectTop = 0;
       visibleProjects.forEach((project) => {
@@ -10992,11 +10994,12 @@
           const dayIndex = dateDiffDays(timelineStart, layout.start);
           return dayIndex >= visibleDayWindow.start && dayIndex <= visibleDayWindow.end;
         });
-        const taskBottom = Math.max(0, ...visibleTaskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
-        const pedBottom = Math.max(0, ...visiblePedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
+        const taskBottom = Math.max(0, ...taskLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + taskBarHeight));
+        const pedBottom = Math.max(0, ...pedLayouts.map((layout) => laneTopPadding + layout.lane * taskLaneHeight + ((layout.posts.length - 1) * pedThumbSlotHeight) + pedThumbHeight));
         const rowHeight = Math.max(28, taskBottom, pedBottom) + rowBottomPadding;
         const row = document.createElement("div");
         row.className = "row-label";
+        row.dataset.projectId = project.id;
         row.style.height = `${rowHeight}px`;
         row.innerHTML = `<span class="project-dot" style="background:${project.color}"></span>${escapeHtml(project.name)}`;
         sidebar.appendChild(row);
@@ -11080,6 +11083,7 @@
     }
 
     function scheduleGanttViewportRender() {
+      return;
       if (document.body.classList.contains("ped-mode")
         || document.body.classList.contains("influencer-mode")
         || document.body.classList.contains("creator-calendar-mode")
@@ -11238,19 +11242,47 @@
     window.addEventListener("unhandledrejection", (event) => {
       console.error("Unhandled error", event.reason);
       hasUnsyncedChanges = true;
-      setSyncMessage("Si è verificato un errore imprevisto: alcune modifiche potrebbero non essere salvate. Ricarica la pagina.", true);
+      setSyncMessage("Something went wrong: some changes may not be saved. Please reload the page.", true);
     });
 
-    function handleLogin() {
+    const OT_TEAM_EMAIL = "team@otacos-workflow.app";
+    /* TEMPORARY: hash of the old shared password, only used until the Firebase account exists. Remove at go-live. */
+    const OT_LEGACY_HASH = "6d3ed3222cd70945eac4a95e9723d0c39529606d499be1c49df35a616ba14cbb";
+    let otFirebaseAppInstance = null;
+    function otFirebaseApp() {
+      if (!otFirebaseAppInstance) otFirebaseAppInstance = initializeApp(window.FIREBASE_CONFIG);
+      return otFirebaseAppInstance;
+    }
+    async function otSha256(text) {
+      const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+    async function handleLogin() {
       const password = document.getElementById("loginPassword").value;
       const error = document.getElementById("loginError");
-      if (password !== accessPassword) {
-        error.textContent = "Password non corretta";
-        return;
-      }
+      const button = document.getElementById("loginButton");
+      if (!password) { error.textContent = "Enter the password"; return; }
+      button.disabled = true;
       error.textContent = "";
-      sessionStorage.setItem("logo-gantt-authenticated", "true");
-      startApp();
+      try {
+        if (window.FIREBASE_CONFIG?.apiKey) {
+          try {
+            await signInWithEmailAndPassword(getAuth(otFirebaseApp()), OT_TEAM_EMAIL, password);
+            startApp();
+            return;
+          } catch (authError) {
+            console.info("Team account sign-in not available, using temporary check", authError?.code);
+          }
+        }
+        if (await otSha256(password) !== OT_LEGACY_HASH) {
+          error.textContent = "Wrong password";
+          return;
+        }
+        sessionStorage.setItem("logo-gantt-authenticated", "true");
+        startApp();
+      } finally {
+        button.disabled = false;
+      }
     }
 
     document.getElementById("loginButton").addEventListener("click", handleLogin);
@@ -11260,6 +11292,10 @@
 
     if (sessionStorage.getItem("logo-gantt-authenticated") === "true") {
       startApp();
+    } else if (window.FIREBASE_CONFIG?.apiKey) {
+      onAuthStateChanged(getAuth(otFirebaseApp()), (user) => {
+        if (user && !user.isAnonymous) startApp();
+      });
     }
 
     undoButton.addEventListener("click", async () => {
@@ -11969,12 +12005,13 @@
       const creatorControls = creatorControlsSnapshot("");
       if (!projectId || !name || !status || !start || !end) return;
       const normalizedEnd = end < start ? start : end;
-      const nameEn = await translateToEnglish(name);
+      const nameEn = localStorage.getItem(translationCacheKey(name)) || "";
       const createdAt = Date.now();
       const baseTask = { id: `t${createdAt}`, projectId, name, nameEn, members, status, start, end: normalizedEnd, info, label, pedEnabled, pedDate, createdAt, updatedAt: createdAt };
       if (creatorControls.giorgia.checked) ensureStatusExists("Notify Giorgia");
       const generatedTasks = creatorDuplicateTasksFromControls(baseTask, createdAt, creatorControls);
       data.tasks.push(baseTask);
+      if (!nameEn) otTranslateLater(baseTask);
       upsertCreatorGeneratedTasks(generatedTasks);
       if (baseTask.pedEnabled) ensurePedPostForTask(baseTask, { syncFromTask: true });
       syncAutomaticPedPostsForTasks([baseTask, ...generatedTasks]);
@@ -13203,11 +13240,12 @@
       const pedDate = document.getElementById("editTaskPedDate").value || start;
       const creatorControls = creatorControlsSnapshot("edit");
       if (!projectId || !name || !status || !start || !end) return;
-      const nameEn = originalTask.name === name && originalTask.nameEn ? originalTask.nameEn : await translateToEnglish(name);
+      const nameEn = originalTask.name === name && originalTask.nameEn ? originalTask.nameEn : (localStorage.getItem(translationCacheKey(name)) || "");
       const task = data.tasks.find((item) => item.id === taskId);
       if (!task) return;
       task.name = name;
       task.nameEn = nameEn;
+      if (!nameEn) otTranslateLater(task);
       task.projectId = projectId;
       task.status = status;
       task.members = members;
@@ -13866,7 +13904,7 @@
     setNewTaskDefaultDates();
 
     document.getElementById("resetBoard").addEventListener("click", () => {
-      if (!confirmDelete("Sei sicuro? Questo cancella TUTTI i dati (task, PED, influencer) e non si può annullare. Continuare?")) return;
+      if (!confirmDelete("Are you sure? This deletes ALL data (tasks, PED, influencers) and cannot be undone. Continue?")) return;
       data = structuredClone(starterData);
       saveData();
       renderBoard();
@@ -13875,6 +13913,491 @@
       renderCreatorCalendar();
       scrollToToday();
     });
+
+    /* =====================================================================
+       v2 round 2 — navigation, quick create, resize, task sheet
+       ===================================================================== */
+
+    /* ---------- horizontal navigation: arrows, keyboard, drag-to-pan ---------- */
+    function otTimelineScroller() {
+      if (document.body.classList.contains("ped-mode")) return pedView;
+      if (document.body.classList.contains("creator-calendar-mode")) return creatorCalendarView;
+      if (document.body.classList.contains("influencer-mode") || document.body.classList.contains("budget-mode")) return null;
+      return scroller;
+    }
+    function otPage(direction) {
+      const el = otTimelineScroller();
+      if (!el) return;
+      const dayW = otCssNumber("--day") || 1;
+      const visibleDays = Math.max(1, Math.floor(el.clientWidth / dayW));
+      const days = visibleDays >= 7 ? 7 : Math.max(1, visibleDays - 1 || 1);
+      const st = otSmoothScrollers.get(el);
+      const from = st?.x ?? el.scrollLeft;
+      const target = Math.round((from + direction * days * dayW) / dayW) * dayW;
+      otSmoothScrollBy(el, "x", target - from);
+    }
+    document.getElementById("otPrevButton")?.addEventListener("click", () => otPage(-1));
+    document.getElementById("otNextButton")?.addEventListener("click", () => otPage(1));
+    document.addEventListener("keydown", (event) => {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+      const tag = (event.target?.tagName || "").toLowerCase();
+      if (["input", "textarea", "select"].includes(tag) || event.target?.isContentEditable) return;
+      if (document.querySelector(".settings-panel.open, .modal-backdrop.open")) return;
+      if (event.key === "ArrowLeft") { event.preventDefault(); otPage(-1); }
+      if (event.key === "ArrowRight") { event.preventDefault(); otPage(1); }
+      if (event.key === "t" || event.key === "T") jumpActiveViewToToday();
+    });
+
+    const otPanBlockers = ".bar, .ped-post, .creator-card, .gantt-ped-thumb, button, a, input, select, textarea, label, .hidden-task-indicator, .ped-hidden-indicator";
+    function otEnablePan(el, verticalEl) {
+      if (!el) return;
+      el.classList.add("ot-pannable");
+      let pan = null;
+      el.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 || event.pointerType !== "mouse" || dragState) return;
+        if (event.target.closest(otPanBlockers)) return;
+        otCancelSmoothScroll(el);
+        pan = { x: event.clientX, y: event.clientY, left: el.scrollLeft, top: verticalEl.scrollTop, moved: false, id: event.pointerId,
+          samples: [{ x: event.clientX, t: performance.now() }] };
+      });
+      window.addEventListener("pointermove", (event) => {
+        if (!pan || event.pointerId !== pan.id) return;
+        const dx = event.clientX - pan.x;
+        const dy = event.clientY - pan.y;
+        if (!pan.moved && Math.hypot(dx, dy) < 5) return;
+        if (!pan.moved) {
+          pan.moved = true;
+          el.classList.add("ot-panning");
+          try { el.setPointerCapture(event.pointerId); } catch (error) {}
+        }
+        el.scrollLeft = pan.left - dx;
+        verticalEl.scrollTop = pan.top - dy;
+        pan.samples.push({ x: event.clientX, t: performance.now() });
+        if (pan.samples.length > 5) pan.samples.shift();
+      });
+      const end = (event) => {
+        if (!pan || (event.pointerId !== undefined && event.pointerId !== pan.id)) return;
+        const finished = pan;
+        pan = null;
+        el.classList.remove("ot-panning");
+        if (!finished.moved) return;
+        const first = finished.samples[0];
+        const last = finished.samples[finished.samples.length - 1];
+        const dt = Math.max(1, last.t - first.t);
+        const velocity = (last.x - first.x) / dt;
+        if (Math.abs(velocity) > 0.25 && performance.now() - last.t < 80) otSmoothScrollBy(el, "x", -velocity * 260);
+        const swallow = (clickEvent) => { clickEvent.stopPropagation(); clickEvent.preventDefault(); };
+        window.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 60);
+      };
+      window.addEventListener("pointerup", end);
+      window.addEventListener("pointercancel", end);
+    }
+    otEnablePan(scroller, boardEl);
+    otEnablePan(pedView, pedView);
+    otEnablePan(creatorCalendarView, creatorCalendarView);
+
+    /* ---------- quick create: double click on an empty day in a project row ---------- */
+    function otProjectAtClientY(clientY) {
+      const row = [...sidebar.querySelectorAll(".row-label[data-project-id]")].find((label) => {
+        const r = label.getBoundingClientRect();
+        return clientY >= r.top && clientY < r.bottom;
+      });
+      return row?.dataset.projectId || "";
+    }
+    const otQuickGhost = document.createElement("div");
+    otQuickGhost.className = "ot-quick-ghost";
+    otQuickGhost.innerHTML = '<span>+</span> Double-click to add';
+    otQuickGhost.hidden = true;
+    bars.appendChild(otQuickGhost);
+    window.otQuickGhostEl = otQuickGhost;
+    let otGhostFrame = 0;
+    bars.addEventListener("pointermove", (event) => {
+      if (dragState || event.pointerType !== "mouse") return;
+      const overItem = event.target.closest(".bar, .gantt-ped-thumb, .ot-quick-ghost");
+      const point = { x: event.clientX, y: event.clientY, overItem };
+      if (otGhostFrame) cancelAnimationFrame(otGhostFrame);
+      otGhostFrame = requestAnimationFrame(() => {
+        otGhostFrame = 0;
+        if (point.overItem && !point.overItem.classList.contains("ot-quick-ghost")) { otQuickGhost.hidden = true; return; }
+        if (point.overItem) return;
+        const projectId = otProjectAtClientY(point.y);
+        if (!projectId) { otQuickGhost.hidden = true; return; }
+        const dayW = otCssNumber("--day");
+        const rect = scroller.getBoundingClientRect();
+        const dayIndex = Math.floor((point.x - rect.left + scroller.scrollLeft) / dayW);
+        const barsRect = bars.getBoundingClientRect();
+        const row = sidebar.querySelector(`.row-label[data-project-id="${CSS.escape(projectId)}"]`);
+        const rowRect = row.getBoundingClientRect();
+        otQuickGhost.style.transform = `translate3d(${dayIndex * dayW + 6}px, ${point.y - barsRect.top - 12}px, 0)`;
+        otQuickGhost.style.width = `${Math.max(60, dayW - 12)}px`;
+        otQuickGhost.dataset.projectId = projectId;
+        otQuickGhost.dataset.dayIndex = String(dayIndex);
+        otQuickGhost.hidden = point.y < rowRect.top || point.y > rowRect.bottom;
+      });
+    });
+    bars.addEventListener("pointerleave", () => { otQuickGhost.hidden = true; });
+    function otQuickCreate(clientX, clientY) {
+      const projectId = otProjectAtClientY(clientY);
+      if (!projectId) return;
+      const date = dateFromTimelineClientX(clientX, scroller);
+      otOpenNewTaskSheet({ projectId, date });
+    }
+    bars.addEventListener("dblclick", (event) => {
+      if (event.target.closest(".bar, .gantt-ped-thumb")) return;
+      event.preventDefault();
+      window.getSelection?.().removeAllRanges();
+      otQuickCreate(event.clientX, event.clientY);
+    });
+
+    /* ---------- resize a task by dragging its left / right edge ---------- */
+    function otAddResizeHandles() {
+      bars.querySelectorAll(".bar[data-task-id]").forEach((bar) => {
+        if (bar.querySelector(".ot-resize")) return;
+        bar.insertAdjacentHTML("beforeend", '<span class="ot-resize ot-resize-start" data-resize="start"></span><span class="ot-resize ot-resize-end" data-resize="end"></span>');
+      });
+    }
+    bars.addEventListener("pointerdown", (event) => {
+      const handle = event.target.closest(".ot-resize");
+      if (!handle || event.button !== 0) return;
+      const bar = handle.closest(".bar[data-task-id]");
+      const task = data.tasks.find((item) => item.id === bar?.dataset.taskId);
+      if (!task) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const dayW = otCssNumber("--day");
+      const state = {
+        side: handle.dataset.resize, startX: event.clientX, bar, task,
+        origStart: task.start, origEnd: task.end || task.start,
+        left: parseFloat(bar.style.left) || 0, width: parseFloat(bar.style.width) || dayW,
+        start: task.start, end: task.end || task.start
+      };
+      bar.classList.add("is-resizing");
+      document.body.classList.add("ot-resizing");
+      try { bar.setPointerCapture(event.pointerId); } catch (error) {}
+      let frame = 0;
+      let lastX = event.clientX;
+      const move = (moveEvent) => {
+        lastX = moveEvent.clientX;
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          const days = Math.round((lastX - state.startX) / dayW);
+          const lengthDays = dateDiffDays(new Date(`${state.origStart}T00:00:00`), new Date(`${state.origEnd}T00:00:00`));
+          if (state.side === "end") {
+            const d = Math.max(-lengthDays, days);
+            state.start = state.origStart;
+            state.end = shiftDateString(state.origEnd, d);
+            bar.style.width = `${state.width + d * dayW}px`;
+          } else {
+            const d = Math.min(lengthDays, days);
+            state.start = shiftDateString(state.origStart, d);
+            state.end = state.origEnd;
+            bar.style.left = `${state.left + d * dayW}px`;
+            bar.style.width = `${state.width - d * dayW}px`;
+          }
+        });
+      };
+      const up = async () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+        if (frame) cancelAnimationFrame(frame);
+        bar.classList.remove("is-resizing");
+        document.body.classList.remove("ot-resizing");
+        suppressNextClick = true;
+        setTimeout(() => { suppressNextClick = false; }, 250);
+        if (state.start === state.origStart && state.end === state.origEnd) return;
+        task.start = state.start;
+        task.end = state.end;
+        if (state.start !== state.origStart && shouldAutoCreatePedPost(task)) {
+          task.pedEnabled = true;
+          task.pedDate = state.start;
+          task.pedTime = task.pedTime || "12:00";
+          syncAutomaticPedPostsForTasks([task]);
+        }
+        touchItem(task);
+        const savePromise = saveData();
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        await savePromise;
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    }, true);
+
+    /* ---------- task sheet (new + edit): Apple-like controls over the same form fields ---------- */
+    function otPillsFor(select, kind) {
+      const wrap = document.createElement("div");
+      wrap.className = `ot-pills ot-pills-${kind}`;
+      wrap.setAttribute("role", "radiogroup");
+      const draw = () => {
+        const html = [...select.options].map((opt) => {
+          let dot = "";
+          if (kind === "project") {
+            const project = data.projects.find((item) => item.id === opt.value);
+            if (project) dot = `<i style="background:${escapeHtml(project.color)}"></i>`;
+          } else if (kind === "status" && opt.value) {
+            dot = `<i style="background:${escapeHtml(statusColor(opt.value))}"></i>`;
+          }
+          const active = opt.value === select.value;
+          return `<button type="button" class="ot-pill${active ? " is-active" : ""}" role="radio" aria-checked="${active}" data-value="${escapeHtml(opt.value)}">${dot}${escapeHtml(opt.textContent || "None")}</button>`;
+        }).join("");
+        if (wrap.innerHTML !== html) wrap.innerHTML = html;
+      };
+      const syncActive = () => wrap.querySelectorAll(".ot-pill").forEach((pill) => {
+        const active = pill.dataset.value === select.value;
+        pill.classList.toggle("is-active", active);
+        pill.setAttribute("aria-checked", String(active));
+      });
+      wrap.addEventListener("click", (event) => {
+        const pill = event.target.closest(".ot-pill");
+        if (!pill) return;
+        select.value = pill.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncActive();
+      });
+      select.addEventListener("change", syncActive);
+      new MutationObserver(draw).observe(select, { childList: true, subtree: true });
+      draw();
+      wrap.otRefresh = () => { draw(); syncActive(); };
+      return wrap;
+    }
+
+    function otGroup(label, ...children) {
+      const section = document.createElement("section");
+      section.className = "ot-group";
+      if (label) {
+        const title = document.createElement("div");
+        title.className = "ot-group-label";
+        title.textContent = label;
+        section.appendChild(title);
+      }
+      children.filter(Boolean).forEach((child) => section.appendChild(child));
+      return section;
+    }
+
+    const otDateFormat = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    function otFriendlyDate(input, chip) {
+      let text = chip.querySelector(".ot-date-text");
+      if (!text) {
+        text = document.createElement("b");
+        text.className = "ot-date-text";
+        chip.appendChild(text);
+        input.addEventListener("input", () => otFriendlyDate(input, chip));
+        input.addEventListener("change", () => otFriendlyDate(input, chip));
+        chip.addEventListener("click", (event) => {
+          if (event.target === input && typeof input.showPicker === "function") {
+            try { input.showPicker(); } catch (error) {}
+          }
+        });
+        /* programmatic value changes (open, quick create, edit) */
+        const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+        Object.defineProperty(input, "value", {
+          get() { return desc.get.call(this); },
+          set(v) { desc.set.call(this, v); otFriendlyDate(input, chip); }
+        });
+      }
+      const v = input.value;
+      const d = v ? new Date(`${v}T00:00:00`) : null;
+      const sameYear = d && d.getFullYear() === new Date().getFullYear();
+      text.textContent = d && !Number.isNaN(d.getTime())
+        ? otDateFormat.format(d).replace(sameYear ? ` ${d.getFullYear()}` : "", "")
+        : "Pick a date";
+    }
+    function otDateChip(input, label) {
+      const chip = document.createElement("label");
+      chip.className = "ot-date-chip";
+      chip.innerHTML = `<span>${label}</span>`;
+      chip.appendChild(input);
+      otFriendlyDate(input, chip);
+      return chip;
+    }
+
+    const otSheets = [];
+    function otEnhanceTaskForm(form, p, creatorId, title) {
+      if (!form || form.dataset.otEnhanced) return;
+      form.dataset.otEnhanced = "1";
+      form.noValidate = true;
+      const $ = (suffix) => document.getElementById(p + suffix);
+      const fieldOf = (el) => el?.closest("label.field");
+      const nameInput = $("Name");
+      const projectSel = $("Project");
+      const statusSel = $("Status");
+      const labelSel = $("Label");
+      const members = $("Members");
+      const start = $("Start");
+      const endToggle = $("AddEndDate");
+      const endWrap = $("EndWrap");
+      const end = $("End");
+      const info = $("Info");
+      const pedToggle = $("PedEnabled");
+      const pedFields = $("PedFields");
+      const creator = document.getElementById(creatorId);
+
+      const head = document.createElement("div");
+      head.className = "ot-sheet-head";
+      const kicker = document.createElement("div");
+      kicker.className = "ot-sheet-kicker";
+      kicker.textContent = title;
+      head.appendChild(kicker);
+      nameInput.classList.add("ot-title-input");
+      nameInput.placeholder = "What needs to be done?";
+      nameInput.autocomplete = "off";
+      const oldNameField = fieldOf(nameInput);
+      head.appendChild(nameInput);
+
+      const projectPills = otPillsFor(projectSel, "project");
+      const statusPills = otPillsFor(statusSel, "status");
+      const labelPills = otPillsFor(labelSel, "label");
+      const pills = [projectPills, statusPills, labelPills];
+
+      const endToggleLabel = endToggle.closest("label");
+      endToggleLabel.classList.add("ot-chip-toggle");
+      endToggleLabel.lastChild.textContent = " End date";
+      const dateRow = document.createElement("div");
+      dateRow.className = "ot-date-row";
+      const startField = fieldOf(start);
+      dateRow.appendChild(otDateChip(start, "Start"));
+      const endField = endWrap;
+      endWrap.classList.add("ot-date-chip");
+      endWrap.firstChild.textContent = "";
+      endWrap.insertAdjacentHTML("afterbegin", "<span>End</span>");
+      otFriendlyDate(end, endWrap);
+      dateRow.appendChild(endWrap);
+      dateRow.appendChild(endToggleLabel);
+
+      const membersField = fieldOf(members);
+      members.classList.add("ot-people");
+
+      const more = document.createElement("details");
+      more.className = "ot-more";
+      more.innerHTML = "<summary>More options</summary>";
+      const moreBody = document.createElement("div");
+      moreBody.className = "ot-more-body";
+      more.appendChild(moreBody);
+      const infoField = fieldOf(info);
+      info.placeholder = "Link or notes";
+      infoField.firstChild.textContent = "Link or notes";
+      moreBody.appendChild(infoField);
+      const pedToggleLabel = pedToggle.closest("label");
+      pedToggleLabel.classList.add("ot-switch-row");
+      moreBody.appendChild(pedToggleLabel);
+      moreBody.appendChild(pedFields);
+
+      const insertionPoint = fieldOf(projectSel);
+      const frag = document.createDocumentFragment();
+      frag.appendChild(head);
+      frag.appendChild(otGroup("Project", projectPills));
+      frag.appendChild(otGroup("When", dateRow));
+      frag.appendChild(otGroup("Status", statusPills));
+      frag.appendChild(otGroup("Who", members));
+      frag.appendChild(otGroup("Label", labelPills));
+      if (creator) frag.appendChild(creator);
+      frag.appendChild(more);
+      form.insertBefore(frag, insertionPoint);
+      [insertionPoint, oldNameField, fieldOf(statusSel), membersField, startField, fieldOf(labelSel)].forEach((field) => {
+        if (!field) return;
+        const sel = field.querySelector("select");
+        if (sel) { sel.hidden = true; form.appendChild(sel); }
+        field.remove();
+      });
+      creator?.querySelectorAll("label.inline-check").forEach((row) => row.classList.add("ot-switch-row"));
+
+      const actions = form.querySelector(".modal-actions") || form.querySelector(":scope > button[type='submit']");
+      if (actions && actions.tagName === "BUTTON") {
+        const bar = document.createElement("div");
+        bar.className = "ot-sheet-actions";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "secondary-btn";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", () => closePanels());
+        actions.textContent = "Add task";
+        actions.title = "Add task (Enter)";
+        bar.append(cancel, actions);
+        form.appendChild(bar);
+      } else if (actions) {
+        actions.classList.add("ot-sheet-actions");
+        form.appendChild(actions);
+      }
+
+      form.addEventListener("submit", (event) => {
+        if (nameInput.value.trim()) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        nameInput.focus();
+        nameInput.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-3px)" }, { transform: "translateX(0)" }], { duration: 320, easing: "ease-out" });
+      }, true);
+
+      if (p === "task") {
+        let countBefore = 0;
+        form.addEventListener("submit", () => { countBefore = data.tasks.length; }, true);
+        form.addEventListener("submit", () => {
+          setTimeout(() => {
+            if (data.tasks.length <= countBefore) return;
+            const newest = data.tasks[data.tasks.length - 1];
+            closePanels();
+            requestAnimationFrame(() => {
+              const bar = bars.querySelector(`.bar[data-task-id="${CSS.escape(newest.id)}"]`);
+              if (!bar) return;
+              bar.animate([{ boxShadow: "0 0 0 0 rgba(255,114,0,.0)", transform: "scale(.96)" }, { boxShadow: "0 0 0 6px rgba(255,114,0,.35)", transform: "scale(1)" }, { boxShadow: "0 0 0 0 rgba(255,114,0,0)", transform: "scale(1)" }],
+                { duration: 700, easing: "cubic-bezier(.16, 1, .3, 1)" });
+            });
+          }, 0);
+        });
+      }
+
+      const sheet = { form, nameInput, pills, more, refresh: () => pills.forEach((group) => group.otRefresh()) };
+      otSheets.push(sheet);
+      return sheet;
+    }
+
+    const otNewSheet = otEnhanceTaskForm(document.getElementById("taskForm"), "task", "creatorOptions", "New task");
+    const otEditSheet = otEnhanceTaskForm(document.getElementById("editTaskForm"), "editTask", "editCreatorOptions", "Edit task");
+    document.getElementById("taskPanel")?.classList.add("ot-sheet");
+    document.querySelector("#taskModal .modal")?.classList.add("ot-sheet");
+    document.querySelector("#taskPanel .panel-footer")?.remove();
+
+    const otSheetBackdrop = document.createElement("div");
+    otSheetBackdrop.className = "ot-sheet-backdrop";
+    document.body.appendChild(otSheetBackdrop);
+    otSheetBackdrop.addEventListener("click", () => closePanels());
+
+    function otOpenNewTaskSheet(preset = {}) {
+      if (!document.getElementById("taskPanel").classList.contains("open")) document.getElementById("openTaskPanel").click();
+      const nameInput = otNewSheet.nameInput;
+      if (preset.projectId) {
+        taskProject.value = preset.projectId;
+        taskProject.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (preset.date) {
+        document.getElementById("taskStart").value = preset.date;
+        document.getElementById("taskEnd").value = preset.date;
+        document.getElementById("taskPedDate").value = preset.date;
+      }
+      otNewSheet.refresh();
+    }
+    document.getElementById("openTaskPanel").addEventListener("click", () => {
+      otNewSheet.nameInput.value = "";
+      otNewSheet.more.open = false;
+      requestAnimationFrame(() => {
+        otNewSheet.refresh();
+        otNewSheet.nameInput.focus({ preventScroll: true });
+      });
+    });
+    new MutationObserver(() => {
+      if (!taskModal.classList.contains("open")) return;
+      otEditSheet.refresh();
+    }).observe(taskModal, { attributes: true, attributeFilter: ["class"] });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (document.getElementById("taskPanel").classList.contains("open")) closePanels();
+      if (taskModal.classList.contains("open")) closeTaskEditor();
+    });
+    /* ===== end round 2 ===== */
   </script>
   <script type="module" src="./email-review.js?v=3"></script>
 </body>
