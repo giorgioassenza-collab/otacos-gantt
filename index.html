@@ -5000,7 +5000,7 @@
     let lastSafetyBackupKey = "";
     let saveQueue = Promise.resolve();
     let budgetState = { loaded: false, loading: false, rows: [], summary: null, error: "" };
-    let budgetMonthSortMode = "spend";
+    let budgetMonthSortMode = "chronological";
     let assetViewerItems = [];
     let assetViewerIndex = 0;
     let assetViewerSource = null;
@@ -7961,6 +7961,15 @@
     }
 
     function renderBudget() {
+      renderBudgetImpl();
+      /* display only: the sheet's GENERAL category is the agency fee */
+      const walker = document.createTreeWalker(budgetShell, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (node.nodeValue.trim() === "General") node.nodeValue = node.nodeValue.replace("General", "Fee");
+      }
+    }
+
+    function renderBudgetImpl() {
       if (appStarted && !isViewActive("budget")) return;
       if (!budgetShell) return;
       if (budgetState.loading) {
