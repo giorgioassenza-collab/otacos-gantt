@@ -6425,10 +6425,10 @@
           historyEntries = committed.history;
           dataVersion = Math.max(dataVersion, committed.revision);
           if (!hasNewerPending) {
-            pendingLocalData = cleanForFirestore(data);
-            pendingLocalRevision = dataVersion;
+            saveLocalSnapshot(cleanForFirestore(data), historyEntries, dataVersion);
+            pendingLocalData = null;
+            pendingLocalRevision = 0;
             pendingSaveCommittedAt = Date.now();
-            saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
           }
           setTimeout(() => {
             applyingRemoteUpdate = false;
@@ -6476,11 +6476,11 @@
         historyEntries = committed.history;
         dataVersion = committed.revision;
         committedData = structuredClone(data);
-        pendingLocalData = cleanForFirestore(data);
-        pendingLocalRevision = dataVersion;
+        saveLocalSnapshot(cleanForFirestore(data), historyEntries, dataVersion);
+        pendingLocalData = null;
+        pendingLocalRevision = 0;
         pendingSaveCommittedAt = Date.now();
         hasUnsyncedChanges = false;
-        saveLocalSnapshot(pendingLocalData, historyEntries, dataVersion);
         setSyncMessage("Synced");
       } catch (error) {
         console.error("Firestore retry failed", error);
