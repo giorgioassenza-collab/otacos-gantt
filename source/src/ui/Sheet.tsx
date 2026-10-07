@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -35,6 +35,15 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
   const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const [closing, setClosing] = useState(false);
+
+  /** Pointer-initiated closes (X, scrim) play a short exit; Escape and other keyboard closes are instant. */
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { closeRef.current(); return; }
+    setClosing(true);
+    window.setTimeout(() => closeRef.current(), 150);
+  }, [closing]);
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -45,6 +54,8 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
 
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // a list item picked up with the keyboard uses Escape to put itself back, not to close the sheet
+        if ((event.target as Element | null)?.closest?.('[data-grabbed="true"]')) return;
         event.stopPropagation();
         closeRef.current();
         return;
@@ -67,10 +78,10 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
 
   return createPortal(
     <>
-      <div className="scrim" onClick={onClose} aria-hidden="true" />
+      <div className={`scrim${closing ? " is-closing" : ""}`} onClick={requestClose} aria-hidden="true" />
       <div
         ref={ref}
-        className={`${dialog ? "dialog" : "sheet"}${wide ? " sheet--wide" : ""}`}
+        className={`${dialog ? "dialog" : "sheet"}${wide ? " sheet--wide" : ""}${closing ? " is-closing" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -80,7 +91,7 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
         <header className="sheet-head">
           <h2 id={titleId}>{title}</h2>
           {headerExtra}
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="icon-btn" onClick={requestClose} aria-label="Close">
             <X />
           </button>
         </header>

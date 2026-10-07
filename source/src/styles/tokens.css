@@ -67,6 +67,7 @@
   --ease: cubic-bezier(.16, 1, .3, 1);
   --t-fast: 120ms;
   --t-med: 220ms;
+  --t-exit: 150ms;
 
   /* layout */
   --rail-w: 232px;

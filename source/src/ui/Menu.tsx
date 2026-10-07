@@ -36,6 +36,10 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
       top = Math.max(8, above);
     }
     setPos({ left, top });
+    // grow from the trigger, not from the middle of the menu
+    const ox = Math.max(0, Math.min(rect.width, ax - left));
+    const oy = top >= ay ? 0 : rect.height;
+    node.style.setProperty("--origin", `${ox}px ${oy}px`);
   }, [anchor]);
 
   useEffect(() => {

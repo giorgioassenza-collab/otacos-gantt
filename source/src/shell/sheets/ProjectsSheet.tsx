@@ -2,7 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useBoard } from "../../store";
 import { useUI } from "../../ui/uiContext";
 import { Sheet, SheetBody } from "../../ui/Sheet";
-import { ArrowLeft, ArrowRight, Plus, Trash2 } from "../../ui/icons";
+import { Sortable } from "../../ui/Sortable";
+import { GripVertical, Plus, Trash2 } from "../../ui/icons";
 import { now } from "../../data/clock";
 import { CommitColor, CommitInput } from "../../ui/CommitInput";
 
@@ -31,21 +32,31 @@ export default function ProjectsSheet() {
   return (
     <Sheet title="Projects" onClose={close}>
       <SheetBody>
-        <p className="field-hint">Projects are the rows of the Gantt. Their order here is the order on screen.</p>
-        <ul className="settings-list">
-          {data.projects.map((project, index) => {
+        <p className="field-hint">
+          Projects are the rows of the Gantt, in this order. Drag the handle to reorder.
+          With the keyboard: focus a handle, press Space, move with the arrow keys, press Space to drop.
+        </p>
+        <Sortable
+          label="Projects, in Gantt order"
+          items={data.projects}
+          getKey={(project) => project.id}
+          getName={(project) => project.name}
+          onReorder={(from, to) => void mutate((draft) => { const [moved] = draft.projects.splice(from, 1); draft.projects.splice(to, 0, moved); })}
+          renderItem={(project, { index, handle }) => {
             const used = use(project.id);
             return (
-              <li key={project.id}>
+              <>
+                <button type="button" className="drag-handle" {...handle} aria-label={`Reorder ${project.name}. Position ${index + 1} of ${data.projects.length}. Press space to pick up.`}>
+                  <GripVertical aria-hidden />
+                </button>
                 <CommitColor value={project.color} label={`Color of ${project.name}`} onCommit={(next) => void mutate((d) => { const p = d.projects.find((x) => x.id === project.id); if (p) p.color = next; })} />
                 <CommitInput className="input input--sm settings-name-input" value={project.name} aria-label={`Name of ${project.name}`} onCommit={(next) => void mutate((d) => { const p = d.projects.find((x) => x.id === project.id); if (p) p.name = next; })} />
-                <button type="button" className="icon-btn icon-btn--sm" disabled={index === 0} aria-label={`Move ${project.name} up`} onClick={() => void mutate((d) => { const [p] = d.projects.splice(index, 1); d.projects.splice(index - 1, 0, p); })}><ArrowLeft style={{ transform: "rotate(90deg)" }} /></button>
-                <button type="button" className="icon-btn icon-btn--sm" disabled={index === data.projects.length - 1} aria-label={`Move ${project.name} down`} onClick={() => void mutate((d) => { const [p] = d.projects.splice(index, 1); d.projects.splice(index + 1, 0, p); })}><ArrowRight style={{ transform: "rotate(90deg)" }} /></button>
+                {used > 0 && <span className="project-row-count">{used} {used === 1 ? "item" : "items"}</span>}
                 <button type="button" className="icon-btn icon-btn--sm" disabled={used > 0} title={used > 0 ? `${used} tasks or posts use this project` : "Remove project"} aria-label={used > 0 ? `${project.name} is in use and cannot be removed` : `Remove ${project.name}`} onClick={() => void mutate((d) => { d.projects = d.projects.filter((x) => x.id !== project.id); })}><Trash2 /></button>
-              </li>
+              </>
             );
-          })}
-        </ul>
+          }}
+        />
         <form className="add-row" onSubmit={add}>
           <input className="input input--sm" value={name} onChange={(e) => setName(e.target.value)} placeholder="New project name" aria-label="New project name" autoComplete="off" data-autofocus={data.projects.length === 0 ? true : undefined} />
           <input className="input input--sm color-input" type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="New project color" />

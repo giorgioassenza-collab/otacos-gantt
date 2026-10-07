@@ -30,7 +30,8 @@
 .gantt-label-dot { width: 12px; height: 12px; border-radius: 4px; flex: none; margin-top: 4px; }
 .gantt-label-name { flex: 1; min-width: 0; font-weight: 700; font-size: var(--fs-2); line-height: 1.25; overflow-wrap: anywhere; }
 .gantt-label-add { width: 30px; height: 30px; border-radius: var(--r-sm); display: grid; place-items: center; color: var(--ink-3); flex: none; margin: -3px -4px 0 0; opacity: .7; }
-.gantt-label-add:hover, .gantt-label-add:focus-visible { background: var(--paper-2); color: var(--ink); opacity: 1; }
+.gantt-label-add:focus-visible { background: var(--paper-2); color: var(--ink); opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .gantt-label-add:hover { background: var(--paper-2); color: var(--ink); opacity: 1; } }
 .gantt-label-add svg { width: 18px; height: 18px; }
 @media (hover: hover) { .gantt-label-add { opacity: 0; } .gantt-row:hover .gantt-label-add, .gantt-label-add:focus-visible { opacity: 1; } }
 .gantt-lanes { position: relative; flex: none; }
@@ -42,7 +43,7 @@
   font-size: var(--fs-2); font-weight: 600; white-space: nowrap; overflow: hidden; cursor: pointer; user-select: none; -webkit-user-select: none;
   touch-action: pan-x pan-y; transition: box-shadow var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
 }
-.bar:hover { background: color-mix(in srgb, var(--p) 32%, var(--card)); }
+@media (hover: hover) and (pointer: fine) { .bar:hover { background: color-mix(in srgb, var(--p) 32%, var(--card)); } }
 .bar.is-done { opacity: .55; }
 .bar.is-done .bar-title { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .bar.is-dragging { z-index: 15; box-shadow: var(--shadow-float); cursor: grabbing; opacity: .95; transition: none; touch-action: none; }
@@ -54,7 +55,8 @@
 .bar-handle--start { left: 0; } .bar-handle--end { right: 0; }
 .bar-handle::after { content: ""; position: absolute; top: 25%; bottom: 25%; width: 3px; border-radius: 3px; background: var(--ink); opacity: 0; transition: opacity var(--t-fast) var(--ease); }
 .bar-handle--start::after { left: 3px; } .bar-handle--end::after { right: 3px; }
-.bar:hover .bar-handle::after, .bar:focus-visible .bar-handle::after, .bar.is-dragging .bar-handle::after { opacity: .5; }
+.bar:focus-visible .bar-handle::after, .bar.is-dragging .bar-handle::after { opacity: .5; }
+@media (hover: hover) and (pointer: fine) { .bar:hover .bar-handle::after { opacity: .5; } }
 @media (pointer: coarse) { .bar-handle { width: 22px; } .bar-handle::after { opacity: .35; } }
 
 .ped-chip {
@@ -62,7 +64,7 @@
   position: absolute; height: var(--bar); display: flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 999px;
   background: var(--card); border: 1.5px dashed var(--p); color: var(--ink); font-size: var(--fs-1); font-weight: 600; white-space: nowrap; overflow: hidden; cursor: pointer;
 }
-.ped-chip:hover { background: color-mix(in srgb, var(--p) 14%, var(--card)); }
+@media (hover: hover) and (pointer: fine) { .ped-chip:hover { background: color-mix(in srgb, var(--p) 14%, var(--card)); } }
 .ped-chip svg { width: 14px; height: 14px; flex: none; color: var(--ink-3); }
 .ped-chip span { overflow: hidden; text-overflow: ellipsis; }
 
@@ -85,7 +87,7 @@
   padding: var(--s-3) var(--s-3) var(--s-3) var(--s-3); background: var(--card); border: 1.5px solid var(--line); border-radius: var(--r-md);
   transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
-.task-card:hover { border-color: var(--ink); }
+@media (hover: hover) and (pointer: fine) { .task-card:hover { border-color: var(--ink); } }
 .task-card.is-done .task-card-title { text-decoration: line-through; color: var(--ink-3); }
 .task-card-swatch { width: 10px; align-self: stretch; border-radius: 6px; background: var(--p); min-height: 44px; }
 .task-card-main { min-width: 0; display: grid; gap: 6px; }

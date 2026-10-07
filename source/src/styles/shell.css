@@ -17,7 +17,7 @@
 .rail-link[aria-current="page"] { color: var(--paper); }
 .rail-link[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 22%; right: 22%; height: 3px; background: var(--orange); border-radius: 0 0 3px 3px; }
 .rail-link[aria-current="page"] svg { color: var(--orange); }
-.rail-link:hover { color: var(--paper); }
+@media (hover: hover) and (pointer: fine) { .rail-link:hover { color: var(--paper); } }
 
 .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding-bottom: calc(var(--tabbar-h) + var(--safe-b)); }
 .topbar {
@@ -68,7 +68,7 @@
   .rail-link[aria-current="page"]::before { left: -6px; right: auto; top: 14px; bottom: 14px; width: 3px; height: auto; border-radius: 0 3px 3px 0; }
   .rail-foot { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
   .rail-foot .icon-btn { color: var(--rail-text); }
-  .rail-foot .icon-btn:hover { background: var(--rail-2); color: var(--paper); }
+  @media (hover: hover) and (pointer: fine) { .rail-foot .icon-btn:hover { background: var(--rail-2); color: var(--paper); } }
   .rail-foot .badge-dot { border-color: var(--rail); }
   .main { padding-bottom: 0; }
   .app > .rail { height: 100dvh; position: sticky; top: 0; }
@@ -88,14 +88,14 @@
   .rail-link[aria-current="page"]::before { left: -12px; top: 12px; bottom: 12px; }
   .rail-foot { flex-direction: column; }
   .rail-foot .rail-foot-btn { display: flex; align-items: center; gap: var(--s-3); height: 42px; padding: 0 var(--s-3); border-radius: var(--r-md); color: var(--rail-text); font-size: var(--fs-3); font-weight: 500; position: relative; }
-  .rail-foot .rail-foot-btn:hover { background: var(--rail-2); color: var(--paper); }
+  @media (hover: hover) and (pointer: fine) { .rail-foot .rail-foot-btn:hover { background: var(--rail-2); color: var(--paper); } }
   .rail-foot .rail-foot-btn svg { width: 20px; height: 20px; }
   .rail-foot .rail-foot-btn .badge-dot { position: static; margin-left: auto; border-color: transparent; }
 }
 .rail-foot .rail-foot-btn { display: none; }
 @media (min-width: 720px) and (max-width: 1099px) {
   .rail-foot .rail-foot-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-md); color: var(--rail-text); position: relative; }
-  .rail-foot .rail-foot-btn:hover { background: var(--rail-2); color: var(--paper); }
+  @media (hover: hover) and (pointer: fine) { .rail-foot .rail-foot-btn:hover { background: var(--rail-2); color: var(--paper); } }
   .rail-foot .rail-foot-btn .rail-foot-label { display: none; }
   .rail-foot .rail-foot-btn svg { width: 20px; height: 20px; }
   .rail-foot .rail-foot-btn .badge-dot { top: 2px; right: 0; border-color: var(--rail); }
@@ -105,7 +105,7 @@
 @media (min-width: 720px) and (max-width: 1099px) { .rail-link span { display: none; } }
 
 /* ---------- login ---------- */
-.login { min-height: 100dvh; display: grid; place-items: center; padding: var(--s-5); background: var(--ink); color: var(--paper); }
+.login { min-height: 100dvh; display: grid; place-items: center; padding: max(var(--s-5), env(safe-area-inset-top)) max(var(--s-5), env(safe-area-inset-right)) max(var(--s-5), env(safe-area-inset-bottom)) max(var(--s-5), env(safe-area-inset-left)); background: var(--ink); color: var(--paper); }
 .login-card { width: min(380px, 100%); display: grid; gap: var(--s-5); }
 .login-brand { display: grid; gap: var(--s-4); }
 .login-brand img { width: min(240px, 70%); filter: none; }
@@ -124,18 +124,18 @@
 /* ---------- member pick chips (used by task / post editors) ---------- */
 .multipick { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .multipick-item { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--s-3); border-radius: var(--r-full); border: 1.5px solid var(--line); background: var(--card); font-size: var(--fs-2); font-weight: 600; transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
-.multipick-item:hover { border-color: #cdbfae; }
+@media (hover: hover) and (pointer: fine) { .multipick-item:hover { border-color: #cdbfae; } }
 .multipick-item[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 /* ---------- who are you / me / notifications ---------- */
 .me-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); }
-.me-btn:hover { background: var(--paper-2); }
+@media (hover: hover) and (pointer: fine) { .me-btn:hover { background: var(--paper-2); } }
 .me-btn .avatar { width: 32px; height: 32px; font-size: 12px; background: var(--orange); color: var(--ink); border: 2px solid var(--ink); }
 .who-card { width: min(520px, 100%); }
 .who-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-3); }
 .who-btn { display: flex; align-items: center; gap: var(--s-3); min-height: 64px; padding: 0 var(--s-4); border-radius: var(--r-md); border: 1.5px solid #4a4038; background: var(--rail-2); color: var(--paper); font-weight: 700; font-size: var(--fs-4); text-align: left; transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
-.who-btn:hover { border-color: var(--orange); background: #322a24; }
-.who-btn:active { transform: translateY(1px); }
+@media (hover: hover) and (pointer: fine) { .who-btn:hover { border-color: var(--orange); background: #322a24; } }
+.who-btn:active { transform: scale(.97); }
 .who-btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; box-shadow: none; }
 .who-avatar { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--orange); color: var(--ink); font-size: var(--fs-2); font-weight: 800; flex: none; }
 @media (min-width: 520px) { .who-grid { grid-template-columns: repeat(3, 1fr); } .who-btn { flex-direction: column; justify-content: center; text-align: center; min-height: 112px; gap: var(--s-2); } }

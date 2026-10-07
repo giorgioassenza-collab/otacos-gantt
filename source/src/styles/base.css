@@ -31,7 +31,7 @@ input, textarea { caret-color: var(--orange); }
 * { scrollbar-width: thin; scrollbar-color: #cdbfae transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb { background: #cdbfae; border-radius: var(--r-full); border: 2px solid transparent; background-clip: content-box; }
-*::-webkit-scrollbar-thumb:hover { background: #b3a28d; background-clip: content-box; border: 2px solid transparent; }
+@media (hover: hover) and (pointer: fine) { *::-webkit-scrollbar-thumb:hover { background: #b3a28d; background-clip: content-box; border: 2px solid transparent; } }
 
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .display { font-family: var(--display); font-stretch: 78%; font-weight: 800; letter-spacing: -.01em; text-transform: uppercase; line-height: 1; }
@@ -49,18 +49,18 @@ input, textarea { caret-color: var(--orange); }
   border: 1.5px solid var(--ink); background: var(--card); color: var(--ink);
   transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
-.btn:hover:not(:disabled) { background: var(--paper-2); }
-.btn:active:not(:disabled) { transform: translateY(1px); }
+@media (hover: hover) and (pointer: fine) { .btn:hover:not(:disabled) { background: var(--paper-2); } }
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn:disabled { opacity: .5; }
 .btn svg { width: 18px; height: 18px; flex: none; }
 .btn--primary { background: var(--orange); border-color: var(--ink); color: var(--ink); }
-.btn--primary:hover:not(:disabled) { background: var(--orange-press); }
+@media (hover: hover) and (pointer: fine) { .btn--primary:hover:not(:disabled) { background: var(--orange-press); } }
 .btn--dark { background: var(--ink); color: var(--paper); }
-.btn--dark:hover:not(:disabled) { background: var(--ink-2); }
+@media (hover: hover) and (pointer: fine) { .btn--dark:hover:not(:disabled) { background: var(--ink-2); } }
 .btn--ghost { border-color: transparent; background: transparent; }
-.btn--ghost:hover:not(:disabled) { background: var(--paper-2); }
+@media (hover: hover) and (pointer: fine) { .btn--ghost:hover:not(:disabled) { background: var(--paper-2); } }
 .btn--danger { color: var(--danger); border-color: var(--danger); }
-.btn--danger:hover:not(:disabled) { background: var(--danger-soft); }
+@media (hover: hover) and (pointer: fine) { .btn--danger:hover:not(:disabled) { background: var(--danger-soft); } }
 .btn--sm { min-height: 34px; padding: 0 var(--s-3); font-size: var(--fs-2); }
 .btn--block { width: 100%; }
 
@@ -69,7 +69,7 @@ input, textarea { caret-color: var(--orange); }
   color: var(--ink); position: relative;
   transition: background var(--t-fast) var(--ease);
 }
-.icon-btn:hover:not(:disabled) { background: var(--paper-2); }
+@media (hover: hover) and (pointer: fine) { .icon-btn:hover:not(:disabled) { background: var(--paper-2); } }
 .icon-btn:disabled { opacity: .4; }
 .icon-btn svg { width: 20px; height: 20px; }
 .icon-btn--sm { width: 32px; height: 32px; }
@@ -91,7 +91,7 @@ input, textarea { caret-color: var(--orange); }
   transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
 }
 .textarea { padding: var(--s-3); min-height: 88px; resize: vertical; line-height: 1.4; }
-.input:hover, .select:hover, .textarea:hover { border-color: #cdbfae; }
+@media (hover: hover) and (pointer: fine) { .input:hover, .select:hover, .textarea:hover { border-color: #cdbfae; } }
 .input:focus-visible, .select:focus-visible, .textarea:focus-visible { border-color: var(--ink); outline: none; box-shadow: var(--focus); }
 .select { appearance: none; padding-right: 36px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2317120f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
 .input--sm, .select--sm { min-height: 36px; font-size: 14px; }
@@ -112,7 +112,7 @@ input[type="color"] { padding: 3px; min-height: 42px; width: 64px; cursor: point
 }
 .chip-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; }
 button.chip { cursor: pointer; transition: background var(--t-fast) var(--ease); }
-button.chip:hover { filter: brightness(.96); }
+@media (hover: hover) and (pointer: fine) { button.chip:hover { filter: brightness(.96); } }
 .avatar { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 700; flex: none; border: 2px solid var(--card); }
 .avatar-stack { display: inline-flex; }
 .avatar-stack .avatar + .avatar { margin-left: -8px; }
@@ -121,10 +121,12 @@ button.chip:hover { filter: brightness(.96); }
 .segmented { display: inline-flex; padding: 3px; gap: 2px; background: var(--paper-2); border-radius: var(--r-md); border: 1px solid var(--line); }
 .segmented button { min-height: 32px; padding: 0 var(--s-3); border-radius: 8px; font-size: var(--fs-2); font-weight: 600; color: var(--ink-3); transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .segmented button[aria-pressed="true"], .segmented button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
-.segmented button:not([aria-pressed="true"]):not([aria-selected="true"]):hover { color: var(--ink); background: var(--line-soft); }
+@media (hover: hover) and (pointer: fine) { .segmented button:not([aria-pressed="true"]):not([aria-selected="true"]):hover { color: var(--ink); background: var(--line-soft); } }
 
 /* ---------- overlays ---------- */
 .scrim { position: fixed; inset: 0; background: rgba(23, 18, 15, .5); z-index: 60; animation: fade-in var(--t-med) var(--ease); }
+/* leaving is quicker than arriving: the system answers fast, the user already decided */
+.scrim.is-closing { animation: fade-out var(--t-exit) var(--ease) forwards; }
 .sheet {
   position: fixed; z-index: 61; background: var(--card); color: var(--ink);
   display: flex; flex-direction: column; box-shadow: var(--shadow-float);
@@ -133,6 +135,7 @@ button.chip:hover { filter: brightness(.96); }
   left: 0; right: 0; bottom: 0; max-height: min(92dvh, 760px); border-radius: var(--r-lg) var(--r-lg) 0 0;
   padding-bottom: var(--safe-b);
 }
+.sheet.is-closing { animation: sheet-out var(--t-exit) var(--ease) forwards; }
 .sheet-grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 8px auto 0; flex: none; }
 .sheet-head { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5); border-bottom: 1px solid var(--line-soft); flex: none; }
 .sheet-head h2 { flex: 1; font-family: var(--display); font-stretch: 78%; font-weight: 800; text-transform: uppercase; font-size: var(--fs-5); letter-spacing: -.01em; line-height: 1.05; }
@@ -141,24 +144,34 @@ button.chip:hover { filter: brightness(.96); }
 .sheet-foot .spacer { flex: 1; }
 @media (min-width: 720px) {
   .sheet { left: auto; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); max-height: none; border-radius: var(--r-lg) 0 0 var(--r-lg); animation-name: panel-in; padding-bottom: 0; }
+  .sheet.is-closing { animation-name: panel-out; }
   .sheet--wide { width: min(760px, 100vw); }
   .sheet-grab { display: none; }
 }
 .dialog { position: fixed; z-index: 61; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); max-height: 88dvh; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow-float); display: flex; flex-direction: column; animation: dialog-in var(--t-med) var(--ease); }
+.dialog.is-closing { animation: dialog-out var(--t-exit) var(--ease) forwards; }
 @keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes sheet-out { to { transform: translateY(24px); opacity: 0; } }
+@keyframes panel-out { to { transform: translateX(28px); opacity: 0; } }
+@keyframes dialog-out { to { opacity: 0; transform: translate(-50%, -48%) scale(.98); } }
+@keyframes menu-in { from { opacity: 0; transform: scale(.96); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
 @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
 @keyframes panel-in { from { transform: translateX(28px); opacity: 0; } }
 @keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%) scale(.98); } }
 
-.menu { position: fixed; z-index: 70; min-width: 180px; max-width: min(320px, calc(100vw - 16px)); padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-float); animation: fade-in var(--t-fast) var(--ease); max-height: 60dvh; overflow-y: auto; }
+.menu { position: fixed; z-index: 70; min-width: 180px; max-width: min(320px, calc(100vw - 16px)); padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow-float); animation: menu-in 140ms var(--ease); transform-origin: var(--origin, top left); max-height: 60dvh; overflow-y: auto; }
 .menu button { display: flex; width: 100%; align-items: center; gap: var(--s-3); min-height: 40px; padding: 0 var(--s-3); border-radius: 8px; text-align: left; font-size: var(--fs-3); }
-.menu button:hover, .menu button:focus-visible { background: var(--paper-2); }
+.menu button:focus-visible { background: var(--paper-2); }
+@media (hover: hover) and (pointer: fine) { .menu button:hover { background: var(--paper-2); } }
 .menu button[aria-checked="true"] { font-weight: 700; }
 .menu hr { border: 0; border-top: 1px solid var(--line-soft); margin: 4px 0; }
 
 .toast-region { position: fixed; z-index: 80; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabbar-h) + var(--safe-b) + 84px); display: grid; gap: var(--s-2); width: min(420px, calc(100vw - 24px)); pointer-events: none; }
 @media (min-width: 900px) { .toast-region { bottom: var(--s-5); } }
 .toast { pointer-events: auto; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); background: var(--ink); color: var(--paper); border-radius: var(--r-md); box-shadow: var(--shadow-float); font-size: var(--fs-2); font-weight: 500; animation: sheet-in var(--t-med) var(--ease); }
+.toast.is-leaving { animation: toast-out var(--t-exit) var(--ease) forwards; }
 .toast--error { background: var(--danger); }
 .toast .btn { min-height: 30px; padding: 0 var(--s-3); background: transparent; color: var(--yellow); border-color: transparent; margin-left: auto; font-size: var(--fs-2); }
 
@@ -172,3 +185,24 @@ button.chip:hover { filter: brightness(.96); }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--orange); animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- native feel on phones (platform layer) ---------- */
+html { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+/* no 300ms tap wait; controls are not selectable text, content is */
+button, a, [role="button"], summary, select, label.check { touch-action: manipulation; }
+button, [role="button"], summary { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.view-scroll { overscroll-behavior: contain; }
+/* press feedback lands on pointer-down, on every input type (hover cannot do this on touch) */
+.icon-btn, button.chip, .pill, .multipick-item, .segmented button, .week-day, .rail-link, .rail-foot-btn, .me-btn, .note-row, .menu button, .task-card-main, .tag .icon-btn, .settings-tabs button {
+  transition: transform 160ms var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.icon-btn:active:not(:disabled), button.chip:active, .pill:active, .multipick-item:active, .segmented button:active, .week-day:active, .rail-link:active, .rail-foot-btn:active, .me-btn:active, .note-row:active, .tag .icon-btn:active { transform: scale(.97); }
+.menu button:active { transform: scale(.98); }
+/* touch: 16px fields (iOS zooms the page into anything smaller) and thumb-sized targets */
+@media (pointer: coarse) {
+  input, textarea, select, .input, .input--sm, .select, .select--sm, .textarea { font-size: 16px; }
+  .input--sm, .select--sm { min-height: 44px; }
+  .icon-btn--sm, .tag .icon-btn { width: 40px; height: 40px; }
+  .btn--sm { min-height: 40px; }
+  .check { min-height: 44px; }
+}
