@@ -11226,6 +11226,7 @@
       document.getElementById("pedPostDate").value = currentDateKey();
       pedPostTime.value = "11:00";
       setView(readSavedView(), { persist: false });
+      otRollOverUnfinished();
       retryPendingLocalSave();
       setInterval(retryPendingLocalSave, 5000);
       setInterval(refreshSharedData, 1800);
@@ -14391,6 +14392,54 @@
       if (taskModal.classList.contains("open")) closeTaskEditor();
     });
     /* ===== end round 2 ===== */
+
+    /* ---------- roll-over: at 20:00 unfinished tasks move to the next working day ---------- */
+    const OT_DAY_END_HOUR = 20;
+    function otNextWorkingDayKey(now = new Date()) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (now.getHours() >= OT_DAY_END_HOUR) d.setDate(d.getDate() + 1);
+      while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+      return dateKey(d);
+    }
+    function otShouldRollOver(task, target) {
+      if (!task || !task.start) return false;
+      if (isDoneStatus(task.status) || isBlockedStatus(task.status)) return false;
+      if (String(task.id || "").endsWith("-influencer-progress")) return false;
+      return (task.end || task.start) < target;
+    }
+    let otRollOverRunning = false;
+    async function otRollOverUnfinished() {
+      if (!appStarted || otRollOverRunning || dragState) return;
+      const target = otNextWorkingDayKey();
+      const moving = (data.tasks || []).filter((task) => otShouldRollOver(task, target));
+      if (!moving.length) return;
+      otRollOverRunning = true;
+      try {
+        moving.forEach((task) => {
+          const wasSingleDay = !task.end || task.end === task.start;
+          if (wasSingleDay) task.start = target;
+          task.end = target;
+          if (wasSingleDay && shouldAutoCreatePedPost(task)) {
+            task.pedEnabled = true;
+            task.pedDate = target;
+            task.pedTime = task.pedTime || "12:00";
+          }
+          touchItem(task);
+        });
+        syncAutomaticPedPostsForTasks(moving);
+        const savePromise = saveData(true);
+        renderBoard();
+        renderPed();
+        renderCreatorCalendar();
+        updateOverdueButton();
+        console.info(`Rolled over ${moving.length} unfinished task(s) to ${target}`);
+        await savePromise;
+      } finally {
+        otRollOverRunning = false;
+      }
+    }
+    setInterval(otRollOverUnfinished, 60000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) otRollOverUnfinished(); });
   </script>
   <script type="module" src="./email-review.js?v=3"></script>
 </body>
