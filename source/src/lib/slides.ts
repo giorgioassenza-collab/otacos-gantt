@@ -3,7 +3,7 @@ import type { DriveItem } from "../external/drive";
 
 /** One thing to show in a post's media area. */
 export type Slide =
-  | { kind: "image"; src: string; fallback?: string; label: string }
+  | { kind: "image"; src: string; fallback?: string; original?: string; label: string }
   /** A video file the browser plays itself. */
   | { kind: "video"; src: string; label: string }
   /** A page that plays the video (Drive, YouTube, Vimeo). `cover` is shown until the user presses play. */
@@ -23,14 +23,14 @@ export function slideFromLink(link: string, format: string, width = 800): Slide 
   if (fileId) {
     return format === "Video"
       ? { kind: "embed", src: url.replace("/view", "/preview"), cover: driveThumb(fileId, width), label: "Drive video" }
-      : { kind: "image", src: driveThumb(fileId, width), fallback: url.replace("/view", "/preview"), label: "Drive asset" };
+      : { kind: "image", src: driveThumb(fileId, width), fallback: url.replace("/view", "/preview"), original: url, label: "Drive asset" };
   }
   const yt = youtubeId(url);
   if (yt) return { kind: "embed", src: `https://www.youtube.com/embed/${yt}?rel=0`, autoplay: "autoplay=1", cover: `https://img.youtube.com/vi/${yt}/hqdefault.jpg`, label: "YouTube video" };
   const vimeo = vimeoId(url);
   if (vimeo) return { kind: "embed", src: `https://player.vimeo.com/video/${vimeo}`, autoplay: "autoplay=1", label: "Vimeo video" };
   if (isVideoAsset(url)) return { kind: "video", src: url, label: "Video" };
-  if (isImageAsset(url)) return { kind: "image", src: url, label: "Image" };
+  if (isImageAsset(url)) return { kind: "image", src: url, original: url, label: "Image" };
   return null;
 }
 
@@ -48,14 +48,14 @@ export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderIt
       const src = item.src || item.original || "";
       if (item.type === "video") return { kind: "video", src, label: item.label || "Video" };
       if (item.type === "iframe") return { kind: "embed", src, label: item.label || "Video" };
-      return { kind: "image", src, fallback: item.fallback || item.original || undefined, label: item.label || "Image" };
+      return { kind: "image", src, fallback: item.fallback || item.original || undefined, original: item.original || undefined, label: item.label || "Image" };
     });
   }
   if (opts.folderItems?.length) {
     return opts.folderItems.map((item): Slide =>
       item.type === "video"
         ? { kind: "embed", src: drivePreview(item.id), cover: driveThumb(item.id, width), label: item.label }
-        : { kind: "image", src: driveThumb(item.id, width), fallback: item.fallback, label: item.label }
+        : { kind: "image", src: driveThumb(item.id, width), fallback: item.fallback, original: item.original, label: item.label }
     );
   }
   return assetLinks(opts.asset).map((link) => slideFromLink(link, opts.format, width)).filter((slide): slide is Slide => Boolean(slide));

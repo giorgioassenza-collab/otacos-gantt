@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { driveFolderLinkId, assetLinks } from "../lib/assets";
 import { useDriveFolder } from "../lib/driveFolders";
 import { buildSlides, type Slide } from "../lib/slides";
@@ -51,19 +51,43 @@ export function PostMedia({ asset, assetItems, format, onOpen, size = "card" }: 
   const only = slides[0];
   return (
     <div className={`pm pm-${size}`}>
-      {only.kind === "image" ? <FullImage slide={only} onOpen={onOpen} /> : <Player slide={only} />}
+      {only.kind === "image" ? <FullImage slide={only} onOpen={onOpen} size={size} /> : <Player slide={only} />}
     </div>
   );
 }
 
 /* ---------- a single picture, whole ---------- */
 
-function FullImage({ slide, onOpen }: { slide: Extract<Slide, { kind: "image" }>; onOpen?: () => void }) {
-  const [src, setSrc] = useState(slide.src);
-  const [failed, setFailed] = useState(false);
-  const [frame, setFrame] = useState(false);
-  if (frame && slide.fallback) return <iframe className="pm-frame" src={slide.fallback} loading="lazy" referrerPolicy="no-referrer" title={slide.label} allowFullScreen />;
-  if (failed) return <div className="pm-failed">Picture unavailable<br /><small>Check the sharing settings</small></div>;
+/** Drive thumbnails come in any size you ask for: ask for what the card needs, not the 1200px the old app saved. */
+function sized(src: string, width: number): string {
+  return src.includes("drive.google.com/thumbnail") ? src.replace(/sz=w\d+/, `sz=w${width}`) : src;
+}
+
+/**
+ * A picture shown whole. Drive answers "too many requests" when a lot of thumbnails are asked at once, so a failed
+ * picture is retried twice with a pause. If it still fails the card says so and links to the original (the editor, which
+ * has room for it, may show Drive's own viewer instead). It never swaps a card for a Drive page on the first error.
+ */
+function FullImage({ slide, onOpen, size, active = true }: { slide: Extract<Slide, { kind: "image" }>; onOpen?: () => void; size: "card" | "wide" | "sheet"; active?: boolean }) {
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<"ok" | "failed" | "frame">("ok");
+  const timer = useRef(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  if (!active) return <div className="pm-pending" aria-hidden="true" />;
+  if (state === "frame" && slide.fallback) return <iframe className="pm-frame" src={slide.fallback} loading="lazy" referrerPolicy="no-referrer" title={slide.label} allowFullScreen />;
+  if (state === "failed") {
+    const href = slide.original && /^https?:\/\//i.test(slide.original) ? slide.original : "";
+    return (
+      <div className="pm-failed">
+        <span>Picture unavailable</span>
+        {href && <a href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} aria-hidden /> Open</a>}
+      </div>
+    );
+  }
+  const width = size === "card" ? 640 : 1000;
+  const base = sized(slide.src, width);
+  const src = attempt ? `${base}${base.includes("?") ? "&" : "#"}retry=${attempt}` : base;
   return (
     <img
       className={`pm-full${onOpen ? " is-clickable" : ""}`}
@@ -75,9 +99,8 @@ function FullImage({ slide, onOpen }: { slide: Extract<Slide, { kind: "image" }>
       draggable={false}
       onClick={onOpen}
       onError={() => {
-        if (slide.fallback && src === slide.src) { setFrame(true); return; }
-        if (src !== slide.src) { setFailed(true); return; }
-        setFailed(true);
+        if (attempt < 2) { timer.current = window.setTimeout(() => setAttempt((n) => n + 1), 900 * (attempt + 1)); return; }
+        setState(size === "sheet" && slide.fallback ? "frame" : "failed");
       }}
     />
   );
@@ -133,7 +156,7 @@ function Carousel({ slides, onOpen, size }: { slides: Slide[]; onOpen?: () => vo
       <div className="pm-track" ref={track} onScroll={sync} onKeyDown={onKey} tabIndex={0}>
         {slides.map((slide, i) => (
           <div key={i} className="pm-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
-            {slide.kind === "image" ? <FullImage slide={slide} onOpen={onOpen} /> : <Player slide={slide} />}
+            {slide.kind === "image" ? <FullImage slide={slide} onOpen={onOpen} size={size} active={Math.abs(i - index) <= 1} /> : <Player slide={slide} />}
           </div>
         ))}
       </div>

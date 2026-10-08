@@ -1,0 +1,1 @@
+import{r as e}from"./index-B_xapxm7.js";function l(r,a){const[s,c]=e.useState(()=>{try{const t=localStorage.getItem(r);if(t!==null)return JSON.parse(t)}catch{}return a}),o=e.useCallback(t=>{c(t);try{localStorage.setItem(r,JSON.stringify(t))}catch{}},[r]);return[s,o]}export{l as u};
