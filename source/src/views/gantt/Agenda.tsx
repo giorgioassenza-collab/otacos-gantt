@@ -4,6 +4,8 @@ import { currentDateKey, isBlockedStatus, isDoneStatus, shiftDateString } from "
 import { displayLabel } from "../../data/labelAliases";
 import { dateRangeLabel, friendlyDate, parseDate, projectOf, socialOf, type PedItem } from "../../lib/gantt";
 import { Avatars, StatusChip } from "../../ui/common";
+import { useAssetPreview } from "../../lib/useAssetPreview";
+import { PostThumb } from "../../ui/PostThumb";
 import { Camera, CircleAlert, ListChecks, MoreHorizontal, Plus, Video, Home, CalendarDays } from "../../ui/icons";
 
 interface AgendaProps {
@@ -126,9 +128,10 @@ export function TaskCard({ data, task, onOpen, onStatus, onContext, showSpan }: 
 
 export function PostCard({ data, item, onOpen }: { data: BoardData; item: PedItem; onOpen: (item: PedItem) => void }) {
   const style = { "--p": item.color } as CSSProperties;
+  const { preview, loading } = useAssetPreview(item.asset, item.assetItems, 160);
   return (
     <button type="button" className="task-card post-row" style={style} onClick={() => onOpen(item)} aria-label={`Open post ${item.title}`}>
-      <span className="ped-time">{item.time}</span>
+      <PostThumb preview={preview} loading={loading} />
       <span className="task-card-main">
         <span className="task-card-title">{item.title}</span>
         <span className="task-card-meta">

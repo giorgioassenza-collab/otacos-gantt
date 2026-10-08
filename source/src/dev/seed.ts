@@ -48,7 +48,9 @@ export function seedDemoBoard(force = false): void {
     pedPosts: [
       post("New menu reveal", "p-demo-social", 0, "12:00", "Ready", ["instagram"], "Video", ["Giorgio"]),
       post("Behind the counter", "p-demo-social", 0, "18:00", "Draft", ["tiktok"], "Video", ["Matteo"]),
-      post("Weekend special", "p-demo-social", 2, "11:00", "Draft", ["instagram", "tiktok"], "Carousel", ["Giorgio"]),
+      { ...post("Weekend special", "p-demo-social", 2, "11:00", "Draft", ["instagram", "tiktok"], "Carousel", ["Giorgio"]), asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv", assetItems: [{ type: "image", src: "data:image/svg+xml;utf8," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'><rect width='320' height='200' fill='#ff7200'/><circle cx='160' cy='100' r='50' fill='#17120f'/></svg>"), fallback: "", original: "", label: "Synthetic" }, { type: "image", src: "x", fallback: "", original: "", label: "" }] },
+      { ...post("Counter video", "p-demo-social", 1, "15:00", "Draft", ["tiktok"], "Video", ["Matteo"]), asset: "https://example.com/clip.mp4" },
+      { ...post("Folder without thumbnails", "p-demo-events", 1, "17:00", "Draft", ["instagram"], "Carousel", ["Vale M"]), asset: "https://drive.google.com/drive/folders/1Dg_bgRkdzoaUD8vSb4XuPaHN6ZxHZEf_" },
       post("Store opening recap", "p-demo-events", 3, "13:00", "Draft", ["instagram"], "Static", ["Vale M"])
     ],
     influencers: [

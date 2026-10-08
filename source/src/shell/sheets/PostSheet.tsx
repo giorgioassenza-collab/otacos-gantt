@@ -14,7 +14,9 @@ import { now } from "../../data/clock";
 import { duplicatePedItem, ensurePedPostForTask } from "../../data/labels";
 import { isClientName } from "../../data/util";
 import { blankPost, deletePedPost } from "../../lib/actions";
-import { assetLinks, isDriveFolder, safeHref, thumbnailFor } from "../../lib/assets";
+import { assetLinks, isDriveFolder, safeHref } from "../../lib/assets";
+import { useAssetPreview } from "../../lib/useAssetPreview";
+import { PostThumb } from "../../ui/PostThumb";
 import { normalizeFormat, normalizeHour } from "../../lib/gantt";
 
 const FORMATS = ["Video", "Static", "Carousel"] as const;
@@ -134,7 +136,7 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
   const live = existing ? data.pedPosts.find((p) => p.id === existing.id) : undefined;
   const persisted = Boolean(live);
   const links = assetLinks(post.asset);
-  const thumb = thumbnailFor(post.asset, 480);
+  const { preview, loading: previewLoading } = useAssetPreview(post.asset, live?.assetItems ?? linkedTask?.pedAssetItems ?? post.assetItems, 480);
   const sorted = [...(live?.comments ?? [])].sort((a, b) => a.createdAt - b.createdAt);
 
   return (
@@ -178,9 +180,9 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
         <MultiPick label="Who" value={post.members} onChange={(next) => patch({ members: next })} options={members.map((m) => ({ value: m, label: m }))} empty="Add people in Settings." />
 
         <TextAreaField label="Asset links" hint="One link per line: Drive files or folders, images, videos." value={post.asset} onChange={(e) => patch({ asset: e.target.value })} rows={3} placeholder="https://drive.google.com/…" />
-        {(thumb || links.length > 0) && (
+        {(links.length > 0 || preview.kind === "image") && (
           <div className="asset-preview">
-            {thumb && <img src={thumb} alt="Preview of the first asset" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+            <PostThumb preview={preview} tall loading={previewLoading} />
             <ul>
               {links.map((link) => {
                 const href = safeHref(link);

@@ -1,4 +1,4 @@
-import type { BoardData, PedFormat, Project, Task, PedPost, Social, Status } from "../data/types";
+import type { AssetItem, BoardData, PedFormat, Project, Task, PedPost, Social, Status } from "../data/types";
 import { dateKey, shiftDateString } from "../data/dates";
 
 export const DAY_MS = 86_400_000;
@@ -73,6 +73,8 @@ export interface PedItem {
   social: string[];
   format: PedFormat;
   asset: string;
+  /** Thumbnails saved in the post (or in the task that feeds it) when a Drive folder was opened in the old app. */
+  assetItems: AssetItem[];
   copy: string;
   projectId: string;
   project: string;
@@ -108,6 +110,7 @@ export function buildPedItems(data: BoardData): PedItem[] {
         social: post?.social || task.pedSocial || [],
         format: normalizeFormat(post?.format),
         asset: post?.asset || task.pedAsset || "",
+        assetItems: post?.assetItems?.length ? post.assetItems : task.pedAssetItems ?? [],
         copy: post?.copy || task.pedCopy || "",
         projectId: task.projectId,
         project: project?.name || "",
@@ -133,6 +136,7 @@ export function buildPedItems(data: BoardData): PedItem[] {
         social: post.social,
         format: normalizeFormat(post.format),
         asset: post.asset,
+        assetItems: post.assetItems ?? [],
         copy: post.copy,
         projectId: post.projectId,
         project: project?.name || "",

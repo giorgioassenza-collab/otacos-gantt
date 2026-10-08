@@ -5,7 +5,8 @@ import { usePref } from "../../lib/usePref";
 import { currentDateKey, shiftDateString } from "../../data/dates";
 import { buildPedItems, initials, normalizeHour, parseDate, socialOf, type PedItem } from "../../lib/gantt";
 import { movePedItem } from "../../lib/actions";
-import { thumbnailFor } from "../../lib/assets";
+import { useAssetPreview } from "../../lib/useAssetPreview";
+import { PostThumb } from "../../ui/PostThumb";
 import { Avatars, EmptyState, StatusChip } from "../../ui/common";
 import { CalendarDays, ChevronLeft, ChevronRight, MessageSquare, Plus, Video, ListChecks } from "../../ui/icons";
 
@@ -181,7 +182,7 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
   data: ReturnType<typeof useBoard>["data"]; item: PedItem; onOpen: (item: PedItem) => void; wide?: boolean; draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLButtonElement>) => void; onDragEnd?: () => void; dragging?: boolean;
 }) {
-  const thumb = thumbnailFor(item.asset, wide ? 400 : 240);
+  const { preview, loading } = useAssetPreview(item.asset, item.assetItems, wide ? 400 : 240);
   const style = { "--p": item.color } as CSSProperties;
   return (
     <button
@@ -194,7 +195,7 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
       onClick={() => onOpen(item)}
       aria-label={`${item.time} ${item.title}. ${item.status}. Open post`}
     >
-      {thumb && <img className="ped-thumb" src={thumb} alt="" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.remove(); }} />}
+      <PostThumb preview={preview} tall={wide} loading={loading} />
       <span className="ped-card-top">
         <span className="ped-card-time">{item.time}</span>
         <Video aria-hidden />
