@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from "react";
 import { driveFolderLinkId, assetLinks } from "../lib/assets";
 import { useDriveFolder } from "../lib/driveFolders";
 import { buildSlides, resolveDriveFile, type Slide } from "../lib/slides";
@@ -87,7 +87,7 @@ function DriveFileSlide({ slide, onOpen, size, active }: { slide: Extract<Slide,
 function SlideView({ slide, onOpen, size, active }: { slide: Slide; onOpen?: () => void; size: "card" | "wide" | "sheet"; active: boolean }) {
   if (slide.kind === "drivefile") return <DriveFileSlide slide={slide} onOpen={onOpen} size={size} active={active} />;
   if (slide.kind === "image") return <FullImage slide={slide} onOpen={onOpen} size={size} active={active} />;
-  return <Player slide={slide} />;
+  return <Player slide={slide} size={size} />;
 }
 
 /* ---------- a single picture, whole ---------- */
@@ -201,10 +201,16 @@ function OpenLink({ href }: { href?: string }) {
   return <a className="pm-open" href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} aria-hidden /> Open in a new tab</a>;
 }
 
-function Facade({ cover, label, onPlay }: { cover?: string; label: string; onPlay: () => void }) {
+function Facade({ cover, label, onPlay, style, onRatio }: { cover?: string; label: string; onPlay: () => void; style?: CSSProperties; onRatio: (ratio: number) => void }) {
   return (
-    <button type="button" className="pm-facade" onClick={onPlay} aria-label={`Play ${label}`}>
-      {cover ? <img src={cover} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = "none"; }} /> : null}
+    <button type="button" className="pm-facade" style={style} onClick={onPlay} aria-label={`Play ${label}`}>
+      {cover ? (
+        <img
+          src={cover} alt="" loading="lazy" draggable={false}
+          onLoad={(e) => { const { naturalWidth: w, naturalHeight: h } = e.currentTarget; if (w && h) onRatio(w / h); }}
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
+        />
+      ) : null}
       <span className="pm-play" aria-hidden="true"><Play /></span>
       <span className="pm-facade-label">{label}</span>
     </button>
@@ -216,21 +222,27 @@ function Facade({ cover, label, onPlay }: { cover?: string; label: string; onPla
  * does not work (a private file, a format Chrome cannot play) Drive's own player takes over in the same place, and there
  * is always a link to open it in a new tab. YouTube/Vimeo load their player when you press play.
  */
-function Player({ slide }: { slide: Exclude<Slide, { kind: "image" | "drivefile" }> }) {
+function Player({ slide, size }: { slide: Exclude<Slide, { kind: "image" | "drivefile" }>; size: "card" | "wide" | "sheet" }) {
   const [mode, setMode] = useState<"cover" | "video" | "frame">("cover");
+  // The player takes the shape of the video (a reel is vertical, not 16:9). Cards keep it between 4:5 and 16:9, as the
+  // feed does; the editor shows up to 9:16.
+  const [ratio, setRatio] = useState(0);
+  const lowest = size === "sheet" ? 9 / 16 : 4 / 5;
+  const style = ratio ? ({ "--ar": String(Math.min(16 / 9, Math.max(lowest, ratio))) } as CSSProperties) : undefined;
+  const measure = (video: HTMLVideoElement) => { if (video.videoWidth && video.videoHeight) setRatio(video.videoWidth / video.videoHeight); };
 
   if (slide.kind === "video") {
-    return <video className="pm-video" src={slide.src} controls playsInline preload="metadata" aria-label={slide.label} />;
+    return <video className="pm-video" style={style} src={slide.src} controls playsInline preload="metadata" aria-label={slide.label} onLoadedMetadata={(e) => measure(e.currentTarget)} />;
   }
 
   if (slide.kind === "drivevideo") {
-    if (mode === "cover") return <Facade cover={slide.cover} label={slide.label} onPlay={() => setMode("video")} />;
+    if (mode === "cover") return <Facade cover={slide.cover} label={slide.label} style={style} onRatio={setRatio} onPlay={() => setMode("video")} />;
     return (
       <div className="pm-playing">
         {mode === "video" ? (
-          <video className="pm-video" src={slide.src} poster={slide.cover} controls autoPlay playsInline preload="auto" aria-label={slide.label} onError={() => setMode("frame")} />
+          <video className="pm-video" style={style} src={slide.src} poster={slide.cover} controls autoPlay playsInline preload="auto" aria-label={slide.label} onLoadedMetadata={(e) => measure(e.currentTarget)} onError={() => setMode("frame")} />
         ) : (
-          <iframe className="pm-frame" src={slide.page} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
+          <iframe className="pm-frame" style={style} src={slide.page} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
         )}
         <OpenLink href={slide.original || slide.page} />
       </div>
@@ -241,12 +253,12 @@ function Player({ slide }: { slide: Exclude<Slide, { kind: "image" | "drivefile"
     const src = slide.autoplay ? `${slide.src}${slide.src.includes("?") ? "&" : "?"}${slide.autoplay}` : slide.src;
     return (
       <div className="pm-playing">
-        <iframe className="pm-frame" src={src} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen />
+        <iframe className="pm-frame" style={style} src={src} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen />
         <OpenLink href={slide.src} />
       </div>
     );
   }
-  return <Facade cover={slide.cover} label={slide.label} onPlay={() => setMode("video")} />;
+  return <Facade cover={slide.cover} label={slide.label} style={style} onRatio={setRatio} onPlay={() => setMode("video")} />;
 }
 
 /* ---------- several pictures: carousel ---------- */

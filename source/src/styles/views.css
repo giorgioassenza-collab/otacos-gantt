@@ -516,8 +516,11 @@
 .pm-sheet .pm-full { max-height: 560px; }
 .pm-sheet { border-radius: var(--r-md); overflow: hidden; }
 .pm-full.is-clickable { cursor: pointer; }
-.pm-video, .pm-frame, .pm-facade { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 420px; background: #17120f; border: 0; }
+.pm-video, .pm-frame, .pm-facade { display: block; width: 100%; aspect-ratio: var(--ar, 16 / 9); background: #17120f; border: 0; }
 .pm-video { object-fit: contain; }
+/* in the cards a taller-than-4:5 video is cropped like the feed does; the editor shows it whole, as wide as its height allows */
+.pm-card .pm-video, .pm-wide .pm-video { object-fit: cover; }
+.pm-sheet .pm-video, .pm-sheet .pm-frame, .pm-sheet .pm-facade { width: min(100%, calc(560px * var(--ar, 1.7778))); margin-inline: auto; }
 .pm-facade { position: relative; display: grid; place-items: center; color: var(--paper); overflow: hidden; }
 .pm-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pm-play { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(23, 18, 15, .78); border: 2px solid var(--paper); transition: transform var(--t-fast) var(--ease); }
@@ -677,3 +680,6 @@
 .sp-story-stage .pm-carousel, .sp-story-stage .pm-track { height: 100%; }
 .sp-story-stage .pm-video, .sp-story-stage .pm-frame, .sp-story-stage .pm-facade { height: 100%; max-height: none; aspect-ratio: auto; }
 .sp-story-stage .pm-video { object-fit: cover; }
+.pm-slide .pm-frame, .pm-slide .pm-video, .pm-slide .pm-facade,
+.sp-story-stage .pm-frame, .sp-story-stage .pm-video, .sp-story-stage .pm-facade,
+.sp-tt-stage .pm-frame, .sp-tt-stage .pm-video, .sp-tt-stage .pm-facade { width: 100%; margin-inline: 0; }
