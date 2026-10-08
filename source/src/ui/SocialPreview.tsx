@@ -213,7 +213,6 @@ function StoryLook({ format, asset, assetItems, onOpen }: { format: string; asse
           <span className="sp-story-bar"><i /></span>
           <span className="sp-story-who"><Avatar size={30} /><strong>{BRAND}</strong><em>now</em></span>
         </div>
-        <div className="sp-story-reply" aria-hidden="true"><span>Send message</span><Heart /></div>
       </div>
     </article>
   );
