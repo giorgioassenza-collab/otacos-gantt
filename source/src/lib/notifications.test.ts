@@ -56,6 +56,18 @@ describe("computeNotifications", () => {
     expect(n.count).toBe(1);
   });
 
+  it("never counts anything blocked: tasks, their subtasks or posts", () => {
+    const data = board();
+    data.tasks = [
+      task("stuck", { members: ["Matteo"], status: "BLOCKED", subtasks: [{ id: "s1", title: "Waiting", done: false, members: ["Jessica"] }] as never }),
+      task("open", { members: ["Matteo"], subtasks: [{ id: "s2", title: "Go", done: false, members: ["Jessica"] }] as never })
+    ];
+    const n = computeNotifications(data, "Jessica", 0, NOW);
+    expect(n.subtasks).toHaveLength(2);
+    expect(n.subtasks.find((s) => s.subtask.id === "s1")?.blocked).toBe(true);
+    expect(n.count).toBe(1);
+  });
+
   it("finds Giorgia's and Alice's work through the status or label, like the old Who filter", () => {
     const data = board();
     data.tasks = [

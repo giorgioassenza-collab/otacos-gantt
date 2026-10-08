@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import { useBoard } from "../../store";
+import { useMenu } from "../../ui/Menu";
+import { setPedStatus, setTaskStatus } from "../../lib/actions";
+import type { Status } from "../../data/types";
+import { isBlockedStatus } from "../../data/dates";
 import { useUI } from "../../ui/uiContext";
 import { Sheet, SheetBody } from "../../ui/Sheet";
 import { EmptyState, StatusChip } from "../../ui/common";
@@ -12,7 +16,8 @@ import { displayLabel } from "../../data/labelAliases";
 
 /** "For you": everything pending for the person using this device, grouped by what it is. */
 export default function NotificationsSheet() {
-  const { data } = useBoard();
+  const { data, mutate } = useBoard();
+  const menu = useMenu();
   const { close, open } = useUI();
   const { me } = useIdentity();
   const notes = useNotifications();
@@ -20,6 +25,16 @@ export default function NotificationsSheet() {
 
   // reading the panel counts as seeing the mentions: they are marked as read when you leave it, not while you read
   const leave = (next?: Parameters<typeof open>[0]) => { notes.markMentionsSeen(); if (next) open(next); else close(); };
+
+  /** The status chip opens the list of statuses right here, so a row can be settled without opening the whole card. */
+  function pickStatus(anchor: DOMRect, statuses: Status[], current: string, apply: (draft: Parameters<Parameters<typeof mutate>[0]>[0], status: string) => void) {
+    menu.open(anchor, statuses.map((status) => ({
+      key: status.name,
+      label: (<><span className="chip-dot" style={{ color: status.color }} />{status.name}</>),
+      checked: current === status.name,
+      onSelect: () => { void mutate((draft) => apply(draft, status.name)); }
+    })), "Set status");
+  }
 
   const nothing = notes.tasks.length + notes.subtasks.length + notes.posts.length + notes.mentions.length === 0;
   const nameFound = [...data.members, "Giorgia", "Alice"].some((m) => m.toLowerCase().replace(/[.\s]/g, "") === me.toLowerCase().replace(/[.\s]/g, ""));
@@ -41,8 +56,8 @@ export default function NotificationsSheet() {
               const late = date < today;
               const project = projectOf(data.projects, task.projectId);
               return (
-                <li key={task.id}>
-                  <button type="button" className="note-row" onClick={() => leave({ kind: "task", id: task.id })}>
+                <li key={task.id} className="note-item">
+                  <button type="button" className="note-open" onClick={() => leave({ kind: "task", id: task.id })}>
                     <span className="gantt-label-dot" style={{ background: project?.color }} aria-hidden="true" />
                     <span className="note-main">
                       <span className="list-row-title">{task.nameEn || task.name}</span>
@@ -54,8 +69,8 @@ export default function NotificationsSheet() {
                         {blocked && <span className="note-late">Blocked, not counted</span>}
                       </span>
                     </span>
-                    <StatusChip statuses={data.statuses} name={task.status} as="span" />
                   </button>
+                  <StatusChip statuses={data.statuses} name={task.status} onClick={(event) => pickStatus(event.currentTarget.getBoundingClientRect(), data.statuses, task.status, (draft, status) => setTaskStatus(draft, task.id, status))} />
                 </li>
               );
             })}
@@ -64,13 +79,13 @@ export default function NotificationsSheet() {
 
         {notes.subtasks.length > 0 && (
           <Group title="Subtasks" count={notes.subtasks.length}>
-            {notes.subtasks.map(({ task, subtask }) => (
+            {notes.subtasks.map(({ task, subtask, blocked }) => (
               <li key={subtask.id}>
                 <button type="button" className="note-row" onClick={() => leave({ kind: "task", id: task.id })}>
                   <ListChecks className="note-icon" aria-hidden />
                   <span className="note-main">
                     <span className="list-row-title">{subtask.title}</span>
-                    <span className="list-row-meta"><span>in {task.nameEn || task.name}</span><span>{friendlyDate(taskDateKey(task), today)}</span></span>
+                    <span className="list-row-meta"><span>in {task.nameEn || task.name}</span><span>{friendlyDate(taskDateKey(task), today)}</span>{blocked && <span className="note-late">Blocked, not counted</span>}</span>
                   </span>
                 </button>
               </li>
@@ -81,15 +96,15 @@ export default function NotificationsSheet() {
         {notes.posts.length > 0 && (
           <Group title="Posts" count={notes.posts.length}>
             {notes.posts.map((item) => (
-              <li key={item.id}>
-                <button type="button" className="note-row" onClick={() => leave({ kind: "post", id: item.postId ?? item.id })}>
+              <li key={item.id} className="note-item">
+                <button type="button" className="note-open" onClick={() => leave({ kind: "post", id: item.postId ?? item.id })}>
                   <Video className="note-icon" aria-hidden />
                   <span className="note-main">
                     <span className="list-row-title">{item.title}</span>
-                    <span className="list-row-meta"><span>{friendlyDate(item.date, today)} · {item.time}</span><span>{item.format}</span>{item.project && <span>{item.project}</span>}</span>
+                    <span className="list-row-meta"><span>{friendlyDate(item.date, today)} · {item.time}</span><span>{item.format}</span>{item.project && <span>{item.project}</span>}{isBlockedStatus(item.status) && <span className="note-late">Blocked, not counted</span>}</span>
                   </span>
-                  <StatusChip statuses={data.pedStatuses} name={item.status} as="span" />
                 </button>
+                <StatusChip statuses={data.pedStatuses} name={item.status} onClick={(event) => pickStatus(event.currentTarget.getBoundingClientRect(), data.pedStatuses, item.status, (draft, status) => setPedStatus(draft, item, status))} />
               </li>
             ))}
           </Group>
@@ -111,6 +126,7 @@ export default function NotificationsSheet() {
           </Group>
         )}
       </SheetBody>
+      {menu.element}
     </Sheet>
   );
 }

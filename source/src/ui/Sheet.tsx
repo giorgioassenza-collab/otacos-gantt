@@ -56,6 +56,8 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
       if (event.key === "Escape") {
         // a list item picked up with the keyboard uses Escape to put itself back, not to close the sheet
         if ((event.target as Element | null)?.closest?.('[data-grabbed="true"]')) return;
+        // an open menu (e.g. a status list) takes Escape first and closes alone
+        if (document.querySelector(".menu")) return;
         event.stopPropagation();
         closeRef.current();
         return;

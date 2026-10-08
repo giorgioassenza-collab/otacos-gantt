@@ -2,6 +2,7 @@ import type { BoardData, PedPost, Task } from "../data/types";
 import { deleteInfluencerById, deletePedPostById, deleteTaskById, touchItem } from "../data/merge";
 import { now } from "../data/clock";
 import { shiftDateString } from "../data/dates";
+import { ensurePedPostForTask } from "../data/labels";
 import { dayIndex, parseDate } from "./gantt";
 
 /** Pure-ish helpers that operate on a draft BoardData inside `mutate`. */
@@ -123,6 +124,18 @@ export function blankPost(draft: BoardData, partial: Partial<PedPost> = {}): Ped
     updatedAt: createdAt,
     ...partial
   };
+}
+
+/** Change the status of a PED entry (manual post, or a post that comes from a Gantt task, which gets its mirror first). */
+export function setPedStatus(draft: BoardData, item: { taskId?: string; postId?: string }, status: string): void {
+  let post = item.postId ? draft.pedPosts.find((p) => p.id === item.postId) ?? null : null;
+  if (!post && item.taskId) {
+    const task = draft.tasks.find((t) => t.id === item.taskId);
+    post = task ? ensurePedPostForTask(draft, task, { syncFromTask: true }) : null;
+  }
+  if (!post || post.status === status) return;
+  post.status = status;
+  touchItem(post);
 }
 
 /** Reschedule a PED entry (task-backed or manual). Mirrors the original drag-and-drop behaviour. */

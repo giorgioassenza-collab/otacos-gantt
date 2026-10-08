@@ -193,7 +193,7 @@ button, a, [role="button"], summary, select, label.check { touch-action: manipul
 button, [role="button"], summary { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .view-scroll { overscroll-behavior: contain; }
 /* press feedback lands on pointer-down, on every input type (hover cannot do this on touch) */
-.icon-btn, button.chip, .pill, .multipick-item, .segmented button, .week-day, .rail-link, .rail-foot-btn, .me-btn, .note-row, .menu button, .task-card-main, .tag .icon-btn, .settings-tabs button {
+.icon-btn, button.chip, .pill, .multipick-item, .segmented button, .week-day, .rail-link, .rail-foot-btn, .me-btn, .note-row, .menu button, .note-open, .task-card-main, .tag .icon-btn, .settings-tabs button {
   transition: transform 160ms var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
 .icon-btn:active:not(:disabled), button.chip:active, .pill:active, .multipick-item:active, .segmented button:active, .week-day:active, .rail-link:active, .rail-foot-btn:active, .me-btn:active, .note-row:active, .tag .icon-btn:active { transform: scale(.97); }

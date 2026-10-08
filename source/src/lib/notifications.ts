@@ -7,7 +7,7 @@ import { isClientPerson, samePerson } from "./team";
 export const MENTION_WINDOW_MS = 7 * 86_400_000;
 
 export interface TaskNote { task: Task; blocked: boolean; subtasks: Subtask[] }
-export interface SubtaskNote { task: Task; subtask: Subtask }
+export interface SubtaskNote { task: Task; subtask: Subtask; /** The task it sits in is blocked. */ blocked: boolean }
 export interface MentionNote { comment: PedComment; postId: string; postTitle: string }
 
 export interface Notifications {
@@ -19,7 +19,7 @@ export interface Notifications {
   posts: PedItem[];
   /** Comments that tag you and that you have not seen yet. */
   mentions: MentionNote[];
-  /** What the badge shows: tasks + loose subtasks + posts + new mentions. */
+  /** What the badge shows: tasks + loose subtasks + posts + new mentions. Anything blocked is listed but never counted. */
   count: number;
 }
 
@@ -56,7 +56,7 @@ export function computeNotifications(data: BoardData, me: string, seenMentionsAt
 
   const subtasks: SubtaskNote[] = data.tasks
     .filter((task) => !isDoneStatus(task.status) && !myTaskIds.has(task.id))
-    .flatMap((task) => task.subtasks.filter((sub) => !sub.done && sub.members.some((m) => samePerson(m, me))).map((subtask) => ({ task, subtask })));
+    .flatMap((task) => task.subtasks.filter((sub) => !sub.done && sub.members.some((m) => samePerson(m, me))).map((subtask) => ({ task, subtask, blocked: isBlockedStatus(task.status) })));
 
   const last = finalPedStatus(data);
   const posts = buildPedItems(data)
@@ -73,5 +73,7 @@ export function computeNotifications(data: BoardData, me: string, seenMentionsAt
     .sort((a, b) => b.comment.createdAt - a.comment.createdAt);
 
   const countedTasks = tasks.filter((entry) => !entry.blocked).length;
-  return { tasks, subtasks, posts, mentions, count: countedTasks + subtasks.length + posts.length + mentions.length };
+  const countedSubtasks = subtasks.filter((entry) => !entry.blocked).length;
+  const countedPosts = posts.filter((item) => !isBlockedStatus(item.status)).length;
+  return { tasks, subtasks, posts, mentions, count: countedTasks + countedSubtasks + countedPosts + mentions.length };
 }
