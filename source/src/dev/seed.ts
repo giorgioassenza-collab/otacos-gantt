@@ -20,6 +20,7 @@ export function seedDemoBoard(force = false): void {
     id: `ped${t}-${n++}`, sourceTaskId: "", title, projectId, date: d(offset), time, status, members, social, format, asset: "", assetItems: [], copy: "Demo caption", comments: title === "New menu reveal" ? [{ id: `c${t}`, text: "@Matteo can you check the caption?", mentions: ["Matteo"], createdAt: t }] : [], subtasks: [], createdAt: t, updatedAt: t
   });
   const inf = (name: string, city: string, type: string, status: string, price: string) => ({ id: `inf${t}-${n++}`, name, city, type, status, price, target: "", where: "", when: "", ttProfile: `@${name.toLowerCase().replace(/ /g, "")}`, igProfile: "", ttLink: "", igLink: "", output: "1 reel", updatedAt: t, fieldUpdatedAt: {}, sortOrder: n });
+  const svg = (fill: string, text: string, w = 320, h = 400) => "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><rect width='${w}' height='${h}' fill='${fill}'/><text x='50%' y='50%' font-size='72' text-anchor='middle' fill='#fff' font-family='sans-serif'>${text}</text></svg>`);
   const data = {
     members: ["Giorgio", "Matteo", "Vale M", "Vale V", "Jessica"],
     statuses: [{ name: "TO DO", color: "#6b7280" }, { name: "In progress", color: "#147bd1" }, { name: "BLOCKED", color: "#e4572e" }, { name: "Notify Giorgia", color: "#f59e0b" }, { name: "DONE", color: "#15a36d" }],
@@ -48,7 +49,9 @@ export function seedDemoBoard(force = false): void {
     pedPosts: [
       post("New menu reveal", "p-demo-social", 0, "12:00", "Ready", ["instagram"], "Video", ["Giorgio"]),
       post("Behind the counter", "p-demo-social", 0, "18:00", "Draft", ["tiktok"], "Video", ["Matteo"]),
-      { ...post("Weekend special", "p-demo-social", 2, "11:00", "Draft", ["instagram", "tiktok"], "Carousel", ["Giorgio"]), asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv", assetItems: [{ type: "image", src: "data:image/svg+xml;utf8," + encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'><rect width='320' height='200' fill='#ff7200'/><circle cx='160' cy='100' r='50' fill='#17120f'/></svg>"), fallback: "", original: "", label: "Synthetic" }, { type: "image", src: "x", fallback: "", original: "", label: "" }] },
+      { ...post("Weekend special", "p-demo-social", 2, "11:00", "Draft", ["instagram", "tiktok"], "Carousel", ["Giorgio"]), asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv", assetItems: [svg("#ff7200", "1"), svg("#17120f", "2"), svg("#ffd360", "3")].map((src, i) => ({ type: "image", src, fallback: "", original: "", label: "Slide " + (i + 1) })) },
+      { ...post("Static visual", "p-demo-social", 1, "10:00", "Ready", ["instagram"], "Static", ["Matteo"]), assetItems: [{ type: "image", src: svg("#e1306c", "Static", 320, 480), fallback: "", original: "", label: "Static" }] },
+      { ...post("Launch teaser (YouTube)", "p-demo-social", 3, "18:30", "Draft", ["tiktok"], "Video", ["Giorgio"]), asset: "https://youtu.be/dQw4w9WgXcQ" },
       { ...post("Counter video", "p-demo-social", 1, "15:00", "Draft", ["tiktok"], "Video", ["Matteo"]), asset: "https://example.com/clip.mp4" },
       { ...post("Folder without thumbnails", "p-demo-events", 1, "17:00", "Draft", ["instagram"], "Carousel", ["Vale M"]), asset: "https://drive.google.com/drive/folders/1Dg_bgRkdzoaUD8vSb4XuPaHN6ZxHZEf_" },
       post("Store opening recap", "p-demo-events", 3, "13:00", "Draft", ["instagram"], "Static", ["Vale M"])

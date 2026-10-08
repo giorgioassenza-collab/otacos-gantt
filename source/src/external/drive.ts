@@ -7,6 +7,7 @@
 import { firebaseConfig } from "../data/firebaseBackend";
 
 export interface DriveItem {
+  id: string;
   type: "image" | "video";
   /** Thumbnail URL. */
   src: string;
@@ -36,6 +37,7 @@ export function driveItemsFromFiles(files: DriveFile[]): DriveItem[] {
   return files
     .filter((file) => /^image\/|^video\//.test(String(file.mimeType || "")))
     .map((file) => ({
+      id: file.id,
       type: String(file.mimeType).startsWith("video/") ? ("video" as const) : ("image" as const),
       src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w800`,
       fallback: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,

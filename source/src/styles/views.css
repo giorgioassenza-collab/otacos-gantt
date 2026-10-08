@@ -501,3 +501,46 @@
 .ped-thumb.is-empty { color: var(--muted); background: transparent; border: 1.5px dashed var(--line); }
 .post-row .ped-thumb-play { width: 24px; height: 24px; margin: -12px 0 0 -12px; }
 .post-row .ped-thumb-play svg { width: 12px; height: 12px; }
+
+/* ---------- post media: carousel, player, whole picture ---------- */
+.ped-card, .ped-card.is-wide { padding: 0; gap: 0; }
+.ped-card-body { display: grid; gap: 6px; width: 100%; padding: var(--s-2) var(--s-3) var(--s-3); text-align: left; }
+.is-wide .ped-card-body { gap: var(--s-2); padding: var(--s-3) var(--s-4) var(--s-4); }
+.ped-card-body .chip { justify-self: start; min-height: 22px; padding: 0 8px; }
+
+.pm { position: relative; background: var(--paper-2); }
+.pm .ped-thumb { width: 100%; margin: 0; height: 150px; }
+.pm-card .ped-thumb { height: 96px; }
+.pm-full { display: block; width: 100%; height: auto; max-height: 300px; object-fit: contain; background: var(--paper-2); }
+.pm-wide .pm-full { max-height: 460px; }
+.pm-sheet .pm-full { max-height: 560px; }
+.pm-sheet { border-radius: var(--r-md); overflow: hidden; }
+.pm-full.is-clickable { cursor: pointer; }
+.pm-video, .pm-frame, .pm-facade { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 420px; background: #17120f; border: 0; }
+.pm-video { object-fit: contain; }
+.pm-facade { position: relative; display: grid; place-items: center; color: var(--paper); overflow: hidden; }
+.pm-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pm-play { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(23, 18, 15, .78); border: 2px solid var(--paper); transition: transform var(--t-fast) var(--ease); }
+.pm-play svg { width: 22px; height: 22px; margin-left: 2px; }
+.pm-facade:active .pm-play { transform: scale(.94); }
+.pm-facade-label { position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: var(--r-full); background: rgba(23, 18, 15, .72); font-size: 11px; font-weight: 700; }
+.pm-failed { padding: var(--s-5) var(--s-3); text-align: center; color: var(--ink-3); font-size: var(--fs-2); font-weight: 600; }
+
+.pm-carousel { position: relative; }
+.pm-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
+.pm-track::-webkit-scrollbar { display: none; }
+.pm-track:focus-visible { outline-offset: -3px; }
+.pm-slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; background: var(--paper-2); aspect-ratio: 1 / 1; overflow: hidden; }
+.pm-wide .pm-slide, .pm-sheet .pm-slide { aspect-ratio: 4 / 5; max-height: 560px; }
+.pm-slide .pm-full { width: 100%; height: 100%; max-height: none; }
+.pm-slide .pm-frame, .pm-slide .pm-video, .pm-slide .pm-facade { height: 100%; max-height: none; aspect-ratio: auto; }
+.pm-arrow { position: absolute; top: 50%; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; margin-top: -17px; border-radius: 50%; background: rgba(255, 253, 248, .94); color: var(--ink); border: 1.5px solid var(--ink); transition: transform 160ms var(--ease), opacity var(--t-fast) var(--ease); }
+.pm-arrow svg { width: 18px; height: 18px; }
+.pm-prev { left: 6px; } .pm-next { right: 6px; }
+.pm-arrow:active:not(:disabled) { transform: scale(.94); }
+.pm-arrow:disabled { opacity: 0; pointer-events: none; }
+.pm-counter { position: absolute; right: 8px; top: 8px; z-index: 2; min-width: 38px; padding: 0 8px; height: 22px; border-radius: var(--r-full); display: grid; place-items: center; background: var(--ink); color: var(--paper); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; pointer-events: none; }
+.pm-dots { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+.pm-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(23, 18, 15, .35); box-shadow: 0 0 0 1px rgba(255, 253, 248, .85); }
+.pm-dots i[data-on="true"] { background: var(--ink); }
+@media (pointer: coarse) { .pm-arrow { width: 40px; height: 40px; margin-top: -20px; } }

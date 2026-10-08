@@ -5,8 +5,7 @@ import { usePref } from "../../lib/usePref";
 import { currentDateKey, shiftDateString } from "../../data/dates";
 import { buildPedItems, initials, normalizeHour, parseDate, socialOf, type PedItem } from "../../lib/gantt";
 import { movePedItem } from "../../lib/actions";
-import { useAssetPreview } from "../../lib/useAssetPreview";
-import { PostThumb } from "../../ui/PostThumb";
+import { PostMedia } from "../../ui/PostMedia";
 import { Avatars, EmptyState, StatusChip } from "../../ui/common";
 import { CalendarDays, ChevronLeft, ChevronRight, MessageSquare, Plus, Video, ListChecks } from "../../ui/icons";
 
@@ -180,39 +179,38 @@ function Row({ hour, days, today, byDay, data, dragId, overCell, onOpen, onNew, 
 
 function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, dragging }: {
   data: ReturnType<typeof useBoard>["data"]; item: PedItem; onOpen: (item: PedItem) => void; wide?: boolean; draggable?: boolean;
-  onDragStart?: (event: DragEvent<HTMLButtonElement>) => void; onDragEnd?: () => void; dragging?: boolean;
+  onDragStart?: (event: DragEvent<HTMLElement>) => void; onDragEnd?: () => void; dragging?: boolean;
 }) {
-  const { preview, loading } = useAssetPreview(item.asset, item.assetItems, wide ? 400 : 240);
   const style = { "--p": item.color } as CSSProperties;
+  // The card is a container, not a button: the media has its own controls (arrows, play) and the text area opens the post.
   return (
-    <button
-      type="button"
+    <article
       className={`ped-card${wide ? " is-wide" : ""}${dragging ? " is-dragging" : ""}`}
       style={style}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={() => onOpen(item)}
-      aria-label={`${item.time} ${item.title}. ${item.status}. Open post`}
     >
-      <PostThumb preview={preview} tall={wide} loading={loading} />
-      <span className="ped-card-top">
-        <span className="ped-card-time">{item.time}</span>
-        <Video aria-hidden />
-        <span className="ped-card-format">{item.format}</span>
-      </span>
-      <span className="ped-card-title">{item.title}</span>
-      <span className="ped-card-foot">
-        {item.social.map((id) => {
-          const social = socialOf(data.socials, id);
-          return <span key={id} className="social-badge" style={{ background: social?.color ?? "var(--ink)" }}>{social?.short ?? id}</span>;
-        })}
-        {item.commentCount > 0 && <span className="meta"><MessageSquare aria-hidden />{item.commentCount}</span>}
-        {item.subtaskTotal > 0 && <span className="meta"><ListChecks aria-hidden />{item.subtaskDone}/{item.subtaskTotal}</span>}
-        {item.members.length > 0 && <Avatars names={item.members} max={2} />}
-      </span>
-      <StatusChip statuses={data.pedStatuses} name={item.status} as="span" />
-    </button>
+      <PostMedia asset={item.asset} assetItems={item.assetItems} format={item.format} size={wide ? "wide" : "card"} onOpen={() => onOpen(item)} />
+      <button type="button" className="ped-card-body" onClick={() => onOpen(item)} aria-label={`${item.time} ${item.title}. ${item.status}. Open post`}>
+        <span className="ped-card-top">
+          <span className="ped-card-time">{item.time}</span>
+          <Video aria-hidden />
+          <span className="ped-card-format">{item.format}</span>
+        </span>
+        <span className="ped-card-title">{item.title}</span>
+        <span className="ped-card-foot">
+          {item.social.map((id) => {
+            const social = socialOf(data.socials, id);
+            return <span key={id} className="social-badge" style={{ background: social?.color ?? "var(--ink)" }}>{social?.short ?? id}</span>;
+          })}
+          {item.commentCount > 0 && <span className="meta"><MessageSquare aria-hidden />{item.commentCount}</span>}
+          {item.subtaskTotal > 0 && <span className="meta"><ListChecks aria-hidden />{item.subtaskDone}/{item.subtaskTotal}</span>}
+          {item.members.length > 0 && <Avatars names={item.members} max={2} />}
+        </span>
+        <StatusChip statuses={data.pedStatuses} name={item.status} as="span" />
+      </button>
+    </article>
   );
 }
 
