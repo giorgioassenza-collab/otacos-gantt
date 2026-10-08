@@ -663,3 +663,21 @@
 .crash p { margin: 0; max-width: 42ch; color: var(--ink-2); }
 .crash-detail { max-width: min(560px, 100%); margin: 0; padding: var(--s-2) var(--s-3); overflow: auto; border-radius: var(--r-md); background: var(--paper-2); font-size: var(--fs-1); text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
 .crash-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center; }
+
+/* calendar card as a feed post: account row, media, action icons, caption, then the working details */
+.ped-card { background: #fff; color: #262626; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; letter-spacing: -.01em; }
+@media (hover: hover) and (pointer: fine) { .ped-card:hover { background: color-mix(in srgb, var(--p) 8%, #fff); } }
+.ped-post-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.ped-post-head strong { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
+.ped-post-nets { display: flex; gap: 4px; }
+.ped-post-actions { display: flex; align-items: center; gap: 12px; padding: 8px 10px 2px; color: #262626; }
+.ped-post-actions svg { width: 22px; height: 22px; stroke-width: 1.7; }
+.ped-post-actions svg:last-child { margin-left: auto; }
+.ped-card-body { padding-top: 4px; }
+.ped-caption { font-size: 13px; color: #262626; }
+.ped-caption strong { color: #262626; font-weight: 600; }
+.ped-card-top { padding-top: 6px; border-top: 1px solid var(--line); }
+.ped-card .chip { margin-top: 2px; }
+.ped-card .sp-avatar { border-width: 1.5px; }
+.sp-avatar.has-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #d6249f; }
+.ped-card.is-story .ped-card-top { border-top: 0; padding-top: 0; }

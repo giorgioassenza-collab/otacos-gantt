@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "rea
 import type { Social } from "../data/types";
 import { copyStats, isStoryNetwork, needsMore, platformKind, type PlatformKind } from "../lib/copy";
 import { RichCopy } from "./RichCopy";
+import { BrandAvatar } from "./BrandAvatar";
 import { parseDate } from "../lib/gantt";
 import { PostMedia } from "./PostMedia";
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Plus, Send, Share2 } from "./icons";
@@ -82,13 +83,7 @@ function PlatformTabs({ options, value, onChange }: { options: { id: string; lab
 
 /* ---------- shared pieces ---------- */
 
-function Avatar({ size = 32 }: { size?: number }) {
-  return (
-    <span className="sp-avatar" style={{ ["--s" as string]: `${size}px` }} aria-hidden="true">
-      <img src={`${import.meta.env.BASE_URL}otacos-logo.svg`} alt="" draggable={false} />
-    </span>
-  );
-}
+const Avatar = BrandAvatar;
 
 /** Caption as the feed shows it: name in bold, the copy after it, folded behind "more" when long. */
 function Caption({ copy, lines, onWriteCopy, inline = true }: { copy: string; lines: number; onWriteCopy?: () => void; inline?: boolean }) {

@@ -7,9 +7,10 @@ import { buildPedItems, initials, normalizeHour, parseDate, socialOf, type PedIt
 import { movePedItem } from "../../lib/actions";
 import { PostMedia } from "../../ui/PostMedia";
 import { RichCopy } from "../../ui/RichCopy";
+import { BrandAvatar } from "../../ui/BrandAvatar";
 import { isStoryPost } from "../../lib/copy";
 import { Avatars, EmptyState, StatusChip } from "../../ui/common";
-import { CalendarDays, ChevronLeft, ChevronRight, MessageSquare, Plus, Video, ListChecks } from "../../ui/icons";
+import { Bookmark, CalendarDays, ChevronLeft, ChevronRight, Heart, MessageCircle, MessageSquare, Plus, Send, Video, ListChecks } from "../../ui/icons";
 
 const START_HOUR = 11;
 const END_HOUR = 20;
@@ -189,14 +190,28 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
   // The card is a container, not a button: the media has its own controls (arrows, play) and the text area opens the post.
   return (
     <article
-      className={`ped-card${wide ? " is-wide" : ""}${dragging ? " is-dragging" : ""}`}
+      className={`ped-card${wide ? " is-wide" : ""}${story ? " is-story" : ""}${dragging ? " is-dragging" : ""}`}
       style={style}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
+      <div className="ped-post-head">
+        <BrandAvatar size={26} ring={story} />
+        <strong>O'Tacos</strong>
+        <span className="ped-post-nets">
+          {item.social.map((id) => {
+            const social = socialOf(data.socials, id);
+            return <span key={id} className="social-badge" style={{ background: social?.color ?? "var(--ink)" }}>{social?.short ?? id}</span>;
+          })}
+        </span>
+      </div>
       <PostMedia asset={item.asset} assetItems={item.assetItems} format={item.format} size={wide ? "wide" : "card"} onOpen={() => onOpen(item)} />
+      {!story && (
+        <div className="ped-post-actions" aria-hidden="true"><Heart /><MessageCircle /><Send /><Bookmark /></div>
+      )}
       <button type="button" className="ped-card-body" onClick={() => onOpen(item)} aria-label={`${item.time} ${item.title}. ${item.status}. Open post`}>
+        {showCopy && <span className="ped-caption"><strong>O'Tacos</strong> <RichCopy text={item.copy} /></span>}
         <span className="ped-card-top">
           <span className="ped-card-time">{item.time}</span>
           <Video aria-hidden />
@@ -204,12 +219,7 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
           {story && <span className="ped-story-tag">Story</span>}
         </span>
         <span className="ped-card-title">{item.title}</span>
-        {showCopy && <span className="ped-caption"><strong>O'Tacos</strong> <RichCopy text={item.copy} /></span>}
         <span className="ped-card-foot">
-          {item.social.map((id) => {
-            const social = socialOf(data.socials, id);
-            return <span key={id} className="social-badge" style={{ background: social?.color ?? "var(--ink)" }}>{social?.short ?? id}</span>;
-          })}
           {item.commentCount > 0 && <span className="meta"><MessageSquare aria-hidden />{item.commentCount}</span>}
           {item.subtaskTotal > 0 && <span className="meta"><ListChecks aria-hidden />{item.subtaskDone}/{item.subtaskTotal}</span>}
           {item.members.length > 0 && <Avatars names={item.members} max={2} />}
