@@ -48,3 +48,16 @@ describe("slides", () => {
     expect(buildSlides({ asset: "", format: "Static" })).toEqual([]);
   });
 });
+
+describe("slides ignore folder items that have no file id", () => {
+  it("never builds a thumbnail?id=undefined address", () => {
+    const slides = buildSlides({
+      asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp", format: "Carousel",
+      // as cached by an older version of the app
+      folderItems: [{ type: "image", src: "https://t/x", fallback: "", original: "", label: "old" } as never],
+      items: [{ type: "image", src: "https://saved/1.jpg" }]
+    });
+    expect(slides.map((s) => (s.kind === "image" ? s.src : ""))).toEqual(["https://saved/1.jpg"]);
+    expect(JSON.stringify(slides)).not.toContain("undefined");
+  });
+});

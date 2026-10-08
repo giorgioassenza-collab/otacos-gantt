@@ -11,7 +11,8 @@ type Entry =
   | { state: "ready"; items: DriveItem[]; at: number }
   | { state: "none"; message: string; at: number };
 
-const CACHE_KEY = "otw2.driveFolders.v1";
+// v2: v1 entries were written before items carried their file id (they produced "thumbnail?id=undefined")
+const CACHE_KEY = "otw2.driveFolders.v2";
 const TTL_MS = 12 * 3600_000;
 const FAILED_RETRY_MS = 5 * 60_000;
 const MAX_PARALLEL = 3;
@@ -29,9 +30,11 @@ function hydrate() {
   if (hydrated) return;
   hydrated = true;
   try {
+    try { localStorage.removeItem("otw2.driveFolders.v1"); } catch { /* ignore */ }
     const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}") as Record<string, { items: DriveItem[]; at: number }>;
     Object.entries(saved).forEach(([id, value]) => {
-      if (value && Array.isArray(value.items) && Date.now() - value.at < TTL_MS) entries.set(id, { state: "ready", items: value.items, at: value.at });
+      const usable = value && Array.isArray(value.items) && value.items.length > 0 && value.items.every((item) => item && typeof item.id === "string" && item.id.length > 5);
+      if (usable && Date.now() - value.at < TTL_MS) entries.set(id, { state: "ready", items: value.items, at: value.at });
     });
   } catch { /* no cache */ }
 }

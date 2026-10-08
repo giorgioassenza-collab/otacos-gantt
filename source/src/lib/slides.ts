@@ -43,7 +43,7 @@ interface SavedItem { type?: string; src?: string; fallback?: string; original?:
 export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderItems?: DriveItem[]; format: string; width?: number }): Slide[] {
   const width = opts.width ?? 800;
   const saved = (opts.items ?? []).filter((item) => item && (item.src || item.original) && item.type !== "folder");
-  if (!opts.folderItems?.length && saved.length) {
+  if (!(opts.folderItems ?? []).some((item) => item && item.id) && saved.length) {
     return saved.map((item): Slide => {
       const src = item.src || item.original || "";
       if (item.type === "video") return { kind: "video", src, label: item.label || "Video" };
@@ -51,8 +51,9 @@ export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderIt
       return { kind: "image", src, fallback: item.fallback || item.original || undefined, original: item.original || undefined, label: item.label || "Image" };
     });
   }
-  if (opts.folderItems?.length) {
-    return opts.folderItems.map((item): Slide =>
+  const folderItems = (opts.folderItems ?? []).filter((item) => item && item.id); // an item without a file id cannot be shown
+  if (folderItems.length) {
+    return folderItems.map((item): Slide =>
       item.type === "video"
         ? { kind: "embed", src: drivePreview(item.id), cover: driveThumb(item.id, width), label: item.label }
         : { kind: "image", src: driveThumb(item.id, width), fallback: item.fallback, original: item.original, label: item.label }
