@@ -6,7 +6,7 @@ import { dateFromIndex, dayIndex, initials, layoutProjectRow, parseDate, timelin
 import { statusColor } from "../../lib/gantt";
 import { Camera, Home, ListChecks, CircleAlert, Plus, Video } from "../../ui/icons";
 
-export interface TimelineHandle { scrollToToday: (smooth?: boolean) => void }
+export interface TimelineHandle { scrollToToday: (smooth?: boolean) => void; scrollByDays: (days: number) => void }
 
 interface TimelineProps {
   data: BoardData;
@@ -65,6 +65,12 @@ export const Timeline = memo(forwardRef<TimelineHandle, TimelineProps>(function 
       const side = parseFloat(getComputedStyle(node.parentElement as HTMLElement).getPropertyValue("--side")) || 112;
       const target = todayIndex * dayWidth - Math.max(24, (node.clientWidth - side) / 4);
       node.scrollTo({ left: Math.max(0, target), behavior: smooth ? "smooth" : "auto" });
+    },
+    scrollByDays(days: number) {
+      const node = scrollRef.current;
+      if (!node) return;
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      node.scrollBy({ left: days * dayWidth, behavior: calm ? "auto" : "smooth" });
     }
   }), [todayIndex, dayWidth]);
 

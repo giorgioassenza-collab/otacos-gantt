@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 import type { BoardData, Task } from "../../data/types";
 import { currentDateKey, isBlockedStatus, isDoneStatus, shiftDateString } from "../../data/dates";
 import { displayLabel } from "../../data/labelAliases";
@@ -17,16 +17,23 @@ interface AgendaProps {
   onStatus: (task: Task, anchor: DOMRect) => void;
   onContext: (task: Task, anchor: DOMRect) => void;
   onAdd: (date: string) => void;
+  /** First day shown. Today by default; the arrows in the toolbar move it a week at a time. */
+  from: string;
+  /** A horizontal swipe asks to move by this many days. */
+  onShift: (days: number) => void;
+  onToday: () => void;
 }
 
 const PAGE_DAYS = 14;
 
-export function Agenda({ data, tasks, pedItems, onOpenTask, onOpenPost, onStatus, onContext, onAdd }: AgendaProps) {
+export function Agenda({ data, tasks, pedItems, onOpenTask, onOpenPost, onStatus, onContext, onAdd, from, onShift, onToday }: AgendaProps) {
   const today = currentDateKey();
+  const live = from === today;
   const [horizon, setHorizon] = useState(PAGE_DAYS);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   const groups = useMemo(() => {
-    const limit = shiftDateString(today, horizon);
+    const limit = shiftDateString(from, horizon);
     const byDay = new Map<string, { tasks: Task[]; posts: PedItem[] }>();
     const bucket = (date: string) => {
       if (!byDay.has(date)) byDay.set(date, { tasks: [], posts: [] });
@@ -37,16 +44,17 @@ export function Agenda({ data, tasks, pedItems, onOpenTask, onOpenPost, onStatus
       const end = task.end || task.start;
       // Unfinished tasks roll over to the next working day by themselves; one that has not been rolled yet
       // (nobody opened the app since) is shown under today. Done or blocked tasks in the past stay on the timeline.
-      if (end < today && (isDoneStatus(task.status) || isBlockedStatus(task.status))) return;
-      const day = task.start < today ? today : task.start;
+      if (live && end < today && (isDoneStatus(task.status) || isBlockedStatus(task.status))) return;
+      if (!live && end < from) return; // looking at another week: everything that touches it, done or not
+      const day = task.start < from ? from : task.start;
       if (day > limit) return;
       bucket(day).tasks.push(task);
     });
     pedItems.forEach((item) => {
-      if (!item.date || item.date < today || item.date > limit) return;
+      if (!item.date || item.date < from || item.date > limit) return;
       bucket(item.date).posts.push(item);
     });
-    bucket(today); // today is always shown
+    bucket(from); // the first day is always shown
     return [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, value]) => ({
@@ -54,13 +62,29 @@ export function Agenda({ data, tasks, pedItems, onOpenTask, onOpenPost, onStatus
         tasks: value.tasks.sort((a, b) => Number(isDoneStatus(a.status)) - Number(isDoneStatus(b.status)) || (a.nameEn || a.name).localeCompare(b.nameEn || b.name)),
         posts: value.posts.sort((a, b) => a.time.localeCompare(b.time))
       }));
-  }, [tasks, pedItems, today, horizon]);
+  }, [tasks, pedItems, today, from, live, horizon]);
 
   const nothingAhead = groups.every((g) => g.tasks.length === 0 && g.posts.length === 0);
 
   return (
-    <div className="view-scroll">
+    <div
+      className="view-scroll"
+      onTouchStart={(e) => { const t = e.touches[0]; swipe.current = { x: t.clientX, y: t.clientY }; }}
+      onTouchEnd={(e) => {
+        const start = swipe.current; swipe.current = null;
+        if (!start) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - start.x; const dy = t.clientY - start.y;
+        if (Math.abs(dx) > 70 && Math.abs(dy) < 40) onShift(dx > 0 ? -7 : 7); // swipe right = back in time
+      }}
+    >
       <div className="agenda">
+        {!live && (
+          <div className="agenda-away" role="status">
+            <span>Showing from {parseDate(from).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</span>
+            <button type="button" className="btn btn--sm" onClick={onToday}>Back to today</button>
+          </div>
+        )}
         {groups.map(({ date, tasks: dayTasks, posts }) => {
           const empty = dayTasks.length === 0 && posts.length === 0;
           return (

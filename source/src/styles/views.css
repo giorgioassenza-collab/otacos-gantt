@@ -681,3 +681,6 @@
 .pm-slide .pm-frame, .pm-slide .pm-video, .pm-slide .pm-facade,
 .sp-story-stage .pm-frame, .sp-story-stage .pm-video, .sp-story-stage .pm-facade,
 .sp-tt-stage .pm-frame, .sp-tt-stage .pm-video, .sp-tt-stage .pm-facade { width: 100%; margin-inline: 0; }
+
+/* agenda looking at another week */
+.agenda-away { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--paper-2); border: 1px solid var(--line); font-size: var(--fs-2); font-weight: 600; color: var(--ink-2); }

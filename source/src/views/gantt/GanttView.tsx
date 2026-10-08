@@ -12,7 +12,7 @@ import { deleteTask, duplicateTask, ensureStatus, moveTask, setTaskStatus } from
 import { Agenda } from "./Agenda";
 import { Timeline, type TimelineHandle } from "./Timeline";
 import { EmptyState } from "../../ui/common";
-import { GanttChart, Plus, ZoomIn, ZoomOut, Settings } from "../../ui/icons";
+import { ChevronLeft, ChevronRight, GanttChart, Plus, ZoomIn, ZoomOut, Settings } from "../../ui/icons";
 import type { Task } from "../../data/types";
 
 const ZOOMS = [
@@ -36,6 +36,17 @@ export default function GanttView() {
   const [zoom, setZoom] = usePref<number>("otw2.gantt.zoom", isNarrow() ? 1 : 2);
   const [who, setWho] = usePref<string>("otw2.gantt.who", "all");
   const [listKey, setListKey] = useState(0);
+  const [agendaFrom, setAgendaFrom] = useState(() => currentDateKey());
+
+  // arrows: the timeline scrolls a week sideways, the agenda moves its first day a week
+  const shift = (days: number) => {
+    if (mode === "timeline") timeline.current?.scrollByDays(days);
+    else setAgendaFrom((from) => shiftDateString(from, days));
+  };
+  const toToday = () => {
+    if (mode === "timeline") timeline.current?.scrollToToday();
+    else { setAgendaFrom(currentDateKey()); setListKey((k) => k + 1); }
+  };
 
   const matches = useCallback((task: Task) => {
     if (who === "all") return true;
@@ -104,6 +115,11 @@ export default function GanttView() {
   return (
     <div className="gantt" style={{ ["--day" as string]: `${dayWidth}px` }}>
       <div className="view-toolbar" role="toolbar" aria-label="Gantt controls">
+        <div className="segmented" role="group" aria-label="Move in time">
+          <button type="button" aria-label="Back one week" title="Back one week" onClick={() => shift(-7)}><ChevronLeft size={16} /></button>
+          <button type="button" onClick={toToday}>Today</button>
+          <button type="button" aria-label="Forward one week" title="Forward one week" onClick={() => shift(7)}><ChevronRight size={16} /></button>
+        </div>
         <select className="select select--sm select-compact" aria-label="Show tasks for" value={who} onChange={(e) => setWho(e.target.value)}>
           <option value="all">Everyone</option>
           {whoOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -119,7 +135,6 @@ export default function GanttView() {
             <button type="button" aria-label="Zoom in" disabled={zoom === ZOOMS.length - 1} onClick={() => setZoom(Math.min(ZOOMS.length - 1, zoom + 1))}><ZoomIn size={16} /></button>
           </div>
         )}
-        <button type="button" className="btn btn--sm" onClick={() => (mode === "timeline" ? timeline.current?.scrollToToday() : setListKey((k) => k + 1))}>Today</button>
         <button type="button" className="btn btn--sm btn--ghost" onClick={() => open({ kind: "projects" })}><Settings />Projects</button>
         <span className="grow" />
         <button type="button" className="btn btn--primary new-btn" onClick={() => open({ kind: "task", defaults: { start: currentDateKey(), end: currentDateKey() } })} disabled={!hasProjects} aria-label="New task">
@@ -142,6 +157,9 @@ export default function GanttView() {
           onStatus={statusMenu}
           onContext={(task, anchor) => contextMenu(task, anchor)}
           onAdd={(date) => open({ kind: "task", defaults: { start: date, end: date } })}
+          from={agendaFrom}
+          onShift={shift}
+          onToday={toToday}
         />
       ) : projects.length === 0 ? (
         <EmptyState icon={<GanttChart />} title="Nothing for this person">No tasks are assigned to {who} yet.</EmptyState>
