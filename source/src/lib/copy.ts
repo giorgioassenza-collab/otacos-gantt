@@ -45,3 +45,15 @@ export const IG_CAPTION_PEEK = 125;
 export function needsMore(text: string, maxChars = IG_CAPTION_PEEK, maxLines = 2): boolean {
   return [...text].length > maxChars || text.split(/\r?\n/).length > maxLines;
 }
+
+/** Stories are posted without a caption: Instagram Stories (and the like). */
+export function isStoryNetwork(social: { id?: string; label?: string; short?: string }): boolean {
+  const key = `${social.id ?? ""} ${social.label ?? ""} ${social.short ?? ""}`.toLowerCase();
+  return /stor(y|ies)|\bigs\b/.test(key);
+}
+
+/** A post is a story when every network it goes out on is a story network (a post also going to the feed has a caption). */
+export function isStoryPost(selectedIds: string[], socials: { id: string; label?: string; short?: string }[]): boolean {
+  const chosen = socials.filter((s) => selectedIds.includes(s.id));
+  return chosen.length > 0 && chosen.every(isStoryNetwork);
+}

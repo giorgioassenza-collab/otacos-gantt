@@ -46,3 +46,24 @@ describe("needsMore", () => {
     expect(needsMore("a\nb\nc")).toBe(true);
   });
 });
+
+import { isStoryNetwork, isStoryPost } from "./copy";
+
+describe("stories", () => {
+  const socials = [
+    { id: "instagram", label: "Instagram", short: "IG" },
+    { id: "igs", label: "IG Stories", short: "IGS" },
+    { id: "tiktok", label: "TikTok", short: "TT" }
+  ];
+  it("recognises story networks", () => {
+    expect(isStoryNetwork(socials[1])).toBe(true);
+    expect(isStoryNetwork({ id: "x", label: "Instagram Story", short: "" })).toBe(true);
+    expect(isStoryNetwork(socials[0])).toBe(false);
+  });
+  it("is a story only when every selected network is a story network", () => {
+    expect(isStoryPost(["igs"], socials)).toBe(true);
+    expect(isStoryPost(["igs", "instagram"], socials)).toBe(false);
+    expect(isStoryPost(["tiktok"], socials)).toBe(false);
+    expect(isStoryPost([], socials)).toBe(false);
+  });
+});

@@ -6,6 +6,8 @@ import { currentDateKey, shiftDateString } from "../../data/dates";
 import { buildPedItems, initials, normalizeHour, parseDate, socialOf, type PedItem } from "../../lib/gantt";
 import { movePedItem } from "../../lib/actions";
 import { PostMedia } from "../../ui/PostMedia";
+import { RichCopy } from "../../ui/RichCopy";
+import { isStoryPost } from "../../lib/copy";
 import { Avatars, EmptyState, StatusChip } from "../../ui/common";
 import { CalendarDays, ChevronLeft, ChevronRight, MessageSquare, Plus, Video, ListChecks } from "../../ui/icons";
 
@@ -182,6 +184,8 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
   onDragStart?: (event: DragEvent<HTMLElement>) => void; onDragEnd?: () => void; dragging?: boolean;
 }) {
   const style = { "--p": item.color } as CSSProperties;
+  const story = isStoryPost(item.social, data.socials); // stories go out without a caption
+  const showCopy = !story && item.copy.trim().length > 0;
   // The card is a container, not a button: the media has its own controls (arrows, play) and the text area opens the post.
   return (
     <article
@@ -197,9 +201,10 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
           <span className="ped-card-time">{item.time}</span>
           <Video aria-hidden />
           <span className="ped-card-format">{item.format}</span>
+          {story && <span className="ped-story-tag">Story</span>}
         </span>
         <span className="ped-card-title">{item.title}</span>
-        {wide && item.copy.trim() && <span className="ped-card-copy">{item.copy}</span>}
+        {showCopy && <span className="ped-caption"><strong>O'Tacos</strong> <RichCopy text={item.copy} /></span>}
         <span className="ped-card-foot">
           {item.social.map((id) => {
             const social = socialOf(data.socials, id);

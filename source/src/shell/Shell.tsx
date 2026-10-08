@@ -8,6 +8,7 @@ import { useMenu } from "../ui/Menu";
 import { initials } from "../lib/gantt";
 import { Bell, CalendarDays, GanttChart, History, Inbox, LogOut, Settings, Undo2, Users, Video, Wallet, Cloud, CloudOff } from "../ui/icons";
 
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 const GanttView = lazy(() => import("../views/gantt/GanttView"));
 const PedView = lazy(() => import("../views/ped/PedView"));
 const InfluencerView = lazy(() => import("../views/influencers/InfluencerView"));
@@ -97,13 +98,15 @@ export function Shell() {
           </button>
         </header>
         <main className="view" id="main">
-          <Suspense fallback={<div className="empty"><div className="spinner" role="status" aria-label="Loading" /></div>}>
-            {view === "gantt" && <GanttView />}
-            {view === "ped" && <PedView />}
-            {view === "influencers" && <InfluencerView />}
-            {view === "creators" && <CreatorView />}
-            {view === "budget" && <BudgetView />}
-          </Suspense>
+          <ErrorBoundary key={view} label="This view" inline>
+            <Suspense fallback={<div className="empty"><div className="spinner" role="status" aria-label="Loading" /></div>}>
+              {view === "gantt" && <GanttView />}
+              {view === "ped" && <PedView />}
+              {view === "influencers" && <InfluencerView />}
+              {view === "creators" && <CreatorView />}
+              {view === "budget" && <BudgetView />}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <Suspense fallback={null}><SheetHost /></Suspense>

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Social } from "../data/types";
-import { copyStats, needsMore, platformKind, tokenizeCopy, type PlatformKind } from "../lib/copy";
+import { copyStats, isStoryNetwork, needsMore, platformKind, type PlatformKind } from "../lib/copy";
+import { RichCopy } from "./RichCopy";
 import { parseDate } from "../lib/gantt";
 import { PostMedia } from "./PostMedia";
 import { Bookmark, Heart, MessageCircle, MoreHorizontal, Plus, Send, Share2 } from "./icons";
@@ -29,11 +30,12 @@ interface SocialPreviewProps {
 export function SocialPreview({ copy, socials, selected, format, asset, assetItems, date, onWriteCopy }: SocialPreviewProps) {
   const options = useMemo(() => {
     const chosen = socials.filter((s) => selected.includes(s.id));
-    return chosen.map((s) => ({ id: s.id, label: s.label, kind: platformKind(s), color: s.color }));
+    return chosen.map((s) => ({ id: s.id, label: s.label, kind: platformKind(s), story: isStoryNetwork(s), color: s.color }));
   }, [socials, selected]);
   const [pickedId, setPickedId] = useState("");
   const current = options.find((o) => o.id === pickedId) ?? options[0];
   const kind: PlatformKind = current?.kind ?? "instagram";
+  const story = Boolean(current?.story);
   const stats = copyStats(copy);
 
   return (
@@ -42,8 +44,10 @@ export function SocialPreview({ copy, socials, selected, format, asset, assetIte
         <p className="sp-platform">{current ? current.label : "Pick a social network to see its look"}</p>
       )}
 
-      <div className={`sp-phone sp-${kind === "tiktok" ? "tiktok" : "feed"}`}>
-        {kind === "tiktok" ? (
+      <div className={`sp-phone sp-${story ? "story" : kind === "tiktok" ? "tiktok" : "feed"}`}>
+        {story ? (
+          <StoryLook format={format} asset={asset} assetItems={assetItems} />
+        ) : kind === "tiktok" ? (
           <TikTokLook copy={copy} format={format} asset={asset} assetItems={assetItems} onWriteCopy={onWriteCopy} />
         ) : (
           <FeedLook copy={copy} format={format} asset={asset} assetItems={assetItems} date={date} onWriteCopy={onWriteCopy} label={current?.label} />
@@ -51,8 +55,12 @@ export function SocialPreview({ copy, socials, selected, format, asset, assetIte
       </div>
 
       <p className="sp-count" aria-live="polite">
-        {stats.characters.toLocaleString("en-GB")}{kind === "instagram" || !current ? " / 2,200" : ""} characters
-        {stats.hashtags > 0 && ` · ${stats.hashtags} hashtag${stats.hashtags === 1 ? "" : "s"}`}
+        {story ? "Stories go out without a caption." : (
+          <>
+            {stats.characters.toLocaleString("en-GB")}{kind === "instagram" || !current ? " / 2,200" : ""} characters
+            {stats.hashtags > 0 && ` · ${stats.hashtags} hashtag${stats.hashtags === 1 ? "" : "s"}`}
+          </>
+        )}
       </p>
     </section>
   );
@@ -82,14 +90,6 @@ function Avatar({ size = 32 }: { size?: number }) {
   );
 }
 
-function Rich({ text }: { text: string }) {
-  return (
-    <>
-      {tokenizeCopy(text).map((token, i) => (token.type === "text" ? <span key={i}>{token.value}</span> : <span key={i} className={`sp-${token.type}`}>{token.value}</span>))}
-    </>
-  );
-}
-
 /** Caption as the feed shows it: name in bold, the copy after it, folded behind "more" when long. */
 function Caption({ copy, lines, onWriteCopy, inline = true }: { copy: string; lines: number; onWriteCopy?: () => void; inline?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -106,7 +106,7 @@ function Caption({ copy, lines, onWriteCopy, inline = true }: { copy: string; li
   return (
     <div className="sp-caption" id={id}>
       <p className={`sp-caption-text${long && !open ? " is-folded" : ""}`} style={{ ["--lines" as string]: lines }}>
-        {inline && <strong>{BRAND}</strong>} <Rich text={copy} />
+        {inline && <strong>{BRAND}</strong>} <RichCopy text={copy} />
       </p>
       {long && (
         <button type="button" className="sp-more" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>{open ? "less" : "… more"}</button>
@@ -202,4 +202,21 @@ function TikTokLook({ copy, format, asset, assetItems, onWriteCopy }: { copy: st
 
 function TikTokCaption({ copy, onWriteCopy }: { copy: string; onWriteCopy?: () => void }): ReactNode {
   return <Caption copy={copy} lines={2} inline={false} onWriteCopy={onWriteCopy} />;
+}
+
+/* ---------- Story: vertical, progress bar on top, no caption ---------- */
+
+function StoryLook({ format, asset, assetItems }: { format: string; asset: string; assetItems: SocialPreviewProps["assetItems"] }) {
+  return (
+    <article className="sp-story">
+      <div className="sp-story-stage">
+        <PostMedia asset={asset} assetItems={assetItems} format={format} size="sheet" />
+        <div className="sp-story-top" aria-hidden="true">
+          <span className="sp-story-bar"><i /></span>
+          <span className="sp-story-who"><Avatar size={30} /><strong>{BRAND}</strong><em>now</em></span>
+        </div>
+        <div className="sp-story-reply" aria-hidden="true"><span>Send message</span><Heart /></div>
+      </div>
+    </article>
+  );
 }

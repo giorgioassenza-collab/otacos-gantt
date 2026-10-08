@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { ErrorBoundary } from "../ui/ErrorBoundary";
 import { useUI } from "../ui/uiContext";
 
 const TaskSheet = lazy(() => import("./sheets/TaskSheet"));
@@ -15,11 +16,12 @@ const DateDialog = lazy(() => import("./sheets/DateDialog"));
 
 /** Renders whichever editor/panel the UI context asks for. One overlay at a time. */
 export default function SheetHost() {
-  const { sheet } = useUI();
+  const { sheet, close } = useUI();
   if (!sheet) return null;
   // `key` remounts the sheet when a different record is opened so its draft state never leaks across records
   const key = JSON.stringify(sheet);
   return (
+    <ErrorBoundary key={key} label="This panel" inline onReset={close}>
     <Suspense fallback={null}>
       {sheet.kind === "task" && <TaskSheet key={key} id={sheet.id} defaults={sheet.defaults} />}
       {sheet.kind === "post" && <PostSheet key={key} id={sheet.id} defaults={sheet.defaults} />}
@@ -34,5 +36,6 @@ export default function SheetHost() {
       {sheet.kind === "pedToGantt" && <DateDialog key={key} kind="pedToGantt" id={sheet.postId} />}
       {sheet.kind === "ganttToPed" && <DateDialog key={key} kind="ganttToPed" id={sheet.taskId} />}
     </Suspense>
+    </ErrorBoundary>
   );
 }

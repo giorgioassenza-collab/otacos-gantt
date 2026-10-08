@@ -7,6 +7,7 @@ import { Shell } from "./shell/Shell";
 import { WhoAreYou } from "./shell/WhoAreYou";
 import { IdentityProvider, useIdentity } from "./lib/identity";
 import { NotificationsProvider } from "./lib/notificationsStore";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { ApprovalsProvider } from "./lib/approvalsStore";
 
 /** The browser/phone chrome takes the colour of the screen under it: ink for login and "Who are you?", paper for the app. */
@@ -36,14 +37,16 @@ function Gate() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <BoardProvider>
-        <IdentityProvider>
-          <UIProvider>
-            <Gate />
-          </UIProvider>
-        </IdentityProvider>
-      </BoardProvider>
-    </ToastProvider>
+    <ErrorBoundary label="The app">
+      <ToastProvider>
+        <BoardProvider>
+          <IdentityProvider>
+            <UIProvider>
+              <Gate />
+            </UIProvider>
+          </IdentityProvider>
+        </BoardProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
