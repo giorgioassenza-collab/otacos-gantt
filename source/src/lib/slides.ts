@@ -55,10 +55,10 @@ interface SavedItem { type?: string; src?: string; fallback?: string; original?:
  * Everything a post can show:
  * the live contents of its Drive folder, else the pictures saved in the post (a copy from the old app), else each link.
  */
-export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderItems?: DriveItem[]; format: string; width?: number }): Slide[] {
+export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderItems?: DriveItem[]; /** The Drive folder was read: copies saved in the post no longer count. */ folderRead?: boolean; format: string; width?: number }): Slide[] {
   const width = opts.width ?? 800;
   const saved = (opts.items ?? []).filter((item) => item && (item.src || item.original) && item.type !== "folder");
-  if (!(opts.folderItems ?? []).some((item) => item && item.id) && saved.length) {
+  if (!opts.folderRead && !(opts.folderItems ?? []).some((item) => item && item.id) && saved.length) {
     return saved.map((item): Slide => {
       const src = item.src || item.original || "";
       if (item.type === "video") return { kind: "video", src, label: item.label || "Video" };

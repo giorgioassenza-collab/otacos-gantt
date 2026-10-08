@@ -60,7 +60,7 @@ export function PostMedia({ asset, assetItems, format, onOpen, size = "card" }: 
   // folder changes. They are only used while the live list loads, or if Drive cannot be read.
   const folderId = assetLinks(asset).map(driveFolderLinkId).find(Boolean) ?? "";
   const folder = useDriveFolder(folderId);
-  const slides = buildSlides({ asset, items: assetItems, folderItems: folder.items, format, width });
+  const slides = buildSlides({ asset, items: assetItems, folderItems: folder.items, folderRead: folder.read, format, width });
   // the tile for "nothing to show": same rules as the small thumbnails (folder loading, link, no asset yet)
   const { preview, loading } = useAssetPreview(asset, assetItems, 320);
 
