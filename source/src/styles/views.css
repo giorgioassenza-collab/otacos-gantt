@@ -551,3 +551,86 @@
 .pm-open { display: inline-flex; align-items: center; gap: 4px; padding: 6px var(--s-3); background: var(--paper-2); font-size: var(--fs-1); font-weight: 600; }
 .pm-slide .pm-playing { width: 100%; height: 100%; grid-template-rows: 1fr auto; }
 .pm-slide .pm-playing .pm-video, .pm-slide .pm-playing .pm-frame { min-height: 0; }
+
+/* ---------- post sheet: preview + form ---------- */
+.post-layout { display: grid; gap: var(--s-5); }
+.post-form { display: grid; gap: var(--s-4); align-content: start; min-width: 0; }
+.post-preview { min-width: 0; }
+@media (min-width: 800px) {
+  .post-layout { grid-template-columns: minmax(0, 330px) minmax(0, 1fr); align-items: start; }
+  .post-preview { position: sticky; top: 0; }
+}
+.asset-links { list-style: none; margin: calc(var(--s-2) * -1) 0 0; padding: 0; display: grid; gap: 4px; font-size: var(--fs-2); }
+.asset-links a { display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+
+/* ---------- social preview: the post as it will look ---------- */
+.sp { display: grid; gap: var(--s-3); }
+.sp-platform { font-size: var(--fs-2); font-weight: 600; color: var(--ink-3); text-align: center; }
+.sp-count { font-size: var(--fs-1); color: var(--ink-3); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* platform switch: one thumb that slides under the labels */
+.sp-tabs { position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); padding: 3px; border-radius: var(--r-full); background: var(--paper-2); border: 1px solid var(--line); }
+.sp-tabs-thumb { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n)); border-radius: var(--r-full); background: var(--ink); transform: translateX(calc(var(--i) * 100%)); transition: transform 280ms cubic-bezier(.32, .72, 0, 1); }
+.sp-tabs button { position: relative; z-index: 1; min-height: 34px; padding: 0 var(--s-3); font-size: var(--fs-2); font-weight: 600; color: var(--ink-3); border-radius: var(--r-full); transition: color var(--t-fast) var(--ease); }
+.sp-tabs button[aria-selected="true"] { color: var(--paper); }
+
+/* the "phone screen": network look, system font, tight tracking, like the real thing */
+.sp-phone { width: 100%; max-width: 420px; margin: 0 auto; overflow: hidden; border: 1.5px solid var(--ink); border-radius: 26px; background: #fff; color: #262626;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; letter-spacing: -.01em; }
+.sp-phone .pm-sheet { border-radius: 0; }
+
+.sp-avatar { --s: 32px; position: relative; display: block; flex: none; width: var(--s); height: var(--s); overflow: hidden; border-radius: 50%; background: var(--ink); border: 2px solid var(--orange); }
+.sp-avatar img { position: absolute; top: 50%; left: calc(var(--s) * .16); height: calc(var(--s) * .5); width: auto; max-width: none; transform: translateY(-50%); }
+
+.sp-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+.sp-who { display: grid; flex: 1; min-width: 0; line-height: 1.2; }
+.sp-who strong { font-size: 14px; font-weight: 600; }
+.sp-who span { font-size: 12px; color: #737373; }
+.sp-dots { width: 20px; height: 20px; color: #262626; }
+.sp-media { position: relative; background: #000; }
+
+.sp-actions { display: flex; align-items: center; gap: 2px; padding: 6px 8px 2px; }
+.sp-spacer { flex: 1; }
+.sp-icon { display: grid; place-items: center; width: 40px; height: 40px; color: #262626; }
+.sp-icon svg { width: 25px; height: 25px; stroke-width: 1.7; }
+.sp-heart svg { transition: transform 200ms var(--ease), color var(--t-fast) var(--ease), fill var(--t-fast) var(--ease); }
+.sp-heart[aria-pressed="true"] svg { color: #ed4956; fill: #ed4956; animation: sp-like 360ms var(--ease); }
+.sp-heart:active svg { transform: scale(.82); transition-duration: 100ms; }
+.sp-icon.is-light { color: #fff; }
+.sp-heart.is-light[aria-pressed="true"] svg { color: #fe2c55; fill: #fe2c55; }
+
+.sp-caption { padding: 2px 14px 4px; font-size: 14px; line-height: 1.38; }
+.sp-caption-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sp-caption-text strong { font-weight: 600; }
+.sp-caption-text.is-folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--lines, 3); overflow: hidden; }
+.sp-tag, .sp-mention, .sp-link { color: #00376b; }
+.sp-more { color: #737373; font-size: 14px; padding: 0; min-height: 24px; }
+.sp-empty { color: #737373; }
+.sp-empty strong { color: #262626; font-weight: 600; }
+.sp-link-btn { color: #00376b; font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 2px; }
+.sp-date { margin: 0; padding: 6px 14px 14px; font-size: 11px; letter-spacing: .02em; color: #737373; }
+
+.sp-burst { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; animation: sp-pop 800ms var(--ease) both; }
+.sp-burst svg { width: 96px; height: 96px; color: #fff; fill: #fff; filter: drop-shadow(0 4px 14px rgba(0, 0, 0, .35)); }
+@keyframes sp-like { 0% { transform: scale(.7); } 45% { transform: scale(1.22); } 100% { transform: scale(1); } }
+@keyframes sp-pop { 0% { transform: scale(.3); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 60% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.1); opacity: 0; } }
+
+/* TikTok: the media fills a vertical screen, the controls sit on top of it */
+.sp-tiktok { background: #000; color: #fff; border-color: #000; }
+.sp-tt-stage { position: relative; display: grid; place-items: center; aspect-ratio: 9 / 16; max-height: 640px; overflow: hidden; background: #000; }
+.sp-tt-stage .pm { width: 100%; background: #000; }
+.sp-tt-stage .pm-full { max-height: 100%; }
+.sp-tt-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: linear-gradient(to top, rgba(0, 0, 0, .66), rgba(0, 0, 0, 0)); pointer-events: none; }
+.sp-tt-rail { position: absolute; right: 6px; bottom: 76px; display: grid; justify-items: center; gap: 6px; z-index: 3; }
+.sp-tt-rail .sp-icon svg { width: 30px; height: 30px; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .5)); }
+.sp-tt-follow { position: relative; margin-bottom: 10px; }
+.sp-tt-follow i { position: absolute; left: 50%; bottom: -9px; width: 20px; height: 20px; margin-left: -10px; display: grid; place-items: center; border-radius: 50%; background: #fe2c55; color: #fff; }
+.sp-tt-follow i svg { width: 13px; height: 13px; stroke-width: 3; }
+.sp-tt-bottom { position: absolute; left: 12px; right: 64px; bottom: 14px; z-index: 3; display: grid; gap: 4px; font-size: 14px; text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+.sp-tt-bottom strong { font-weight: 700; font-size: 15px; }
+.sp-tiktok .sp-caption { padding: 0; }
+.sp-tiktok .sp-tag, .sp-tiktok .sp-mention, .sp-tiktok .sp-link { color: #fff; font-weight: 700; }
+.sp-tiktok .sp-more, .sp-tiktok .sp-empty { color: rgba(255, 255, 255, .8); }
+.sp-tiktok .sp-empty strong { color: #fff; }
+.sp-tiktok .sp-link-btn { color: #fff; }
+.ped-card-copy { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: var(--fs-2); line-height: 1.35; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }

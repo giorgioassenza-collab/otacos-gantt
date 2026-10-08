@@ -199,6 +199,7 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
           <span className="ped-card-format">{item.format}</span>
         </span>
         <span className="ped-card-title">{item.title}</span>
+        {wide && item.copy.trim() && <span className="ped-card-copy">{item.copy}</span>}
         <span className="ped-card-foot">
           {item.social.map((id) => {
             const social = socialOf(data.socials, id);

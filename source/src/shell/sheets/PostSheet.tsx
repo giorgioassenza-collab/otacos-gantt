@@ -15,7 +15,7 @@ import { duplicatePedItem, ensurePedPostForTask } from "../../data/labels";
 import { isClientName } from "../../data/util";
 import { blankPost, deletePedPost } from "../../lib/actions";
 import { assetLinks, isDriveFolder, safeHref } from "../../lib/assets";
-import { PostMedia } from "../../ui/PostMedia";
+import { SocialPreview } from "../../ui/SocialPreview";
 import { normalizeFormat, normalizeHour } from "../../lib/gantt";
 
 const FORMATS = ["Video", "Static", "Carousel"] as const;
@@ -167,6 +167,20 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
       }
     >
       <SheetBody>
+        <div className="post-layout">
+        <aside className="post-preview">
+          <SocialPreview
+            copy={post.copy}
+            socials={data.socials}
+            selected={post.social}
+            format={post.format}
+            asset={post.asset}
+            assetItems={savedItems}
+            date={post.date}
+            onWriteCopy={() => document.querySelector<HTMLTextAreaElement>("[data-copy-field]")?.focus()}
+          />
+        </aside>
+        <div className="post-form">
         <TextField label="Title" value={post.title} onChange={(e) => patch({ title: e.target.value })} placeholder="Post title" data-autofocus aria-invalid={titleError} autoComplete="off" hint={titleError ? "Add a title to continue." : undefined} />
         <PillRadio label="Project" value={post.projectId} onChange={(v) => patch({ projectId: v })} options={data.projects.map((p) => ({ value: p.id, label: p.name, color: p.color }))} />
         <div className="row-2">
@@ -179,22 +193,19 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
         <MultiPick label="Who" value={post.members} onChange={(next) => patch({ members: next })} options={members.map((m) => ({ value: m, label: m }))} empty="Add people in Settings." />
 
         <TextAreaField label="Asset links" hint="One link per line: Drive files or folders, images, videos." value={post.asset} onChange={(e) => patch({ asset: e.target.value })} rows={3} placeholder="https://drive.google.com/…" />
-        <div className="asset-preview">
-          <PostMedia asset={post.asset} assetItems={savedItems} format={post.format} size="sheet" />
-          {links.length > 0 && (
-            <ul>
-              {links.map((link) => {
-                const href = safeHref(link);
-                return (
-                  <li key={link}>
-                    {href ? <a href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} aria-hidden /> {isDriveFolder(link) ? "Drive folder" : link.replace(/^https?:\/\//, "").slice(0, 60)}</a> : <span>{link}</span>}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <TextAreaField label="Copy" value={post.copy} onChange={(e) => patch({ copy: e.target.value })} rows={4} placeholder="Caption, hashtags, notes for the publisher" />
+        {links.length > 0 && (
+          <ul className="asset-links">
+            {links.map((link) => {
+              const href = safeHref(link);
+              return (
+                <li key={link}>
+                  {href ? <a href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} aria-hidden /> {isDriveFolder(link) ? "Drive folder" : link.replace(/^https?:\/\//, "").slice(0, 60)}</a> : <span>{link}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <TextAreaField label="Copy" data-copy-field value={post.copy} onChange={(e) => patch({ copy: e.target.value })} rows={6} placeholder="Caption, hashtags, notes for the publisher" hint="The preview updates as you type. Hashtags, @mentions and links are coloured like on the network." />
 
         {(persisted || linkedTask) && (
           <section className="subform" aria-label="Comments">
@@ -239,6 +250,8 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
             {members.length > 0 && <MultiPick label="Subtask for" value={subMembers} onChange={setSubMembers} options={members.map((m) => ({ value: m, label: m }))} />}
           </section>
         )}
+        </div>
+        </div>
       </SheetBody>
     </Sheet>
   );
