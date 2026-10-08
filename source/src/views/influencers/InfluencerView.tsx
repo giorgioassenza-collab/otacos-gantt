@@ -4,15 +4,11 @@ import { useBoard } from "../../store";
 import { useUI } from "../../ui/uiContext";
 import { useToast } from "../../ui/Toast";
 import { useMenu, type MenuItem } from "../../ui/Menu";
-import { usePref } from "../../lib/usePref";
 import { Sheet, SheetBody } from "../../ui/Sheet";
 import { SelectField } from "../../ui/fields";
 import { EmptyState, Notice } from "../../ui/common";
-import { ChevronDown, ExternalLink, MoreHorizontal, Pencil, Plus, Search, Trash2, Users, X } from "../../ui/icons";
-import { currentDateKey, formatDateLabel } from "../../data/dates";
+import { ExternalLink, MoreHorizontal, Pencil, Plus, Search, Trash2, Users, X } from "../../ui/icons";
 import {
-  influencerProgressCounts,
-  influencerTypeIsVisible,
   nextInfluencerSortOrder,
   setInfluencerField,
   syncInfluencerProgressTasks
@@ -125,7 +121,6 @@ export default function InfluencerView() {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [sort, setSort] = useState<Sort | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [stripOpen, setStripOpen] = usePref<boolean>("otw2.inf.strip", true);
   const [cardLimit, setCardLimit] = useState(80);
   const [imp, setImp] = useState<ImportState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
@@ -387,7 +382,6 @@ export default function InfluencerView() {
           )
         ) : (
           <>
-            <ProgressStrip data={data} open={stripOpen} onToggle={() => setStripOpen(!stripOpen)} />
 
             {total === 0 ? (
               <EmptyState
@@ -534,57 +528,6 @@ function ImportPanel({ state, onConfirm, onCancel, onRetry, onDismiss }: {
         <button type="button" className="btn btn--sm btn--ghost" onClick={onDismiss}>Dismiss</button>
       </div>
     </div>
-  );
-}
-
-/* ---------------------------------------------------------------- staffing strip */
-
-function ProgressStrip({ data, open, onToggle }: { data: BoardData; open: boolean; onToggle: () => void }) {
-  const today = currentDateKey();
-  const items = useMemo(() => (data.influencerOptions?.type || [])
-    .filter((type) => influencerTypeIsVisible(type, data))
-    .map((type) => {
-      const counts = influencerProgressCounts(data, type);
-      const needed = Math.max(0, Number(type.needed) || 0);
-      return { type, needed, ...counts };
-    }), [data]);
-  if (!items.length) return null;
-  const booked = items.reduce((sum, item) => sum + item.confirmed, 0);
-  const needed = items.reduce((sum, item) => sum + item.needed, 0);
-  const contacted = items.reduce((sum, item) => sum + item.contacted, 0);
-  return (
-    <section className="inf-strip" aria-label="Staffing progress">
-      <button type="button" className="inf-strip-head" aria-expanded={open} aria-controls="inf-strip-list" onClick={onToggle}>
-        <span className="inf-strip-title">Staffing</span>
-        <span className="inf-strip-sum">{needed > 0 ? `${booked}/${needed} booked` : `${booked} booked`} · {contacted} contacted</span>
-        <ChevronDown className="inf-strip-chevron" aria-hidden />
-      </button>
-      {open && (
-        <ul className="inf-strip-list" id="inf-strip-list">
-          {items.map(({ type, needed: target, assigned, confirmed, contacted: reached }) => {
-            const bookedPct = target ? Math.min(100, (confirmed / target) * 100) : 0;
-            const contactedPct = target ? Math.min(100 - bookedPct, (reached / target) * 100) : 0;
-            const late = Boolean(type.deadline) && type.deadline! < today && (target === 0 || confirmed < target);
-            return (
-              <li key={type.name} className="inf-prog">
-                <span className="inf-prog-name">{type.name}</span>
-                <span
-                  className="inf-prog-bar"
-                  role="img"
-                  aria-label={target ? `${confirmed} of ${target} booked, ${reached} contacted` : `${confirmed} booked, ${reached} contacted, no target set`}
-                >
-                  <i className="is-booked" style={{ width: `${bookedPct}%` }} />
-                  <i className="is-contacted" style={{ width: `${contactedPct}%` }} />
-                </span>
-                <span className="inf-prog-ratio">{confirmed}/{target || "-"}</span>
-                <span className="inf-prog-meta">{reached} contacted · {assigned} assigned</span>
-                <span className="inf-prog-deadline" data-late={late}>{type.deadline ? `Deadline ${formatDateLabel(type.deadline)}` : "No deadline"}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
   );
 }
 

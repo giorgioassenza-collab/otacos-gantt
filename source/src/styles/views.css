@@ -365,29 +365,6 @@
 .inf-import-text { flex: 1 1 240px; min-width: 0; }
 .inf-import--error { background: var(--danger-soft); border-color: #f2b8b5; color: #7a1a15; }
 
-/* staffing strip */
-.inf-strip { position: sticky; left: 0; margin: var(--s-3) var(--s-4) 0; border: 1.5px solid var(--line); border-radius: var(--r-md); background: var(--card); }
-.inf-strip-head { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 44px; padding: 0 var(--s-3) 0 var(--s-4); text-align: left; border-radius: var(--r-md); }
-.inf-strip-title { font-weight: 700; }
-.inf-strip-sum { flex: 1; min-width: 0; font-size: var(--fs-2); font-weight: 600; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.inf-strip-chevron { width: 18px; height: 18px; flex: none; color: var(--ink-3); transition: transform var(--t-fast) var(--ease); }
-.inf-strip-head[aria-expanded="true"] .inf-strip-chevron { transform: rotate(180deg); }
-.inf-strip-list { list-style: none; margin: 0; padding: 0 var(--s-4) var(--s-2); display: grid; }
-.inf-prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name ratio" "bar bar" "meta deadline"; gap: 4px var(--s-3); align-items: center; padding: var(--s-3) 0; border-top: 1px solid var(--line-soft); font-size: var(--fs-2); }
-.inf-prog-name { grid-area: name; font-weight: 700; overflow-wrap: anywhere; }
-.inf-prog-ratio { grid-area: ratio; font-weight: 700; font-variant-numeric: tabular-nums; }
-.inf-prog-bar { grid-area: bar; display: flex; height: 8px; border-radius: var(--r-full); background: var(--line-soft); overflow: hidden; }
-.inf-prog-bar i { display: block; height: 100%; }
-.inf-prog-bar .is-booked { background: var(--ok); }
-.inf-prog-bar .is-contacted { background: var(--yellow); }
-.inf-prog-meta { grid-area: meta; color: var(--ink-3); }
-.inf-prog-deadline { grid-area: deadline; color: var(--ink-3); white-space: nowrap; }
-.inf-prog-deadline[data-late="true"] { color: var(--danger); font-weight: 700; }
-@media (min-width: 900px) {
-  .inf-prog { grid-template-columns: 170px minmax(120px, 1fr) 52px auto auto; grid-template-areas: "name bar ratio meta deadline"; gap: var(--s-4); padding: var(--s-2) 0; }
-  .inf-prog-ratio { text-align: right; }
-}
-
 /* table (>= 900px) */
 .inf-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1200px; font-size: var(--fs-2); background: var(--card); }
 .inf-table th, .inf-table td { padding: 8px 12px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line-soft); }
