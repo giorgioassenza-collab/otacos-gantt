@@ -26,9 +26,12 @@ interface SocialPreviewProps {
   date: string;
   /** Called when the empty-copy hint is pressed (focus the copy field). */
   onWriteCopy?: () => void;
+  /** Calendar use: just the phone screen (no network tabs, no counter); a press on the picture calls onOpen. */
+  compact?: boolean;
+  onOpen?: () => void;
 }
 
-export function SocialPreview({ copy, socials, selected, format, asset, assetItems, date, onWriteCopy }: SocialPreviewProps) {
+export function SocialPreview({ copy, socials, selected, format, asset, assetItems, date, onWriteCopy, compact, onOpen }: SocialPreviewProps) {
   const options = useMemo(() => {
     const chosen = socials.filter((s) => selected.includes(s.id));
     return chosen.map((s) => ({ id: s.id, label: s.label, kind: platformKind(s), story: isStoryNetwork(s), color: s.color }));
@@ -40,29 +43,29 @@ export function SocialPreview({ copy, socials, selected, format, asset, assetIte
   const stats = copyStats(copy);
 
   return (
-    <section className="sp" aria-label="How the post will look">
-      {options.length > 1 ? <PlatformTabs options={options} value={current.id} onChange={setPickedId} /> : (
+    <section className={`sp${compact ? " is-compact" : ""}`} aria-label="How the post will look">
+      {compact ? null : options.length > 1 ? <PlatformTabs options={options} value={current.id} onChange={setPickedId} /> : (
         <p className="sp-platform">{current ? current.label : "Pick a social network to see its look"}</p>
       )}
 
       <div className={`sp-phone sp-${story ? "story" : kind === "tiktok" ? "tiktok" : "feed"}`}>
         {story ? (
-          <StoryLook format={format} asset={asset} assetItems={assetItems} />
+          <StoryLook format={format} asset={asset} assetItems={assetItems} onOpen={onOpen} />
         ) : kind === "tiktok" ? (
-          <TikTokLook copy={copy} format={format} asset={asset} assetItems={assetItems} onWriteCopy={onWriteCopy} />
+          <TikTokLook copy={copy} format={format} asset={asset} assetItems={assetItems} onWriteCopy={onWriteCopy} onOpen={onOpen} />
         ) : (
-          <FeedLook copy={copy} format={format} asset={asset} assetItems={assetItems} date={date} onWriteCopy={onWriteCopy} label={current?.label} />
+          <FeedLook copy={copy} format={format} asset={asset} assetItems={assetItems} date={date} onWriteCopy={onWriteCopy} label={current?.label} onOpen={onOpen} />
         )}
       </div>
 
-      <p className="sp-count" aria-live="polite">
+      {!compact && <p className="sp-count" aria-live="polite">
         {story ? "Stories go out without a caption." : (
           <>
             {stats.characters.toLocaleString("en-GB")}{kind === "instagram" || !current ? " / 2,200" : ""} characters
             {stats.hashtags > 0 && ` · ${stats.hashtags} hashtag${stats.hashtags === 1 ? "" : "s"}`}
           </>
         )}
-      </p>
+      </p>}
     </section>
   );
 }
@@ -139,7 +142,7 @@ function BurstHeart({ burst }: { burst: number }) {
 
 /* ---------- Instagram / generic feed ---------- */
 
-function FeedLook({ copy, format, asset, assetItems, date, onWriteCopy, label }: { copy: string; format: string; asset: string; assetItems: SocialPreviewProps["assetItems"]; date: string; onWriteCopy?: () => void; label?: string }) {
+function FeedLook({ copy, format, asset, assetItems, date, onWriteCopy, label, onOpen }: { copy: string; format: string; asset: string; assetItems: SocialPreviewProps["assetItems"]; date: string; onWriteCopy?: () => void; label?: string; onOpen?: () => void }) {
   const { liked, setLiked, burst, doubleTap } = useBurst();
   const day = date ? parseDate(date).toLocaleDateString("en-GB", { day: "numeric", month: "long" }).toUpperCase() : "";
   return (
@@ -152,8 +155,8 @@ function FeedLook({ copy, format, asset, assetItems, date, onWriteCopy, label }:
         </div>
         <MoreHorizontal aria-hidden className="sp-dots" />
       </header>
-      <div className="sp-media" onDoubleClick={doubleTap}>
-        <PostMedia asset={asset} assetItems={assetItems} format={format} size="sheet" />
+      <div className="sp-media" onDoubleClick={onOpen ? undefined : doubleTap}>
+        <PostMedia asset={asset} assetItems={assetItems} format={format} size={onOpen ? "card" : "sheet"} onOpen={onOpen} />
         <BurstHeart burst={burst} />
       </div>
       <div className="sp-actions">
@@ -171,12 +174,12 @@ function FeedLook({ copy, format, asset, assetItems, date, onWriteCopy, label }:
 
 /* ---------- TikTok ---------- */
 
-function TikTokLook({ copy, format, asset, assetItems, onWriteCopy }: { copy: string; format: string; asset: string; assetItems: SocialPreviewProps["assetItems"]; onWriteCopy?: () => void }) {
+function TikTokLook({ copy, format, asset, assetItems, onWriteCopy, onOpen }: { copy: string; format: string; asset: string; assetItems: SocialPreviewProps["assetItems"]; onWriteCopy?: () => void; onOpen?: () => void }) {
   const { liked, setLiked, burst, doubleTap } = useBurst();
   return (
     <article className="sp-tt">
-      <div className="sp-tt-stage" onDoubleClick={doubleTap}>
-        <PostMedia asset={asset} assetItems={assetItems} format={format} size="sheet" />
+      <div className="sp-tt-stage" onDoubleClick={onOpen ? undefined : doubleTap}>
+        <PostMedia asset={asset} assetItems={assetItems} format={format} size={onOpen ? "card" : "sheet"} onOpen={onOpen} />
         <BurstHeart burst={burst} />
         <div className="sp-tt-shade" aria-hidden="true" />
         <div className="sp-tt-rail">
@@ -201,11 +204,11 @@ function TikTokCaption({ copy, onWriteCopy }: { copy: string; onWriteCopy?: () =
 
 /* ---------- Story: vertical, progress bar on top, no caption ---------- */
 
-function StoryLook({ format, asset, assetItems }: { format: string; asset: string; assetItems: SocialPreviewProps["assetItems"] }) {
+function StoryLook({ format, asset, assetItems, onOpen }: { format: string; asset: string; assetItems: SocialPreviewProps["assetItems"]; onOpen?: () => void }) {
   return (
     <article className="sp-story">
       <div className="sp-story-stage">
-        <PostMedia asset={asset} assetItems={assetItems} format={format} size="sheet" />
+        <PostMedia asset={asset} assetItems={assetItems} format={format} size={onOpen ? "card" : "sheet"} onOpen={onOpen} />
         <div className="sp-story-top" aria-hidden="true">
           <span className="sp-story-bar"><i /></span>
           <span className="sp-story-who"><Avatar size={30} /><strong>{BRAND}</strong><em>now</em></span>

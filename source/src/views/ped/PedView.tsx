@@ -6,11 +6,10 @@ import { currentDateKey, shiftDateString } from "../../data/dates";
 import { buildPedItems, initials, normalizeHour, parseDate, socialOf, type PedItem } from "../../lib/gantt";
 import { movePedItem } from "../../lib/actions";
 import { PostMedia } from "../../ui/PostMedia";
-import { RichCopy } from "../../ui/RichCopy";
-import { BrandAvatar } from "../../ui/BrandAvatar";
+import { SocialPreview } from "../../ui/SocialPreview";
 import { isStoryPost } from "../../lib/copy";
 import { Avatars, EmptyState, StatusChip } from "../../ui/common";
-import { Bookmark, CalendarDays, ChevronLeft, ChevronRight, Heart, MessageCircle, MessageSquare, Plus, Send, Video, ListChecks } from "../../ui/icons";
+import { CalendarDays, ChevronLeft, ChevronRight, MessageSquare, Plus, Video, ListChecks } from "../../ui/icons";
 
 const START_HOUR = 11;
 const END_HOUR = 20;
@@ -186,7 +185,6 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
 }) {
   const style = { "--p": item.color } as CSSProperties;
   const story = isStoryPost(item.social, data.socials); // stories go out without a caption
-  const showCopy = !story && item.copy.trim().length > 0;
   // The card is a container, not a button: the media has its own controls (arrows, play) and the text area opens the post.
   return (
     <article
@@ -196,22 +194,8 @@ function PedCard({ data, item, onOpen, wide, draggable, onDragStart, onDragEnd, 
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <div className="ped-post-head">
-        <BrandAvatar size={26} ring={story} />
-        <strong>O'Tacos</strong>
-        <span className="ped-post-nets">
-          {item.social.map((id) => {
-            const social = socialOf(data.socials, id);
-            return <span key={id} className="social-badge" style={{ background: social?.color ?? "var(--ink)" }}>{social?.short ?? id}</span>;
-          })}
-        </span>
-      </div>
-      <PostMedia asset={item.asset} assetItems={item.assetItems} format={item.format} size={wide ? "wide" : "card"} onOpen={() => onOpen(item)} />
-      {!story && (
-        <div className="ped-post-actions" aria-hidden="true"><Heart /><MessageCircle /><Send /><Bookmark /></div>
-      )}
+      <SocialPreview compact copy={item.copy} socials={data.socials} selected={item.social} format={item.format} asset={item.asset} assetItems={item.assetItems} date={item.date} onOpen={() => onOpen(item)} />
       <button type="button" className="ped-card-body" onClick={() => onOpen(item)} aria-label={`${item.time} ${item.title}. ${item.status}. Open post`}>
-        {showCopy && <span className="ped-caption"><strong>O'Tacos</strong> <RichCopy text={item.copy} /></span>}
         <span className="ped-card-top">
           <span className="ped-card-time">{item.time}</span>
           <Video aria-hidden />
