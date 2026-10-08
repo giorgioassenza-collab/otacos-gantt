@@ -634,19 +634,14 @@
 .sp-tiktok .sp-empty strong { color: #fff; }
 .sp-tiktok .sp-link-btn { color: #fff; }
 
-/* calendar card: the caption under the media, the way the feed shows it (stories have none) */
-.ped-caption { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: var(--fs-2); line-height: 1.38; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
-.ped-caption strong { color: var(--ink); font-weight: 650; }
-.ped-caption .sp-tag, .ped-caption .sp-mention, .ped-caption .sp-link { color: #00376b; }
-.ped-card.is-wide .ped-caption, .ped-list .ped-caption { -webkit-line-clamp: 5; }
 .ped-story-tag { display: inline-flex; align-items: center; min-height: 18px; padding: 0 var(--s-2); border-radius: var(--r-full); background: var(--ink); color: var(--paper); font-size: var(--fs-1); font-weight: 650; letter-spacing: .02em; }
 
-/* Story look in the preview: vertical, progress bar, no caption */
+/* Story look in the preview: full-bleed vertical picture, progress bar, no caption */
 .sp-story { background: #000; color: #fff; }
 .sp-phone.sp-story { background: #000; border-color: #000; }
-.sp-story-stage { position: relative; display: grid; place-items: center; aspect-ratio: 9 / 16; max-height: 640px; overflow: hidden; background: #000; }
-.sp-story-stage .pm { width: 100%; background: #000; }
-.sp-story-stage .pm-full { max-height: 100%; }
+.sp-story-stage { position: relative; width: 100%; max-width: 360px; margin: 0 auto; aspect-ratio: 9 / 16; overflow: hidden; background: #000; }
+.sp-story-stage .pm { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+.sp-story-stage .pm-full, .sp-story-stage .pm-slide { width: 100%; height: 100%; max-height: none; aspect-ratio: auto; object-fit: cover; }
 .sp-story-top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: grid; gap: 8px; padding: 10px 12px 28px; background: linear-gradient(to bottom, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0)); pointer-events: none; }
 .sp-story-bar { display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .35); overflow: hidden; }
 .sp-story-bar i { display: block; width: 38%; height: 100%; background: #fff; }
@@ -675,46 +670,10 @@
 .sp.is-compact .sp-caption { padding: 0 10px 2px; font-size: 13px; }
 .sp.is-compact .sp-date { padding: 4px 10px 8px; }
 .sp.is-compact .sp-actions { padding: 2px 4px 0; }
-.sp.is-compact .sp-story-stage, .sp.is-compact .sp-tt-stage { max-height: 360px; }
+.sp.is-compact .sp-story-stage { max-width: none; }
+.sp.is-compact .sp-tt-stage { max-height: 360px; }
 .ped-card-body { padding-top: 6px; border-top: 1px solid var(--line); }
 .ped-card.is-story .ped-card-body { border-top-color: transparent; }
-/* Story look in the preview: vertical, progress bar, no caption */
-.sp-story { background: #000; color: #fff; }
-.sp-phone.sp-story { background: #000; border-color: #000; }
-.sp-story-stage { position: relative; display: grid; place-items: center; aspect-ratio: 9 / 16; max-height: 640px; overflow: hidden; background: #000; }
-.sp-story-stage .pm { width: 100%; background: #000; }
-.sp-story-stage .pm-full { max-height: 100%; }
-.sp-story-top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: grid; gap: 8px; padding: 10px 12px 28px; background: linear-gradient(to bottom, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0)); pointer-events: none; }
-.sp-story-bar { display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .35); overflow: hidden; }
-.sp-story-bar i { display: block; width: 38%; height: 100%; background: #fff; }
-.sp-story-who { display: flex; align-items: center; gap: 8px; font-size: 14px; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
-.sp-story-who strong { font-weight: 600; }
-.sp-story-who em { font-style: normal; opacity: .75; }
-.sp-story-reply { position: absolute; left: 12px; right: 12px; bottom: 14px; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px; min-height: 44px; border: 1.5px solid rgba(255, 255, 255, .7); border-radius: var(--r-full); font-size: 14px; color: rgba(255, 255, 255, .9); pointer-events: none; }
-.sp-story-reply svg { width: 22px; height: 22px; }
-
-/* crash screen */
-.crash { display: grid; justify-items: center; align-content: center; gap: var(--s-3); min-height: 60dvh; padding: var(--s-6) var(--s-4); text-align: center; }
-.crash.is-inline { min-height: 40dvh; }
-.crash h2 { margin: 0; font-size: var(--fs-5, 1.25rem); }
-.crash p { margin: 0; max-width: 42ch; color: var(--ink-2); }
-.crash-detail { max-width: min(560px, 100%); margin: 0; padding: var(--s-2) var(--s-3); overflow: auto; border-radius: var(--r-md); background: var(--paper-2); font-size: var(--fs-1); text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
-.crash-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center; }
-
-/* calendar card as a feed post: account row, media, action icons, caption, then the working details */
-.ped-card { background: #fff; color: #262626; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; letter-spacing: -.01em; }
-@media (hover: hover) and (pointer: fine) { .ped-card:hover { background: color-mix(in srgb, var(--p) 8%, #fff); } }
-.ped-post-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
-.ped-post-head strong { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; }
-.ped-post-nets { display: flex; gap: 4px; }
-.ped-post-actions { display: flex; align-items: center; gap: 12px; padding: 8px 10px 2px; color: #262626; }
-.ped-post-actions svg { width: 22px; height: 22px; stroke-width: 1.7; }
-.ped-post-actions svg:last-child { margin-left: auto; }
-.ped-card-body { padding-top: 4px; }
-.ped-caption { font-size: 13px; color: #262626; }
-.ped-caption strong { color: #262626; font-weight: 600; }
-.ped-card-top { padding-top: 6px; border-top: 1px solid var(--line); }
-.ped-card .chip { margin-top: 2px; }
-.ped-card .sp-avatar { border-width: 1.5px; }
-.sp-avatar.has-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #d6249f; }
-.ped-card.is-story .ped-card-top { border-top: 0; padding-top: 0; }
+.sp-story-stage .pm-carousel, .sp-story-stage .pm-track { height: 100%; }
+.sp-story-stage .pm-video, .sp-story-stage .pm-frame, .sp-story-stage .pm-facade { height: 100%; max-height: none; aspect-ratio: auto; }
+.sp-story-stage .pm-video { object-fit: cover; }
