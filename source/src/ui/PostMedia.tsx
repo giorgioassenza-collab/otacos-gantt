@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { driveFolderLinkId, assetLinks } from "../lib/assets";
 import { useDriveFolder } from "../lib/driveFolders";
-import { buildSlides, type Slide } from "../lib/slides";
+import { buildSlides, resolveDriveFile, type Slide } from "../lib/slides";
+import { useDriveKind } from "../lib/driveFiles";
 import { PostThumb } from "./PostThumb";
 import { useAssetPreview } from "../lib/useAssetPreview";
 import { ChevronLeft, ChevronRight, ExternalLink, Play } from "./icons";
@@ -68,9 +69,25 @@ export function PostMedia({ asset, assetItems, format, onOpen, size = "card" }: 
   const only = slides[0];
   return (
     <div ref={box} className={`pm pm-${size}`}>
-      {only.kind === "image" ? <FullImage slide={only} onOpen={onOpen} size={size} active={near} /> : <Player slide={only} />}
+      <SlideView slide={only} onOpen={onOpen} size={size} active={near} />
     </div>
   );
+}
+
+/* ---------- one slide, whatever it is ---------- */
+
+/** A Drive file is first asked what it is, so a picture in a "Video" post is shown as a picture, not given a player. */
+function DriveFileSlide({ slide, onOpen, size, active }: { slide: Extract<Slide, { kind: "drivefile" }>; onOpen?: () => void; size: "card" | "wide" | "sheet"; active: boolean }) {
+  const kind = useDriveKind(active ? slide.id : "");
+  if (active && kind === "loading") return <div className="pm-pending" aria-hidden="true" />;
+  const resolved = resolveDriveFile(slide, active ? (kind as "image" | "video" | "other") : "other");
+  return <SlideView slide={resolved} onOpen={onOpen} size={size} active={active} />;
+}
+
+function SlideView({ slide, onOpen, size, active }: { slide: Slide; onOpen?: () => void; size: "card" | "wide" | "sheet"; active: boolean }) {
+  if (slide.kind === "drivefile") return <DriveFileSlide slide={slide} onOpen={onOpen} size={size} active={active} />;
+  if (slide.kind === "image") return <FullImage slide={slide} onOpen={onOpen} size={size} active={active} />;
+  return <Player slide={slide} />;
 }
 
 /* ---------- a single picture, whole ---------- */
@@ -199,7 +216,7 @@ function Facade({ cover, label, onPlay }: { cover?: string; label: string; onPla
  * does not work (a private file, a format Chrome cannot play) Drive's own player takes over in the same place, and there
  * is always a link to open it in a new tab. YouTube/Vimeo load their player when you press play.
  */
-function Player({ slide }: { slide: Exclude<Slide, { kind: "image" }> }) {
+function Player({ slide }: { slide: Exclude<Slide, { kind: "image" | "drivefile" }> }) {
   const [mode, setMode] = useState<"cover" | "video" | "frame">("cover");
 
   if (slide.kind === "video") {
@@ -262,7 +279,7 @@ function Carousel({ slides, onOpen, size, visible }: { slides: Slide[]; onOpen?:
       <div className="pm-track" ref={track} onScroll={sync} onKeyDown={onKey} tabIndex={0}>
         {slides.map((slide, i) => (
           <div key={i} className="pm-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
-            {slide.kind === "image" ? <FullImage slide={slide} onOpen={onOpen} size={size} active={visible && Math.abs(i - index) <= 1} /> : <Player slide={slide} />}
+            <SlideView slide={slide} onOpen={onOpen} size={size} active={visible && Math.abs(i - index) <= 1} />
           </div>
         ))}
       </div>

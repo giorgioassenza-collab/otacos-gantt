@@ -75,3 +75,24 @@ export async function fetchDriveFolder(folderId: string, signal?: AbortSignal, t
     signal?.removeEventListener("abort", onAbort);
   }
 }
+
+export interface DriveFileMeta { mimeType: string; name: string }
+export type DriveFileResult = { status: "ok"; meta: DriveFileMeta } | { status: "error"; message: string };
+
+/** The real type of a Drive file (public files only), so a picture is never treated as a video or the other way round. */
+export async function fetchDriveFileMeta(fileId: string, timeoutMs = 8000): Promise<DriveFileResult> {
+  if (!fileId) return { status: "error", message: "No file id." };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=mimeType%2Cname&supportsAllDrives=true&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) return { status: "error", message: `Drive answered ${response.status}.` };
+    const payload = (await response.json()) as { mimeType?: string; name?: string };
+    return payload.mimeType ? { status: "ok", meta: { mimeType: payload.mimeType, name: payload.name ?? "" } } : { status: "error", message: "Drive did not say what the file is." };
+  } catch {
+    return { status: "error", message: "Cannot reach Google Drive." };
+  } finally {
+    clearTimeout(timer);
+  }
+}

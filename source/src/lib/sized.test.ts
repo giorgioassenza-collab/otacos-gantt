@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildSlides } from "./slides";
+import { buildSlides, resolveDriveFile } from "./slides";
 
-// the Drive thumbnail size is rewritten by PostMedia; here we only pin the urls the slide model hands over
+// what a failed picture needs in order to offer "Open": the original link must survive until the picture is resolved
 describe("slides keep what a failed picture needs", () => {
-  it("carries the original link so the card can offer to open it", () => {
+  it("carries the original link from the Drive file to the resolved picture", () => {
     const [slide] = buildSlides({ asset: "https://drive.google.com/file/d/ABC123/view", format: "Static" });
-    expect(slide).toMatchObject({ kind: "image", original: "https://drive.google.com/file/d/ABC123/view" });
+    expect(slide).toMatchObject({ kind: "drivefile", original: "https://drive.google.com/file/d/ABC123/view" });
+    if (slide.kind !== "drivefile") throw new Error("expected a drive file");
+    expect(resolveDriveFile(slide, "image")).toMatchObject({ kind: "image", original: "https://drive.google.com/file/d/ABC123/view" });
   });
 });
