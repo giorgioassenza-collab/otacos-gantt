@@ -179,22 +179,57 @@ function FullImage({ slide, onOpen, size, active: wantedNow = true }: { slide: E
 
 /* ---------- video: file or page that plays it ---------- */
 
+function OpenLink({ href }: { href?: string }) {
+  if (!href || !/^https?:\/\//i.test(href)) return null;
+  return <a className="pm-open" href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} aria-hidden /> Open in a new tab</a>;
+}
+
+function Facade({ cover, label, onPlay }: { cover?: string; label: string; onPlay: () => void }) {
+  return (
+    <button type="button" className="pm-facade" onClick={onPlay} aria-label={`Play ${label}`}>
+      {cover ? <img src={cover} alt="" loading="lazy" draggable={false} onError={(e) => { e.currentTarget.style.display = "none"; }} /> : null}
+      <span className="pm-play" aria-hidden="true"><Play /></span>
+      <span className="pm-facade-label">{label}</span>
+    </button>
+  );
+}
+
+/**
+ * Video in the card. A file the browser can play is played right here. A Drive video is streamed from Drive; if that
+ * does not work (a private file, a format Chrome cannot play) Drive's own player takes over in the same place, and there
+ * is always a link to open it in a new tab. YouTube/Vimeo load their player when you press play.
+ */
 function Player({ slide }: { slide: Exclude<Slide, { kind: "image" }> }) {
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<"cover" | "video" | "frame">("cover");
+
   if (slide.kind === "video") {
     return <video className="pm-video" src={slide.src} controls playsInline preload="metadata" aria-label={slide.label} />;
   }
-  if (playing) {
-    const src = slide.autoplay ? `${slide.src}${slide.src.includes("?") ? "&" : "?"}${slide.autoplay}` : slide.src;
-    return <iframe className="pm-frame" src={src} loading="lazy" referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen />;
+
+  if (slide.kind === "drivevideo") {
+    if (mode === "cover") return <Facade cover={slide.cover} label={slide.label} onPlay={() => setMode("video")} />;
+    return (
+      <div className="pm-playing">
+        {mode === "video" ? (
+          <video className="pm-video" src={slide.src} poster={slide.cover} controls autoPlay playsInline preload="auto" aria-label={slide.label} onError={() => setMode("frame")} />
+        ) : (
+          <iframe className="pm-frame" src={slide.page} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
+        )}
+        <OpenLink href={slide.original || slide.page} />
+      </div>
+    );
   }
-  return (
-    <button type="button" className="pm-facade" onClick={() => setPlaying(true)} aria-label={`Play ${slide.label}`}>
-      {slide.cover ? <img src={slide.cover} alt="" loading="lazy" referrerPolicy="no-referrer" draggable={false} onError={(e) => { e.currentTarget.style.display = "none"; }} /> : null}
-      <span className="pm-play" aria-hidden="true"><Play /></span>
-      <span className="pm-facade-label">{slide.label}</span>
-    </button>
-  );
+
+  if (mode !== "cover") {
+    const src = slide.autoplay ? `${slide.src}${slide.src.includes("?") ? "&" : "?"}${slide.autoplay}` : slide.src;
+    return (
+      <div className="pm-playing">
+        <iframe className="pm-frame" src={src} referrerPolicy="no-referrer" title={slide.label} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen />
+        <OpenLink href={slide.src} />
+      </div>
+    );
+  }
+  return <Facade cover={slide.cover} label={slide.label} onPlay={() => setMode("video")} />;
 }
 
 /* ---------- several pictures: carousel ---------- */

@@ -24,6 +24,11 @@ export function driveFolderIdOf(link: string): string {
     || "";
 }
 
+/** The file itself, streamable by a <video> element (supports seeking). Works for files shared as "anyone with the link". */
+export function driveMediaUrl(fileId: string): string {
+  return `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+}
+
 export function driveFolderRequestUrl(folderId: string): string {
   const query = `'${folderId}' in parents and trashed=false`;
   const fields = "files(id,name,mimeType,webViewLink)";

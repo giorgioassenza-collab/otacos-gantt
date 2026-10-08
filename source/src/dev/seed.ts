@@ -51,6 +51,7 @@ export function seedDemoBoard(force = false): void {
       post("Behind the counter", "p-demo-social", 0, "18:00", "Draft", ["tiktok"], "Video", ["Matteo"]),
       { ...post("Weekend special", "p-demo-social", 2, "11:00", "Draft", ["instagram", "tiktok"], "Carousel", ["Giorgio"]), asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv", assetItems: [svg("#ff7200", "1"), svg("#17120f", "2"), svg("#ffd360", "3")].map((src, i) => ({ type: "image", src, fallback: "", original: "", label: "Slide " + (i + 1) })) },
       { ...post("Static visual", "p-demo-social", 1, "10:00", "Ready", ["instagram"], "Static", ["Matteo"]), assetItems: [{ type: "image", src: svg("#e1306c", "Static", 320, 480), fallback: "", original: "", label: "Static" }] },
+      { ...post("Drive reel", "p-demo-social", 1, "19:00", "Draft", ["instagram"], "Video", ["Giorgio"]), asset: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view" },
       { ...post("Launch teaser (YouTube)", "p-demo-social", 3, "18:30", "Draft", ["tiktok"], "Video", ["Giorgio"]), asset: "https://youtu.be/dQw4w9WgXcQ" },
       { ...post("Counter video", "p-demo-social", 1, "15:00", "Draft", ["tiktok"], "Video", ["Matteo"]), asset: "https://example.com/clip.mp4" },
       { ...post("Folder without thumbnails", "p-demo-events", 1, "17:00", "Draft", ["instagram"], "Carousel", ["Vale M"]), asset: "https://drive.google.com/drive/folders/1Dg_bgRkdzoaUD8vSb4XuPaHN6ZxHZEf_" },

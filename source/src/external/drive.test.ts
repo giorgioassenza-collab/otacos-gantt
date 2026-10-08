@@ -41,3 +41,13 @@ describe("Drive folders", () => {
     expect(await fetchDriveFolder("F")).toMatchObject({ status: "error", message: "Cannot reach Google Drive." });
   });
 });
+
+import { driveMediaUrl } from "./drive";
+describe("Drive media address", () => {
+  it("streams the file itself with the public key", () => {
+    const url = new URL(driveMediaUrl("FILE123456"));
+    expect(url.pathname).toBe("/drive/v3/files/FILE123456");
+    expect(url.searchParams.get("alt")).toBe("media");
+    expect(url.searchParams.get("key")).toBeTruthy();
+  });
+});
