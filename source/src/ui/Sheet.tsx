@@ -24,22 +24,30 @@ interface SheetProps {
   dialog?: boolean;
   /** Shown as a small label next to the title. */
   headerExtra?: ReactNode;
+  /** There are edits that were not saved: closing (X, outside tap, Esc) asks before throwing them away. */
+  dirty?: boolean;
 }
 
 /**
  * One overlay for every editor: bottom sheet on phones, side panel on larger screens.
  * Traps focus, closes on Esc and on scrim tap, restores focus to the opener.
  */
-export function Sheet({ title, onClose, children, footer, wide, dialog, headerExtra }: SheetProps) {
+export function Sheet({ title, onClose, children, footer, wide, dialog, headerExtra, dirty }: SheetProps) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const [closing, setClosing] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const dirtyRef = useRef(Boolean(dirty));
+  dirtyRef.current = Boolean(dirty);
+  const askingRef = useRef(false);
+  askingRef.current = asking;
 
   /** Pointer-initiated closes (X, scrim) play a short exit; Escape and other keyboard closes are instant. */
   const requestClose = useCallback(() => {
     if (closing) return;
+    if (dirtyRef.current) { setAsking(true); return; }
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { closeRef.current(); return; }
     setClosing(true);
     window.setTimeout(() => closeRef.current(), 150);
@@ -59,6 +67,8 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
         // an open menu (e.g. a status list) takes Escape first and closes alone
         if (document.querySelector(".menu")) return;
         event.stopPropagation();
+        if (askingRef.current) { setAsking(false); return; } // Esc on the question = keep editing
+        if (dirtyRef.current) { setAsking(true); return; }
         closeRef.current();
         return;
       }
@@ -98,7 +108,13 @@ export function Sheet({ title, onClose, children, footer, wide, dialog, headerEx
           </button>
         </header>
         {children}
-        {footer && <footer className="sheet-foot">{footer}</footer>}
+        {asking ? (
+          <div className="sheet-foot sheet-ask" role="alertdialog" aria-labelledby={`${titleId}-ask`}>
+            <p id={`${titleId}-ask`}>Close without saving? Your changes will be lost.</p>
+            <button type="button" className="btn" data-autofocus onClick={() => setAsking(false)} autoFocus>Keep editing</button>
+            <button type="button" className="btn btn--danger" onClick={() => { dirtyRef.current = false; setAsking(false); closeRef.current(); }}>Discard</button>
+          </div>
+        ) : footer && <footer className="sheet-foot">{footer}</footer>}
       </div>
     </>,
     document.body

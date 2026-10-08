@@ -698,6 +698,7 @@ export function createBoardSync(options: BoardSyncOptions = {}): BoardSync {
     if (!removeBrowserListeners && typeof window !== "undefined" && typeof document !== "undefined") {
       const onVisible = () => {
         if (!document.hidden) autoMaintenance();
+        else if (pendingLocalData) void retryPendingLocalSave(); // going to the background: try to land the change now
       };
       const onOnline = () => void retryPendingLocalSave();
       document.addEventListener("visibilitychange", onVisible);

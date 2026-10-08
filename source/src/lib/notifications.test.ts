@@ -5,6 +5,7 @@ import { createEnglishStarterData } from "../data/starter";
 import type { BoardData, PedPost, Task } from "../data/types";
 
 const NOW = Date.UTC(2026, 9, 7, 10, 0, 0);
+const TODAY = "2026-10-09";
 
 function board(): BoardData {
   const data = createEnglishStarterData();
@@ -47,25 +48,32 @@ describe("computeNotifications", () => {
     expect(n.count).toBe(2);
   });
 
-  it("lists blocked tasks but does not count them", () => {
+  it("leaves out everything blocked: tasks, subtasks inside blocked tasks and blocked posts", () => {
     const data = board();
-    data.tasks = [task("stuck", { members: ["Jessica"], status: "BLOCKED" }), task("open", { members: ["Jessica"] })];
-    const n = computeNotifications(data, "Jessica", 0, NOW);
-    expect(n.tasks).toHaveLength(2);
-    expect(n.tasks.find((t) => t.task.id === "stuck")?.blocked).toBe(true);
+    data.pedStatuses = [...data.pedStatuses, { name: "BLOCKED", color: "#f00" }];
+    data.tasks = [
+      task("stuck", { members: ["Jessica"], status: "BLOCKED" }),
+      task("hold", { members: ["Matteo"], status: "BLOCKED", subtasks: [{ id: "s1", title: "Waiting", done: false, members: ["Jessica"] }] as never }),
+      task("open", { members: ["Jessica"] })
+    ];
+    data.pedPosts = [post("stuckpost", { members: ["Jessica"], status: "BLOCKED", date: "2026-10-08" })];
+    const n = computeNotifications(data, "Jessica", 0, NOW, TODAY);
+    expect(n.tasks.map((t) => t.task.id)).toEqual(["open"]);
+    expect(n.subtasks).toHaveLength(0);
+    expect(n.posts).toHaveLength(0);
     expect(n.count).toBe(1);
   });
 
-  it("never counts anything blocked: tasks, their subtasks or posts", () => {
+  it("shows posts dated today or earlier and none from the future", () => {
     const data = board();
-    data.tasks = [
-      task("stuck", { members: ["Matteo"], status: "BLOCKED", subtasks: [{ id: "s1", title: "Waiting", done: false, members: ["Jessica"] }] as never }),
-      task("open", { members: ["Matteo"], subtasks: [{ id: "s2", title: "Go", done: false, members: ["Jessica"] }] as never })
+    data.pedPosts = [
+      post("past", { members: ["Jessica"], date: "2026-10-01" }),
+      post("today", { members: ["Jessica"], date: "2026-10-09" }),
+      post("tomorrow", { members: ["Jessica"], date: "2026-10-10" })
     ];
-    const n = computeNotifications(data, "Jessica", 0, NOW);
-    expect(n.subtasks).toHaveLength(2);
-    expect(n.subtasks.find((s) => s.subtask.id === "s1")?.blocked).toBe(true);
-    expect(n.count).toBe(1);
+    const n = computeNotifications(data, "Jessica", 0, NOW, TODAY);
+    expect(n.posts.map((p) => p.title)).toEqual(["past", "today"]);
+    expect(n.count).toBe(2);
   });
 
   it("finds Giorgia's and Alice's work through the status or label, like the old Who filter", () => {
@@ -102,7 +110,7 @@ describe("computeNotifications", () => {
       post("done", { members: ["Vale V"], status: "Published" }),
       post("notmine", { members: ["Jessica"] })
     ];
-    const n = computeNotifications(data, "Vale V", 0, NOW);
+    const n = computeNotifications(data, "Vale V", 0, NOW, TODAY);
     expect(n.posts.map((p) => p.title)).toEqual(["manual"]);
     expect(n.count).toBe(2); // the task + the manual post
   });

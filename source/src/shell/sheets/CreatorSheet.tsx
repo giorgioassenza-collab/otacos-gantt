@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useBoard } from "../../store";
 import { useUI } from "../../ui/uiContext";
 import { useToast } from "../../ui/Toast";
@@ -40,6 +40,10 @@ export default function CreatorSheet({ id }: { id: string }) {
   const [time, setTime] = useState(existing?.creatorTime || "10:00");
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
+  // closing with edits that were not saved asks first
+  const draftJson = JSON.stringify({ title, date, publicationDate, status, store, time });
+  const startJson = useRef(draftJson);
+  const dirty = draftJson !== startJson.current;
 
   if (!existing) {
     return (
@@ -132,6 +136,7 @@ export default function CreatorSheet({ id }: { id: string }) {
     <Sheet
       title="Edit creator item"
       onClose={close}
+      dirty={dirty}
       footer={
         <>
           <button type="button" className="btn btn--danger btn--sm" onClick={remove}><Trash2 />Delete</button>

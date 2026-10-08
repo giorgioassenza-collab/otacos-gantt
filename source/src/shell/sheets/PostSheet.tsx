@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useBoard } from "../../store";
 import { useUI } from "../../ui/uiContext";
 import { useToast } from "../../ui/Toast";
@@ -48,6 +48,10 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
   const [comment, setComment] = useState("");
   const [subTitle, setSubTitle] = useState("");
   const [subMembers, setSubMembers] = useState<string[]>([]);
+  // closing with edits that were not saved asks first (a tap outside the sheet used to throw them away silently)
+  const draftJson = JSON.stringify({ post: { ...post, comments: undefined, subtasks: undefined }, comment, subTitle });
+  const startJson = useRef(draftJson);
+  const dirty = draftJson !== startJson.current;
 
   const members = useMemo(() => data.members.filter((m) => !isClientName(m)), [data.members]);
   const patch = (changes: Partial<PedPost>) => setPost((current) => ({ ...current, ...changes }));
@@ -142,6 +146,7 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
     <Sheet
       title={isNew ? "New post" : "Edit post"}
       onClose={close}
+      dirty={dirty}
       wide
       footer={
         <>

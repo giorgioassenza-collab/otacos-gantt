@@ -187,6 +187,7 @@ function InfluencerEditor({ existing }: { existing: Influencer | undefined }) {
     <Sheet
       title={existing ? "Edit influencer" : "New influencer"}
       onClose={close}
+      dirty={dirty}
       footer={
         <>
           {existing && <button type="button" className="btn btn--danger btn--sm" onClick={remove}><Trash2 />Delete</button>}

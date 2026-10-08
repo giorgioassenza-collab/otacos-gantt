@@ -97,6 +97,13 @@ export function Shell() {
             <span className="avatar" aria-hidden="true">{initials(me)}</span>
           </button>
         </header>
+        {state.hasUnsyncedChanges && (state.syncStatus === "offline" || state.syncStatus === "error") && (
+          <div className="unsynced" role="alert">
+            <CloudOff size={16} aria-hidden />
+            <span>{state.syncStatus === "offline" ? "Not saved to the shared board yet. Your change is kept on this device and will sync when you are online." : "Not saved to the shared board yet. Retrying automatically."}</span>
+            <button type="button" className="btn btn--sm" onClick={() => void sync.retryPendingSave()}>Retry now</button>
+          </div>
+        )}
         <main className="view" id="main">
           <ErrorBoundary key={view} label="This view" inline>
             <Suspense fallback={<div className="empty"><div className="spinner" role="status" aria-label="Loading" /></div>}>

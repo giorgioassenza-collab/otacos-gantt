@@ -3,7 +3,6 @@ import { useBoard } from "../../store";
 import { useMenu } from "../../ui/Menu";
 import { setPedStatus, setTaskStatus } from "../../lib/actions";
 import type { Status } from "../../data/types";
-import { isBlockedStatus } from "../../data/dates";
 import { useUI } from "../../ui/uiContext";
 import { Sheet, SheetBody } from "../../ui/Sheet";
 import { EmptyState, StatusChip } from "../../ui/common";
@@ -51,7 +50,7 @@ export default function NotificationsSheet() {
 
         {notes.tasks.length > 0 && (
           <Group title="Tasks" count={notes.tasks.length}>
-            {notes.tasks.map(({ task, blocked, subtasks }) => {
+            {notes.tasks.map(({ task, subtasks }) => {
               const date = taskDateKey(task);
               const late = date < today;
               const project = projectOf(data.projects, task.projectId);
@@ -66,7 +65,6 @@ export default function NotificationsSheet() {
                         {project && <span>{project.name}</span>}
                         {task.label && <span>{displayLabel(task.label)}</span>}
                         {subtasks.length > 0 && <span><ListChecks size={13} aria-hidden /> {subtasks.length} of your subtasks</span>}
-                        {blocked && <span className="note-late">Blocked, not counted</span>}
                       </span>
                     </span>
                   </button>
@@ -79,13 +77,13 @@ export default function NotificationsSheet() {
 
         {notes.subtasks.length > 0 && (
           <Group title="Subtasks" count={notes.subtasks.length}>
-            {notes.subtasks.map(({ task, subtask, blocked }) => (
+            {notes.subtasks.map(({ task, subtask }) => (
               <li key={subtask.id}>
                 <button type="button" className="note-row" onClick={() => leave({ kind: "task", id: task.id })}>
                   <ListChecks className="note-icon" aria-hidden />
                   <span className="note-main">
                     <span className="list-row-title">{subtask.title}</span>
-                    <span className="list-row-meta"><span>in {task.nameEn || task.name}</span><span>{friendlyDate(taskDateKey(task), today)}</span>{blocked && <span className="note-late">Blocked, not counted</span>}</span>
+                    <span className="list-row-meta"><span>in {task.nameEn || task.name}</span><span>{friendlyDate(taskDateKey(task), today)}</span></span>
                   </span>
                 </button>
               </li>
@@ -101,7 +99,7 @@ export default function NotificationsSheet() {
                   <Video className="note-icon" aria-hidden />
                   <span className="note-main">
                     <span className="list-row-title">{item.title}</span>
-                    <span className="list-row-meta"><span>{friendlyDate(item.date, today)} · {item.time}</span><span>{item.format}</span>{item.project && <span>{item.project}</span>}{isBlockedStatus(item.status) && <span className="note-late">Blocked, not counted</span>}</span>
+                    <span className="list-row-meta"><span>{friendlyDate(item.date, today)} · {item.time}</span><span>{item.format}</span>{item.project && <span>{item.project}</span>}</span>
                   </span>
                 </button>
                 <StatusChip statuses={data.pedStatuses} name={item.status} onClick={(event) => pickStatus(event.currentTarget.getBoundingClientRect(), data.pedStatuses, item.status, (draft, status) => setPedStatus(draft, item, status))} />

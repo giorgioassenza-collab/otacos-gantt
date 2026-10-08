@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useBoard } from "../../store";
 import { useUI } from "../../ui/uiContext";
 import { useToast } from "../../ui/Toast";
@@ -45,6 +45,10 @@ export default function TaskSheet({ id, defaults }: { id?: string; defaults?: Pa
   const [busy, setBusy] = useState(false);
   const [subTitle, setSubTitle] = useState("");
   const [subMembers, setSubMembers] = useState<string[]>([]);
+  // closing with edits that were not saved asks first (a tap outside the sheet used to throw them away silently)
+  const draftJson = JSON.stringify({ task, title, multiDay, subTitle });
+  const startJson = useRef(draftJson);
+  const dirty = draftJson !== startJson.current;
 
   const members = useMemo(() => data.members.filter((m) => !isClientName(m)), [data.members]);
   const creatorOn = isCreatorLabel(task.label);
@@ -124,6 +128,7 @@ export default function TaskSheet({ id, defaults }: { id?: string; defaults?: Pa
     <Sheet
       title={existing ? "Edit task" : "New task"}
       onClose={close}
+      dirty={dirty}
       footer={
         <>
           {existing && (

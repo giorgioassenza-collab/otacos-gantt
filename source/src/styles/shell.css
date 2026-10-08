@@ -139,3 +139,8 @@
 .who-btn:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; box-shadow: none; }
 .who-avatar { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--orange); color: var(--ink); font-size: var(--fs-2); font-weight: 800; flex: none; }
 @media (min-width: 520px) { .who-grid { grid-template-columns: repeat(3, 1fr); } .who-btn { flex-direction: column; justify-content: center; text-align: center; min-height: 112px; gap: var(--s-2); } }
+
+/* a change that is not on the shared board yet: visible on phones too, where the status text is hidden */
+.unsynced { display: flex; align-items: center; gap: var(--s-2); margin: var(--s-2) var(--s-3) 0; padding: var(--s-2) var(--s-3); border: 1.5px solid var(--danger); border-radius: var(--r-md); background: var(--danger-soft); color: var(--danger); font-size: var(--fs-2); font-weight: 600; }
+.unsynced span { flex: 1; min-width: 0; }
+.unsynced svg { flex: none; }
