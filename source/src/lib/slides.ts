@@ -37,13 +37,13 @@ export function slideFromLink(link: string, format: string, width = 800): Slide 
 interface SavedItem { type?: string; src?: string; fallback?: string; original?: string; label?: string }
 
 /**
- * Everything a post can show, in the order the old app trusted it:
- * pictures saved in the post, else the contents of its Drive folder, else each pasted link.
+ * Everything a post can show:
+ * the live contents of its Drive folder, else the pictures saved in the post (a copy from the old app), else each link.
  */
 export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderItems?: DriveItem[]; format: string; width?: number }): Slide[] {
   const width = opts.width ?? 800;
   const saved = (opts.items ?? []).filter((item) => item && (item.src || item.original) && item.type !== "folder");
-  if (saved.length) {
+  if (!opts.folderItems?.length && saved.length) {
     return saved.map((item): Slide => {
       const src = item.src || item.original || "";
       if (item.type === "video") return { kind: "video", src, label: item.label || "Video" };

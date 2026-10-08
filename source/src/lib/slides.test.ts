@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 import { buildSlides, slideFromLink } from "./slides";
 
 describe("slides", () => {
-  it("uses the pictures saved in the post first, in order, and keeps the Drive-video pages as embeds", () => {
+  it("prefers the live folder over the pictures saved in the post, which may be out of date", () => {
+    const slides = buildSlides({
+      asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp", format: "Carousel",
+      items: [{ type: "image", src: "https://old/1.jpg" }],
+      folderItems: [{ id: "n1", type: "image", src: "https://t/n1", fallback: "", original: "", label: "new" }]
+    });
+    expect(slides).toHaveLength(1);
+    expect(slides[0]).toMatchObject({ kind: "image", src: expect.stringContaining("thumbnail?id=n1") });
+  });
+
+  it("uses the pictures saved in the post when there is no live folder, in order, and keeps the Drive-video pages as embeds", () => {
     const slides = buildSlides({
       asset: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp",
       format: "Carousel",

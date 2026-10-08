@@ -36,70 +36,141 @@ export interface PostMediaProps {
   size?: "card" | "wide" | "sheet";
 }
 
+/** True once the element is on (or within 300px of) the screen, and stays true. */
+function useNear(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    if (near) return;
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setNear(true); return; }
+    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) { setNear(true); observer.disconnect(); } }, { rootMargin: "300px" });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [near, ref]);
+  return near;
+}
+
 export function PostMedia({ asset, assetItems, format, onOpen, size = "card" }: PostMediaProps) {
   installPauseOthers();
+  const box = useRef<HTMLDivElement>(null);
+  const near = useNear(box);
   const width = size === "card" ? 640 : 1000;
-  const hasSaved = Boolean(assetItems?.some((item) => item && (item.src || item.original) && item.type !== "folder"));
-  const folderId = !hasSaved ? assetLinks(asset).map(driveFolderLinkId).find(Boolean) ?? "" : "";
+  // a Drive folder is always read live: the pictures saved in the post are a copy of what the folder held once, and the
+  // folder changes. They are only used while the live list loads, or if Drive cannot be read.
+  const folderId = assetLinks(asset).map(driveFolderLinkId).find(Boolean) ?? "";
   const folder = useDriveFolder(folderId);
   const slides = buildSlides({ asset, items: assetItems, folderItems: folder.items, format, width });
   // the tile for "nothing to show": same rules as the small thumbnails (folder loading, link, no asset yet)
   const { preview, loading } = useAssetPreview(asset, assetItems, 320);
 
-  if (!slides.length) return <div className={`pm pm-${size}`}><PostThumb preview={preview} tall loading={loading || folder.loading} /></div>;
-  if (slides.length > 1) return <div className={`pm pm-${size}`}><Carousel slides={slides} onOpen={onOpen} size={size} /></div>;
+  if (!slides.length) return <div ref={box} className={`pm pm-${size}`}><PostThumb preview={preview} tall loading={loading || folder.loading} /></div>;
+  if (slides.length > 1) return <div ref={box} className={`pm pm-${size}`}><Carousel slides={slides} onOpen={onOpen} size={size} visible={near} /></div>;
   const only = slides[0];
   return (
-    <div className={`pm pm-${size}`}>
-      {only.kind === "image" ? <FullImage slide={only} onOpen={onOpen} size={size} /> : <Player slide={only} />}
+    <div ref={box} className={`pm pm-${size}`}>
+      {only.kind === "image" ? <FullImage slide={only} onOpen={onOpen} size={size} active={near} /> : <Player slide={only} />}
     </div>
   );
 }
 
 /* ---------- a single picture, whole ---------- */
 
-/** Drive thumbnails come in any size you ask for: ask for what the card needs, not the 1200px the old app saved. */
+/**
+ * At most four pictures are loading at once, however many cards are on screen. Drive answers "too many requests" to a
+ * burst of thumbnails, and a week of carousels is exactly that; queued pictures show a shimmer until their turn.
+ */
+const MAX_LOADING = 4;
+let loading = 0;
+const waiting: (() => void)[] = [];
+function acquireSlot(): Promise<() => void> {
+  return new Promise((resolve) => {
+    const grant = () => {
+      loading += 1;
+      let done = false;
+      resolve(() => { if (done) return; done = true; loading -= 1; waiting.shift()?.(); });
+    };
+    if (loading < MAX_LOADING) grant(); else waiting.push(grant);
+  });
+}
+
+/** Drive thumbnails come in any size you ask for. */
 function sized(src: string, width: number): string {
   return src.includes("drive.google.com/thumbnail") ? src.replace(/sz=w\d+/, `sz=w${width}`) : src;
 }
 
+function driveIdOf(src: string): string {
+  return src.match(/[?&]id=([A-Za-z0-9_-]{10,})/)?.[1] ?? src.match(/\/d\/([A-Za-z0-9_-]{10,})/)?.[1] ?? "";
+}
+
 /**
- * A picture shown whole. Drive answers "too many requests" when a lot of thumbnails are asked at once, so a failed
- * picture is retried twice with a pause. If it still fails the card says so and links to the original (the editor, which
- * has room for it, may show Drive's own viewer instead). It never swaps a card for a Drive page on the first error.
+ * The addresses to try for a picture, best first. The exact address the post saved comes first (it is the one known to
+ * have worked before), then a version at the size the card needs, then Google's image host for the same file.
  */
-function FullImage({ slide, onOpen, size, active = true }: { slide: Extract<Slide, { kind: "image" }>; onOpen?: () => void; size: "card" | "wide" | "sheet"; active?: boolean }) {
-  const [attempt, setAttempt] = useState(0);
+export function pictureCandidates(src: string, width: number): string[] {
+  const id = driveIdOf(src);
+  const list = [src, sized(src, width), id ? `https://lh3.googleusercontent.com/d/${id}=w${width}` : ""];
+  return list.filter((value, index) => value && list.indexOf(value) === index);
+}
+
+/**
+ * A picture shown whole. If an address fails the next one is tried at once; if all fail it waits and goes round once
+ * more (Drive sometimes answers "too many requests"). Then the card says so and links to the original. It never swaps a
+ * card for a Drive page on the first error; only the editor, which has room, may fall back to Drive's own viewer.
+ */
+function FullImage({ slide, onOpen, size, active: wantedNow = true }: { slide: Extract<Slide, { kind: "image" }>; onOpen?: () => void; size: "card" | "wide" | "sheet"; active?: boolean }) {
+  // once a picture has been asked for it stays loaded, so swiping back never flashes the placeholder
+  const [active, setActive] = useState(wantedNow);
+  if (wantedNow && !active) setActive(true);
+  const candidates = pictureCandidates(slide.src, size === "card" ? 640 : 1000);
+  const [step, setStep] = useState(0); // index into candidates, counting the second round after the pause
   const [state, setState] = useState<"ok" | "failed" | "frame">("ok");
   const timer = useRef(0);
+  const release = useRef<(() => void) | null>(null);
+  const [granted, setGranted] = useState(false);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  if (!active) return <div className="pm-pending" aria-hidden="true" />;
+  // wait for a loading slot (see acquireSlot), give it back when the picture has loaded or failed
+  useEffect(() => {
+    if (!active || state !== "ok") return;
+    let cancelled = false;
+    void acquireSlot().then((give) => {
+      if (cancelled) { give(); return; }
+      release.current = give;
+      setGranted(true);
+    });
+    return () => { cancelled = true; release.current?.(); release.current = null; };
+  }, [active, state]);
+  const free = () => { release.current?.(); release.current = null; };
+
+  if (!active || (state === "ok" && !granted)) return <div className="pm-pending" aria-hidden="true" />;
   if (state === "frame" && slide.fallback) return <iframe className="pm-frame" src={slide.fallback} loading="lazy" referrerPolicy="no-referrer" title={slide.label} allowFullScreen />;
   if (state === "failed") {
     const href = slide.original && /^https?:\/\//i.test(slide.original) ? slide.original : "";
     return (
-      <div className="pm-failed">
+      <div className="pm-failed" title={"Tried: " + candidates.join(" | ")}>
         <span>Picture unavailable</span>
         {href && <a href={href} target="_blank" rel="noopener noreferrer"><ExternalLink size={13} aria-hidden /> Open</a>}
       </div>
     );
   }
-  const width = size === "card" ? 640 : 1000;
-  const base = sized(slide.src, width);
-  const src = attempt ? `${base}${base.includes("?") ? "&" : "#"}retry=${attempt}` : base;
+  const round = Math.floor(step / candidates.length);
+  const src = candidates[step % candidates.length];
   return (
     <img
+      key={step}
       className={`pm-full${onOpen ? " is-clickable" : ""}`}
-      src={src}
+      src={round ? `${src}${src.includes("?") ? "&" : "#"}round=${round}` : src}
       alt={slide.label}
-      loading="lazy"
       decoding="async"
-      referrerPolicy="no-referrer"
       draggable={false}
       onClick={onOpen}
+      onLoad={free}
       onError={() => {
-        if (attempt < 2) { timer.current = window.setTimeout(() => setAttempt((n) => n + 1), 900 * (attempt + 1)); return; }
+        free();
+        const next = step + 1;
+        if (next % candidates.length !== 0) { setStep(next); return; } // another address for the same picture
+        if (round === 0) { timer.current = window.setTimeout(() => setStep(next), 1500); return; } // one more round after a pause
+        console.warn("Picture could not be loaded. Addresses tried:", candidates);
         setState(size === "sheet" && slide.fallback ? "frame" : "failed");
       }}
     />
@@ -128,7 +199,7 @@ function Player({ slide }: { slide: Exclude<Slide, { kind: "image" }> }) {
 
 /* ---------- several pictures: carousel ---------- */
 
-function Carousel({ slides, onOpen, size }: { slides: Slide[]; onOpen?: () => void; size: "card" | "wide" | "sheet" }) {
+function Carousel({ slides, onOpen, size, visible }: { slides: Slide[]; onOpen?: () => void; size: "card" | "wide" | "sheet"; visible: boolean }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
 
@@ -156,7 +227,7 @@ function Carousel({ slides, onOpen, size }: { slides: Slide[]; onOpen?: () => vo
       <div className="pm-track" ref={track} onScroll={sync} onKeyDown={onKey} tabIndex={0}>
         {slides.map((slide, i) => (
           <div key={i} className="pm-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>
-            {slide.kind === "image" ? <FullImage slide={slide} onOpen={onOpen} size={size} active={Math.abs(i - index) <= 1} /> : <Player slide={slide} />}
+            {slide.kind === "image" ? <FullImage slide={slide} onOpen={onOpen} size={size} active={visible && Math.abs(i - index) <= 1} /> : <Player slide={slide} />}
           </div>
         ))}
       </div>
