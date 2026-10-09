@@ -51,3 +51,15 @@ describe("Drive media address", () => {
     expect(url.searchParams.get("key")).toBeTruthy();
   });
 });
+
+describe("mediaRatio", () => {
+  it("reads the shape of a video and of a picture from what Drive reports", async () => {
+    const { mediaRatio, driveItemsFromFiles } = await import("./drive");
+    expect(mediaRatio({ videoMediaMetadata: { width: 1080, height: 1920 } })).toBeCloseTo(0.5625);
+    expect(mediaRatio({ imageMediaMetadata: { width: 1122, height: 1402, rotation: 0 } })).toBeCloseTo(0.8);
+    expect(mediaRatio({ imageMediaMetadata: { width: 4000, height: 3000, rotation: 90 } })).toBeCloseTo(0.75); // stored sideways
+    expect(mediaRatio({})).toBeUndefined();
+    const [item] = driveItemsFromFiles([{ id: "abcdefghijk", mimeType: "video/mp4", videoMediaMetadata: { width: 1080, height: 1920 } }]);
+    expect(item.ratio).toBeCloseTo(0.5625);
+  });
+});

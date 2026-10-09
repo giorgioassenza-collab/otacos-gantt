@@ -3,11 +3,11 @@ import { driveMediaUrl, type DriveItem } from "../external/drive";
 
 /** One thing to show in a post's media area. */
 export type Slide =
-  | { kind: "image"; src: string; fallback?: string; original?: string; label: string }
+  | { kind: "image"; src: string; fallback?: string; original?: string; label: string; ratio?: number }
   /** A video file the browser plays itself. */
   | { kind: "video"; src: string; label: string }
   /** A video stored on Drive: played in the app from Drive's media address, with Drive's own player as the fallback. */
-  | { kind: "drivevideo"; id: string; src: string; page: string; cover?: string; label: string; original?: string }
+  | { kind: "drivevideo"; id: string; src: string; page: string; cover?: string; label: string; original?: string; ratio?: number }
   /**
    * A Drive file whose type is not known yet (picture or video?). Drive is asked what it is; `hint` is only the guess
    * from the post's format, used if Drive cannot answer.
@@ -18,7 +18,7 @@ export type Slide =
 
 const driveThumb = (id: string, width: number) => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${width}`;
 const drivePreview = (id: string) => `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
-const driveVideo = (id: string, width: number, label: string, original?: string): Slide => ({ kind: "drivevideo", id, src: driveMediaUrl(id), page: drivePreview(id), cover: driveThumb(id, width), label, original });
+const driveVideo = (id: string, width: number, label: string, original?: string, ratio?: number): Slide => ({ kind: "drivevideo", id, src: driveMediaUrl(id), page: drivePreview(id), cover: driveThumb(id, width), label, original, ratio });
 
 function vimeoId(link: string): string {
   return link.match(/vimeo\.com\/(?:video\/)?(\d{6,})/)?.[1] ?? "";
@@ -42,11 +42,11 @@ export function slideFromLink(link: string, format: string, width = 800): Slide 
 }
 
 /** A Drive file once its real type is known (or guessed from the post when Drive could not be asked). */
-export function resolveDriveFile(slide: Extract<Slide, { kind: "drivefile" }>, kind: "image" | "video" | "other"): Slide {
+export function resolveDriveFile(slide: Extract<Slide, { kind: "drivefile" }>, kind: "image" | "video" | "other", ratio?: number): Slide {
   const as = kind === "other" ? slide.hint : kind;
   return as === "video"
-    ? driveVideo(slide.id, slide.width, slide.label, slide.original)
-    : { kind: "image", src: driveThumb(slide.id, slide.width), fallback: slide.page, original: slide.original, label: slide.label };
+    ? driveVideo(slide.id, slide.width, slide.label, slide.original, ratio)
+    : { kind: "image", src: driveThumb(slide.id, slide.width), fallback: slide.page, original: slide.original, label: slide.label, ratio };
 }
 
 interface SavedItem { type?: string; src?: string; fallback?: string; original?: string; label?: string }
@@ -75,8 +75,8 @@ export function buildSlides(opts: { asset: string; items?: SavedItem[]; folderIt
   if (folderItems.length) {
     return folderItems.map((item): Slide =>
       item.type === "video"
-        ? driveVideo(item.id, width, item.label, item.original)
-        : { kind: "image", src: driveThumb(item.id, width), fallback: item.fallback, original: item.original, label: item.label }
+        ? driveVideo(item.id, width, item.label, item.original, item.ratio)
+        : { kind: "image", src: driveThumb(item.id, width), fallback: item.fallback, original: item.original, label: item.label, ratio: item.ratio }
     );
   }
   return assetLinks(opts.asset).map((link) => slideFromLink(link, opts.format, width)).filter((slide): slide is Slide => Boolean(slide));

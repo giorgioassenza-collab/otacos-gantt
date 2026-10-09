@@ -14,6 +14,8 @@ export interface DriveItem {
   fallback: string;
   original: string;
   label: string;
+  /** Width / height as the picture or video is seen (Drive knows it without loading the file). */
+  ratio?: number;
 }
 
 export function driveFolderIdOf(link: string): string {
@@ -31,12 +33,23 @@ export function driveMediaUrl(fileId: string): string {
 
 export function driveFolderRequestUrl(folderId: string): string {
   const query = `'${folderId}' in parents and trashed=false`;
-  const fields = "files(id,name,mimeType,webViewLink)";
+  const fields = "files(id,name,mimeType,webViewLink,imageMediaMetadata(width,height,rotation),videoMediaMetadata(width,height))";
   return `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent(fields)}`
     + `&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=name&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
 }
 
-interface DriveFile { id: string; name?: string; mimeType?: string; webViewLink?: string }
+interface DriveMedia { width?: number; height?: number; rotation?: number }
+interface DriveFile { id: string; name?: string; mimeType?: string; webViewLink?: string; imageMediaMetadata?: DriveMedia; videoMediaMetadata?: DriveMedia }
+
+/** Width / height of a picture or video as it is seen, from what Drive reports (a picture stored turned by 90 degrees is swapped). */
+export function mediaRatio(file: { imageMediaMetadata?: DriveMedia; videoMediaMetadata?: DriveMedia }): number | undefined {
+  const media = file.videoMediaMetadata ?? file.imageMediaMetadata;
+  const w = Number(media?.width);
+  const h = Number(media?.height);
+  if (!(w > 0 && h > 0)) return undefined;
+  const turned = file.imageMediaMetadata && [90, 270].includes(Number(file.imageMediaMetadata.rotation));
+  return turned ? h / w : w / h;
+}
 
 export function driveItemsFromFiles(files: DriveFile[]): DriveItem[] {
   return files
@@ -47,7 +60,8 @@ export function driveItemsFromFiles(files: DriveFile[]): DriveItem[] {
       src: `https://drive.google.com/thumbnail?id=${encodeURIComponent(file.id)}&sz=w800`,
       fallback: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview`,
       original: file.webViewLink || `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`,
-      label: file.name || (String(file.mimeType).startsWith("video/") ? "Drive video" : "Drive image")
+      label: file.name || (String(file.mimeType).startsWith("video/") ? "Drive video" : "Drive image"),
+      ratio: mediaRatio(file)
     }));
 }
 
@@ -76,7 +90,7 @@ export async function fetchDriveFolder(folderId: string, signal?: AbortSignal, t
   }
 }
 
-export interface DriveFileMeta { mimeType: string; name: string }
+export interface DriveFileMeta { mimeType: string; name: string; ratio?: number }
 export type DriveFileResult = { status: "ok"; meta: DriveFileMeta } | { status: "error"; message: string };
 
 /** The real type of a Drive file (public files only), so a picture is never treated as a video or the other way round. */
@@ -85,11 +99,11 @@ export async function fetchDriveFileMeta(fileId: string, timeoutMs = 8000): Prom
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=mimeType%2Cname&supportsAllDrives=true&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+    const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=mimeType%2Cname%2CimageMediaMetadata(width%2Cheight%2Crotation)%2CvideoMediaMetadata(width%2Cheight)&supportsAllDrives=true&key=${encodeURIComponent(firebaseConfig.apiKey)}`;
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) return { status: "error", message: `Drive answered ${response.status}.` };
-    const payload = (await response.json()) as { mimeType?: string; name?: string };
-    return payload.mimeType ? { status: "ok", meta: { mimeType: payload.mimeType, name: payload.name ?? "" } } : { status: "error", message: "Drive did not say what the file is." };
+    const payload = (await response.json()) as { mimeType?: string; name?: string; imageMediaMetadata?: DriveMedia; videoMediaMetadata?: DriveMedia };
+    return payload.mimeType ? { status: "ok", meta: { mimeType: payload.mimeType, name: payload.name ?? "", ratio: mediaRatio(payload) } } : { status: "error", message: "Drive did not say what the file is." };
   } catch {
     return { status: "error", message: "Cannot reach Google Drive." };
   } finally {

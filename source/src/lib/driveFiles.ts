@@ -6,9 +6,9 @@ import { fetchDriveFileMeta } from "../external/drive";
  * file, a few at a time, remembered on this device for a day. Never written to the shared board data.
  */
 export type DriveKind = "image" | "video" | "other";
-type Entry = { state: "loading" } | { state: "done"; kind: DriveKind; at: number };
+type Entry = { state: "loading" } | { state: "done"; kind: DriveKind; at: number; ratio?: number };
 
-const CACHE_KEY = "otw2.driveFiles.v1";
+const CACHE_KEY = "otw2.driveFiles.v2"; // v2 also keeps the shape (ratio) of the file
 const TTL_MS = 24 * 3600_000;
 const FAILED_RETRY_MS = 5 * 60_000;
 const MAX_PARALLEL = 4;
@@ -26,17 +26,18 @@ function hydrate() {
   if (hydrated) return;
   hydrated = true;
   try {
-    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}") as Record<string, { kind: DriveKind; at: number }>;
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}") as Record<string, { kind: DriveKind; at: number; ratio?: number }>;
+    try { localStorage.removeItem("otw2.driveFiles.v1"); } catch { /* ignore */ }
     Object.entries(saved).forEach(([id, value]) => {
-      if (value && ["image", "video"].includes(value.kind) && Date.now() - value.at < TTL_MS) entries.set(id, { state: "done", kind: value.kind, at: value.at });
+      if (value && ["image", "video"].includes(value.kind) && Date.now() - value.at < TTL_MS) entries.set(id, { state: "done", kind: value.kind, at: value.at, ratio: value.ratio });
     });
   } catch { /* no cache */ }
 }
 
 function persist() {
   try {
-    const out: Record<string, { kind: DriveKind; at: number }> = {};
-    entries.forEach((entry, id) => { if (entry.state === "done" && entry.kind !== "other") out[id] = { kind: entry.kind, at: entry.at }; });
+    const out: Record<string, { kind: DriveKind; at: number; ratio?: number }> = {};
+    entries.forEach((entry, id) => { if (entry.state === "done" && entry.kind !== "other") out[id] = { kind: entry.kind, at: entry.at, ratio: entry.ratio }; });
     localStorage.setItem(CACHE_KEY, JSON.stringify(out));
   } catch { /* storage full or blocked */ }
 }
@@ -48,7 +49,7 @@ function pump() {
     void fetchDriveFileMeta(id).then((result) => {
       const mime = result.status === "ok" ? result.meta.mimeType : "";
       const kind: DriveKind = mime.startsWith("image/") ? "image" : mime.startsWith("video/") ? "video" : "other";
-      entries.set(id, { state: "done", kind, at: Date.now() });
+      entries.set(id, { state: "done", kind, at: Date.now(), ratio: result.status === "ok" ? result.meta.ratio : undefined });
       if (kind !== "other") persist();
     }).finally(() => { running -= 1; emit(); pump(); });
   }
@@ -62,6 +63,12 @@ function request(id: string) {
   entries.set(id, { state: "loading" });
   queue.push(id);
   pump();
+}
+
+/** Width / height of a Drive file once it has been asked about (undefined until then, or when Drive does not say). */
+export function driveRatioOf(fileId: string): number | undefined {
+  const known = entries.get(fileId);
+  return known?.state === "done" ? known.ratio : undefined;
 }
 
 /** The kind of a Drive file, or "loading" while Drive is being asked. Pass "" for no file. */

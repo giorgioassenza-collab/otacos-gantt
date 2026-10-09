@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Keyb
 import { driveFolderLinkId, assetLinks } from "../lib/assets";
 import { useDriveFolder } from "../lib/driveFolders";
 import { buildSlides, resolveDriveFile, type Slide } from "../lib/slides";
-import { useDriveKind } from "../lib/driveFiles";
+import { driveRatioOf, useDriveKind } from "../lib/driveFiles";
 import { PostThumb } from "./PostThumb";
 import { useAssetPreview } from "../lib/useAssetPreview";
 import { ChevronLeft, ChevronRight, ExternalLink, Play } from "./icons";
@@ -80,7 +80,7 @@ export function PostMedia({ asset, assetItems, format, onOpen, size = "card" }: 
 function DriveFileSlide({ slide, onOpen, size, active }: { slide: Extract<Slide, { kind: "drivefile" }>; onOpen?: () => void; size: "card" | "wide" | "sheet"; active: boolean }) {
   const kind = useDriveKind(active ? slide.id : "");
   if (active && kind === "loading") return <div className="pm-pending" aria-hidden="true" />;
-  const resolved = resolveDriveFile(slide, active ? (kind as "image" | "video" | "other") : "other");
+  const resolved = resolveDriveFile(slide, active ? (kind as "image" | "video" | "other") : "other", driveRatioOf(slide.id));
   return <SlideView slide={resolved} onOpen={onOpen} size={size} active={active} />;
 }
 
@@ -226,9 +226,9 @@ function Player({ slide, size }: { slide: Exclude<Slide, { kind: "image" | "driv
   const [mode, setMode] = useState<"cover" | "video" | "frame">("cover");
   // The player takes the shape of the video (a reel is vertical, not 16:9). Cards keep it between 4:5 and 16:9, as the
   // feed does; the editor shows up to 9:16.
-  const [ratio, setRatio] = useState(0);
-  const lowest = size === "sheet" ? 9 / 16 : 4 / 5;
-  const style = ratio ? ({ "--ar": String(Math.min(16 / 9, Math.max(lowest, ratio))) } as CSSProperties) : undefined;
+  const [measured, setRatio] = useState(0);
+  const ratio = measured || ("ratio" in slide ? slide.ratio ?? 0 : 0); // measured on the cover or the video, else what Drive reported
+  const style = ratio ? ({ "--ar": String(Math.min(16 / 9, Math.max(9 / 16, ratio))) } as CSSProperties) : undefined;
   const measure = (video: HTMLVideoElement) => { if (video.videoWidth && video.videoHeight) setRatio(video.videoWidth / video.videoHeight); };
 
   if (slide.kind === "video") {
@@ -266,6 +266,10 @@ function Player({ slide, size }: { slide: Exclude<Slide, { kind: "image" | "driv
 function Carousel({ slides, onOpen, size, visible }: { slides: Slide[]; onOpen?: () => void; size: "card" | "wide" | "sheet"; visible: boolean }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
+  // like the feed, every slide takes the shape of the first one (a vertical video makes a tall carousel, whole)
+  const first = slides[0];
+  const firstRatio = first && "ratio" in first ? first.ratio : undefined;
+  const carouselStyle = firstRatio ? ({ "--car": String(Math.min(16 / 9, Math.max(9 / 16, firstRatio))) } as CSSProperties) : undefined;
 
   // the counter follows the scroll (swipes included); setState ignores repeats so this is cheap enough to run on every event
   const sync = useCallback(() => {
@@ -287,7 +291,7 @@ function Carousel({ slides, onOpen, size, visible }: { slides: Slide[]; onOpen?:
   };
 
   return (
-    <div className="pm-carousel" role="group" aria-roledescription="carousel" aria-label={`${slides.length} slides`}>
+    <div className="pm-carousel" style={carouselStyle} role="group" aria-roledescription="carousel" aria-label={`${slides.length} slides`}>
       <div className="pm-track" ref={track} onScroll={sync} onKeyDown={onKey} tabIndex={0}>
         {slides.map((slide, i) => (
           <div key={i} className="pm-slide" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${slides.length}`}>

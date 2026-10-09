@@ -499,8 +499,7 @@
 .pm-full.is-clickable { cursor: pointer; }
 .pm-video, .pm-frame, .pm-facade { display: block; width: 100%; aspect-ratio: var(--ar, 16 / 9); background: #17120f; border: 0; }
 .pm-video { object-fit: contain; }
-/* in the cards a taller-than-4:5 video is cropped like the feed does; the editor shows it whole, as wide as its height allows */
-.pm-card .pm-video, .pm-wide .pm-video { object-fit: cover; }
+/* a video is shown whole in its own shape; the editor limits it to its height */
 .pm-sheet .pm-video, .pm-sheet .pm-frame, .pm-sheet .pm-facade { width: min(100%, calc(560px * var(--ar, 1.7778))); margin-inline: auto; }
 .pm-facade { position: relative; display: grid; place-items: center; color: var(--paper); overflow: hidden; }
 .pm-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -514,8 +513,8 @@
 .pm-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
 .pm-track::-webkit-scrollbar { display: none; }
 .pm-track:focus-visible { outline-offset: -3px; }
-.pm-slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; background: var(--paper-2); aspect-ratio: 1 / 1; overflow: hidden; }
-.pm-wide .pm-slide, .pm-sheet .pm-slide { aspect-ratio: 4 / 5; max-height: 560px; }
+.pm-slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; background: var(--paper-2); aspect-ratio: var(--car, 1 / 1); overflow: hidden; }
+.pm-wide .pm-slide, .pm-sheet .pm-slide { aspect-ratio: var(--car, 4 / 5); max-height: 560px; }
 .pm-slide .pm-full { width: 100%; height: 100%; max-height: none; }
 .pm-slide .pm-frame, .pm-slide .pm-video, .pm-slide .pm-facade { height: 100%; max-height: none; aspect-ratio: auto; }
 .pm-arrow { position: absolute; top: 50%; z-index: 2; display: grid; place-items: center; width: 34px; height: 34px; margin-top: -17px; border-radius: 50%; background: rgba(255, 253, 248, .94); color: var(--ink); border: 1.5px solid var(--ink); transition: transform 160ms var(--ease), opacity var(--t-fast) var(--ease); }
@@ -686,3 +685,8 @@
 .upz-bar { grid-column: 1 / -1; height: 4px; border-radius: var(--r-full); background: var(--line); overflow: hidden; }
 .upz-bar i { display: block; width: 100%; height: 100%; background: var(--orange); transform-origin: left; transition: transform 150ms linear; }
 @media (max-width: 719px) { .upz-drop { flex-wrap: wrap; } .upz-drop .btn { width: 100%; } }
+
+/* a video inside a carousel is shown whole (letterboxed), never cropped */
+.pm-slide .pm-facade { background: #000; }
+.pm-slide .pm-facade img { object-fit: contain; }
+.pm-slide .pm-video { object-fit: contain; background: #000; }
