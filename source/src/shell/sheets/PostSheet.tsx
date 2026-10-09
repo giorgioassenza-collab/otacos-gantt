@@ -16,6 +16,7 @@ import { isClientName } from "../../data/util";
 import { blankPost, deletePedPost } from "../../lib/actions";
 import { assetLinks, isDriveFolder, safeHref } from "../../lib/assets";
 import { SocialPreview } from "../../ui/SocialPreview";
+import { UploadZone, type UploadResult } from "../../ui/UploadZone";
 import { normalizeFormat, normalizeHour } from "../../lib/gantt";
 
 const FORMATS = ["Video", "Static", "Carousel"] as const;
@@ -49,7 +50,9 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
   const [subTitle, setSubTitle] = useState("");
   const [subMembers, setSubMembers] = useState<string[]>([]);
   // closing with edits that were not saved asks first (a tap outside the sheet used to throw them away silently)
-  const draftJson = JSON.stringify({ post: { ...post, comments: undefined, subtasks: undefined }, comment, subTitle });
+  // (an asset link that is already saved, such as the folder a just-finished upload was linked to, is not an unsaved edit)
+  const savedAsset = existing?.asset ?? "";
+  const draftJson = JSON.stringify({ post: { ...post, asset: post.asset === savedAsset ? "" : post.asset, comments: undefined, subtasks: undefined }, comment, subTitle });
   const startJson = useRef(draftJson);
   const dirty = draftJson !== startJson.current;
 
@@ -139,6 +142,17 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
   const live = existing ? data.pedPosts.find((p) => p.id === existing.id) : undefined;
   const persisted = Boolean(live);
   const links = assetLinks(post.asset);
+
+  /** Files are in the post's Drive folder: point the post at it. A saved post is updated right away; a new one on Save. */
+  function folderReady(result: UploadResult) {
+    const has = assetLinks(post.asset).some((link) => link.includes(result.folderId));
+    const asset = has || !result.folderUrl ? post.asset : [post.asset.trim(), result.folderUrl].filter(Boolean).join("\n");
+    if (asset !== post.asset) {
+      patch({ asset });
+      if (existing || linkedTask) void withPost((target) => { target.asset = asset; touchItem(target); });
+    }
+    toast.show(result.count === 1 ? "File added to the post folder" : `${result.count} files added to the post folder`);
+  }
   const savedItems = live?.assetItems ?? linkedTask?.pedAssetItems ?? post.assetItems;
   const sorted = [...(live?.comments ?? [])].sort((a, b) => a.createdAt - b.createdAt);
 
@@ -197,6 +211,7 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
         <MultiPick label="Social" value={post.social} onChange={(next) => patch({ social: next })} options={data.socials.map((s) => ({ value: s.id, label: s.label, color: s.color }))} empty="Add social networks in Settings." />
         <MultiPick label="Who" value={post.members} onChange={(next) => patch({ members: next })} options={members.map((m) => ({ value: m, label: m }))} empty="Add people in Settings." />
 
+        <UploadZone title={post.title} date={post.date} onUploaded={folderReady} />
         <TextAreaField label="Asset links" hint="One link per line: Drive files or folders, images, videos." value={post.asset} onChange={(e) => patch({ asset: e.target.value })} rows={3} placeholder="https://drive.google.com/…" />
         {links.length > 0 && (
           <ul className="asset-links">

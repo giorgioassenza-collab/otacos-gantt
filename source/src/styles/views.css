@@ -665,3 +665,24 @@
 
 /* agenda looking at another week */
 .agenda-away { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-2) var(--s-3); border-radius: var(--r-md); background: var(--paper-2); border: 1px solid var(--line); font-size: var(--fs-2); font-weight: 600; color: var(--ink-2); }
+
+/* upload zone in the post sheet */
+.upz { display: grid; gap: var(--s-2); }
+.upz-drop { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border: 1.5px dashed var(--ink-3); border-radius: var(--r-md); background: var(--paper-2); transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+.upz-drop > svg { width: 22px; height: 22px; flex: none; color: var(--ink-2); }
+.upz-drop > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.upz-drop strong { font-size: var(--fs-3); }
+.upz-drop span { font-size: var(--fs-2); color: var(--ink-3); }
+.upz-drop.is-over { border-color: var(--ink); border-style: solid; background: color-mix(in srgb, var(--orange) 18%, var(--paper-2)); }
+.upz-drop.is-off { opacity: .6; }
+.upz-error { color: var(--danger); }
+.upz-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.upz-list li { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px var(--s-3); padding: var(--s-2) var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.upz-name { font-weight: 600; font-size: var(--fs-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upz-meta { grid-column: 1; display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-1); color: var(--ink-3); }
+.upz-list li[data-state="failed"] .upz-meta { color: var(--danger); }
+.upz-list li[data-state="done"] .upz-meta { color: var(--ok); }
+.upz-list li .btn { grid-column: 2; grid-row: 1 / span 2; }
+.upz-bar { grid-column: 1 / -1; height: 4px; border-radius: var(--r-full); background: var(--line); overflow: hidden; }
+.upz-bar i { display: block; width: 100%; height: 100%; background: var(--orange); transform-origin: left; transition: transform 150ms linear; }
+@media (max-width: 719px) { .upz-drop { flex-wrap: wrap; } .upz-drop .btn { width: 100%; } }

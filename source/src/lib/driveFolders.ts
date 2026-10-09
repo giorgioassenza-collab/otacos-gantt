@@ -82,6 +82,16 @@ function request(folderId: string) {
   void pump();
 }
 
+/** Read a folder again now (after files were added to it). */
+export function refreshDriveFolder(folderId: string) {
+  hydrate();
+  const known = entries.get(folderId);
+  if (known?.state === "ready") entries.set(folderId, { ...known, at: 0 });
+  else entries.delete(folderId);
+  request(folderId);
+  emit();
+}
+
 export interface FolderPreview {
   items: DriveItem[]; loading: boolean; message: string;
   /** True once the folder itself was read (pictures or empty), so copies saved in the post must no longer be shown. */

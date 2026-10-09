@@ -31,6 +31,13 @@ function wrap(snapshot: DocumentSnapshot): DocSnapshotLike {
   };
 }
 
+/** The sign-in token of the team session, for services (the upload script) that must know the request comes from the app. */
+export async function currentIdToken(): Promise<string | null> {
+  const app = getApps()[0];
+  if (!app) return null;
+  return (await getAuth(app).currentUser?.getIdToken()) ?? null;
+}
+
 /** Real Firebase v11 backend. Nothing is contacted until a method is called. */
 export function createFirebaseBackend(config: typeof firebaseConfig = firebaseConfig): BoardBackend {
   let app: FirebaseApp | null = null;
