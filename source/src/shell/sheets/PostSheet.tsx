@@ -82,7 +82,7 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
         const task = draft.tasks.find((t) => t.id === linkedTask.id);
         target = task ? ensurePedPostForTask(draft, task, { syncFromTask: true }) : null;
       } else {
-        target = { ...post, id: `ped${now()}`, createdAt: now(), updatedAt: now(), sourceTaskId: "" };
+        target = { ...post, id: post.id || `ped${now()}`, createdAt: now(), updatedAt: now(), sourceTaskId: "" };
         draft.pedPosts.push(target);
       }
       if (!target) return;
@@ -142,6 +142,8 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
   const live = existing ? data.pedPosts.find((p) => p.id === existing.id) : undefined;
   const persisted = Boolean(live);
   const links = assetLinks(post.asset);
+  // the upload folder belongs to the post itself: a post made from a Gantt task keeps the task's key after its mirror exists
+  const uploadKey = existing?.sourceTaskId ? `task-${existing.sourceTaskId}` : linkedTask ? `task-${linkedTask.id}` : existing?.id || post.id || "";
 
   /** Files are in the post's Drive folder: point the post at it. A saved post is updated right away; a new one on Save. */
   function folderReady(result: UploadResult) {
@@ -211,7 +213,7 @@ export default function PostSheet({ id, defaults }: { id?: string; defaults?: Pa
         <MultiPick label="Social" value={post.social} onChange={(next) => patch({ social: next })} options={data.socials.map((s) => ({ value: s.id, label: s.label, color: s.color }))} empty="Add social networks in Settings." />
         <MultiPick label="Who" value={post.members} onChange={(next) => patch({ members: next })} options={members.map((m) => ({ value: m, label: m }))} empty="Add people in Settings." />
 
-        <UploadZone title={post.title} date={post.date} onUploaded={folderReady} />
+        <UploadZone postKey={uploadKey} title={post.title} date={post.date} onUploaded={folderReady} />
         <TextAreaField label="Asset links" hint="One link per line: Drive files or folders, images, videos." value={post.asset} onChange={(e) => patch({ asset: e.target.value })} rows={3} placeholder="https://drive.google.com/…" />
         {links.length > 0 && (
           <ul className="asset-links">

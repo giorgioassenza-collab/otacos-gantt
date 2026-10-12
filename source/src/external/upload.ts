@@ -28,7 +28,7 @@ export interface UploadStart {
 export class UploadError extends Error {}
 
 /** Asks the script for the post's folder and an upload address for each file. */
-export async function startUpload(args: { date: string; title: string; files: { name: string; mimeType: string; size: number }[] }): Promise<UploadStart> {
+export async function startUpload(args: { postKey: string; date: string; title: string; files: { name: string; mimeType: string; size: number }[] }): Promise<UploadStart> {
   const token = await currentIdToken();
   if (!token) throw new UploadError("Uploads need the shared board to be connected. Reload the app and sign in again.");
   let response: Response;

@@ -14,7 +14,8 @@ export interface UploadResult { folderId: string; folderUrl: string; count: numb
 
 const sizeLabel = (bytes: number) => bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : bytes >= 1e6 ? `${Math.round(bytes / 1e6)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`;
 
-export function UploadZone({ title, date, onUploaded }: { title: string; date: string; onUploaded: (result: UploadResult) => void }) {
+/** `postKey` is what the post's folder is tied to (not its name, so two posts with the same title and day never share one). */
+export function UploadZone({ postKey, title, date, onUploaded }: { postKey: string; title: string; date: string; onUploaded: (result: UploadResult) => void }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [over, setOver] = useState(false);
   const [message, setMessage] = useState("");
@@ -33,7 +34,7 @@ export function UploadZone({ title, date, onUploaded }: { title: string; date: s
     batch.forEach(({ id }) => patchRow(id, { state: "waiting", sent: 0, error: undefined }));
     try {
       const started = await startUpload({
-        date, title: title.trim(),
+        postKey, date, title: title.trim(),
         files: batch.map(({ file }) => ({ name: file.name, mimeType: mediaType(file), size: file.size }))
       });
       let done = 0;

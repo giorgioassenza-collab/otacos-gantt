@@ -66,7 +66,9 @@ function start(request) {
     if (!(Number(file.size) > 0 && Number(file.size) <= MAX_BYTES)) throw new Error(file.name + " is empty or too large.");
   });
 
-  const folder = postFolder(date, title);
+  const postKey = String(request.postKey || "");
+  if (postKey && !/^[A-Za-z0-9_-]{1,80}$/.test(postKey)) throw new Error("The post has no usable identity.");
+  const folder = postFolder(date, title, postKey);
   try {
     folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); // the app reads the folder through its link
   } catch (error) {
@@ -86,11 +88,33 @@ function uploadsRoot() {
   return found.hasNext() ? found.next() : parent.createFolder(UPLOADS_FOLDER_NAME);
 }
 
-function postFolder(date, title) {
-  const name = (date + " " + title).replace(/[\\/:*?"<>|#%]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+/**
+ * The folder of one post. It is found by the post's own key (stored on the folder), never by its name, so two posts that
+ * share a title and a day get two folders. A post without a key falls back to the name.
+ */
+function postFolder(date, title, postKey) {
   const root = uploadsRoot();
-  const found = root.getFoldersByName(name);
-  return found.hasNext() ? found.next() : root.createFolder(name);
+  const baseName = (date + " " + title).replace(/[\\/:*?"<>|#%]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+
+  if (postKey) {
+    const found = Drive.Files.list({
+      q: "'" + root.getId() + "' in parents and trashed=false and mimeType='application/vnd.google-apps.folder' and appProperties has { key='postKey' and value='" + postKey + "' }",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: "files(id)",
+      pageSize: 1
+    });
+    if (found.files && found.files.length) return DriveApp.getFolderById(found.files[0].id);
+
+    let name = baseName;
+    for (let n = 2; root.getFoldersByName(name).hasNext(); n += 1) name = baseName + " (" + n + ")";
+    const created = root.createFolder(name);
+    Drive.Files.update({ appProperties: { postKey: postKey } }, created.getId(), null, { supportsAllDrives: true });
+    return created;
+  }
+
+  const same = root.getFoldersByName(baseName);
+  return same.hasNext() ? same.next() : root.createFolder(baseName);
 }
 
 /** Starts a resumable upload and returns the address the browser sends the file to. */
